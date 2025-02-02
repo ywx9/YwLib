@@ -1,0 +1,166 @@
+#pragma once /* clang-format off */ /* Python code start
+import os, sys, subprocess
+HERE     = os.path.dirname(os.path.abspath(__file__))
+HACK     = fR"{HERE}\hack"
+MSVC_CL  = fR"{HERE}\msvc\bin\cl.exe"
+MSVC_INC = fR"{HERE}\msvc\inc"
+MSVC_LIB = fR"{HERE}\msvc\lib"
+MY_INC   = fR"{HERE}\inc"
+IFC      = fR"{HERE}\ywstd.ifc"
+IXX      = fR"{HERE}\ywstd.ixx"
+OBJ      = fR"{HERE}\ywstd.obj"
+if len(sys.argv) > 1:
+  cpp_file = sys.argv[1]
+  if (os.path.splitext(cpp_file)[1] != ".cpp"): print("Usage: python ywstd [<cpp_file> [--run]]")
+  exe_file = cpp_file.replace(".cpp", ".exe")
+  obj_file = cpp_file.replace(".cpp", ".obj")
+  args = [MSVC_CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywstd_import", ]
+  args+= ["/std:c++latest", "/EHsc", "/nologo", "/W4", "/O2", "/Qpar", "/utf-8", ]
+  args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
+  return_code = subprocess.run(args).returncode
+  if os.path.exists(obj_file): os.remove(obj_file)
+  if return_code == 0:
+    if "--run" in sys.argv: subprocess.run([exe_file])
+    sys.exit(0)
+  else:
+    print(f"failed to compile {cpp_file} ({return_code})")
+    sys.exit(1)
+else:
+  if os.path.exists(IFC): os.remove(IFC)
+  if os.path.exists(OBJ): os.remove(OBJ)
+  with open(IXX, "w") as f: f.write("export module ywstd;\n#include \"ywstd\"\n")
+  args = [MSVC_CL, IXX, "/c", "/D__ywstd_export=export", ]
+  args+= ["/std:c++latest", "/EHsc", "/nologo", "/W4", "/O2", "/Qpar", "/utf-8", ]
+  args+= [f"/ifcOutput{IFC}", f"/Fo{OBJ}", f"/I{HACK}", f"/I{MSVC_INC}", ]
+  return_code = subprocess.run(args).returncode
+  if os.path.exists(IXX): os.remove(IXX)
+  if return_code == 0:
+    print("ywstd compiled successfully.")
+    sys.exit(0)
+  else:
+    print(f"failed to compile ywstd ({return_code})")
+    sys.exit(1)
+# Python code end */
+
+#ifndef __ywstd_export
+#define __ywstd_export
+#define __ywstd_is_exported 0
+#else
+#define __ywstd_is_exported 1
+#endif
+
+#ifndef __ywstd_import
+#define __ywstd_is_imported 0
+#else
+#define __ywstd_is_imported 1
+#endif
+
+#if __ywstd_is_imported
+import ywstd;
+#else
+#pragma warning(push)
+#pragma warning(disable: 5244)
+
+#include "cassert"
+#include "cctype"
+#include "cerrno"
+#include "cfenv"
+#include "cfloat"
+#include "cinttypes"
+#include "climits"
+#include "clocale"
+#include "cmath"
+#include "csetjmp"
+#include "csignal"
+#include "cstdarg"
+#include "cstddef"
+#include "cstdint"
+#include "cstdio"
+#include "cstdlib"
+#include "cstring"
+#include "ctime"
+#include "cuchar"
+#include "cwchar"
+#include "cwctype"
+
+#include "algorithm"
+#include "any"
+#include "array"
+#include "atomic"
+#include "bitset"
+#include "charconv"
+#include "chrono"
+#include "compare"
+#include "complex"
+#include "concepts"
+#include "condition_variable"
+#include "coroutine"
+#include "deque"
+#include "exception"
+#include "execution"
+#include "filesystem"
+#include "format"
+#include "forward_list"
+#include "fstream"
+#include "functional"
+#include "future"
+#include "initializer_list"
+#include "iomanip"
+#include "ios"
+#include "iosfwd"
+#include "iostream"
+#include "istream"
+#include "iterator"
+#include "latch"
+#include "limits"
+#include "list"
+#include "locale"
+#include "map"
+#include "mdspan"
+#include "memory"
+#include "memory_resource"
+#include "mutex"
+#include "new"
+#include "numbers"
+#include "numeric"
+#include "optional"
+#include "ostream"
+#include "print"
+#include "queue"
+#include "random"
+#include "ranges"
+#include "ratio"
+#include "regex"
+#include "scoped_allocator"
+#include "semaphore"
+#include "set"
+#include "shared_mutex"
+#include "source_location"
+#include "span"
+#include "spanstream"
+#include "sstream"
+#include "stack"
+#include "stacktrace"
+#include "stdexcept"
+#include "stdfloat"
+#include "stop_token"
+#include "streambuf"
+#include "string"
+#include "string_view"
+#include "syncstream"
+#include "system_error"
+#include "thread"
+#include "tuple"
+#include "type_traits"
+#include "typeindex"
+#include "typeinfo"
+#include "unordered_map"
+#include "unordered_set"
+#include "utility"
+#include "valarray"
+#include "variant"
+#include "vector"
+#include "version"
+
+#pragma warning(pop)
+#endif
