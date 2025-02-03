@@ -1,0 +1,34 @@
+/// \file cstddef
+/// \copyright (c) 2025 ywx9.com
+
+// clang-format off
+#pragma once
+#include "abc.h"
+#include "xtr1common"
+
+////////////////////////////////////////////////////////////////////////////////
+// public definitions
+
+#define offsetof(s,m) (static_cast<size_t>(&reinterpret_cast<char const volatile&>((((s*)0)->m))))
+
+#if !__ywstd_is_imported
+__ywstd_export namespace std {
+using size_t = decltype(sizeof(0));
+using ptrdiff_t = decltype((int*)0 - (int*)0);
+using nullptr_t = decltype(nullptr);
+using max_align_t = double;
+enum class byte : unsigned char {};
+template<typename Int> requires is_integral_v<Int> constexpr byte operator<<(byte b, Int i) noexcept { return static_cast<byte>(static_cast<unsigned char>(b) << i); }
+template<typename Int> requires is_integral_v<Int> constexpr byte operator>>(byte b, Int i) noexcept { return static_cast<byte>(static_cast<unsigned char>(b) >> i); }
+template<typename Int> requires is_integral_v<Int> constexpr byte& operator<<=(byte& b, Int i) noexcept { return b = b << i; }
+template<typename Int> requires is_integral_v<Int> constexpr byte& operator>>=(byte& b, Int i) noexcept { return b = b >> i; }
+constexpr byte operator|(byte l, byte r) noexcept { return static_cast<byte>(static_cast<unsigned char>(l) | static_cast<unsigned char>(r)); }
+constexpr byte operator&(byte l, byte r) noexcept { return static_cast<byte>(static_cast<unsigned char>(l) & static_cast<unsigned char>(r)); }
+constexpr byte operator^(byte l, byte r) noexcept { return static_cast<byte>(static_cast<unsigned char>(l) ^ static_cast<unsigned char>(r)); }
+constexpr byte operator~(byte b) noexcept { return static_cast<byte>(~static_cast<unsigned char>(b)); }
+constexpr byte& operator|=(byte& l, byte r) noexcept { return l = l | r; }
+constexpr byte& operator&=(byte& l, byte r) noexcept { return l = l & r; }
+constexpr byte& operator^=(byte& l, byte r) noexcept { return l = l ^ r; }
+template<typename Int> requires is_integral_v<Int> constexpr Int to_integer(byte b) noexcept { return static_cast<Int>(static_cast<unsigned char>(b)); }
+}
+#endif

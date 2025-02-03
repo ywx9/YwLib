@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}",
                 "${workspaceFolder}/hack",
-                "${workspaceFolder}/msvc"
+                "${workspaceFolder}/msvc/inc"
             ],
             "defines": [],
             "windowsSdkVersion": "10.0.22621.0",

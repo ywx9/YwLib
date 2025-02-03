@@ -1,0 +1,18 @@
+/// \file cassert
+/// \copyright (c) 2025 ywx9.com
+
+#pragma once
+#include "abc.h"
+
+#define __ywstd_wide_(s) L##s
+#define __ywstd_wide(s) __ywstd_wide_(s)
+
+#if !defined NDEBUG  && (__ywstd_is_exported || __ywstd_is_imported)
+#define assert(e) (static_cast<void>(!(e) && (::_wassert(L#e, __ywstd_wide(__FILE__), (unsigned)__LINE__), 0)))
+#else
+#define assert(e) (static_cast<void>(0))
+#endif
+
+#if __ywstd_is_exported
+export extern "C" void __cdecl _wassert(const wchar_t*, const wchar_t*, unsigned);
+#endif

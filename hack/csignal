@@ -1,0 +1,46 @@
+/// \file csignal
+/// \copyright (c) 2025 ywx9.com
+
+// clang-format off
+#pragma once
+#include "abc.h"
+
+////////////////////////////////////////////////////////////////////////////////
+// internal definitions
+
+#if __ywstd_is_exported
+extern "C" {
+using sig_atomic_t = int;
+using signal_handler = void (__cdecl*)(int);
+signal_handler __cdecl signal(int, signal_handler);
+int __cdecl raise(int);
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+// public definitions
+
+#define SIG_DFL (reinterpret_cast<std::signal_handler>(0))
+#define SIG_IGN (reinterpret_cast<std::signal_handler>(1))
+#define SIG_GET (reinterpret_cast<std::signal_handler>(2))
+#define SIG_SGE (reinterpret_cast<std::signal_handler>(3))
+#define SIG_ACK (reinterpret_cast<std::signal_handler>(4))
+#define SIG_DIE (reinterpret_cast<std::signal_handler>(5))
+#define SIG_ERR (reinterpret_cast<std::signal_handler>(-1))
+
+#define SIGINT 2
+#define SIGILL 4
+#define SIGFPE 8
+#define SIGSEGV 11
+#define SIGTERM 15
+#define SIGBREAK 21
+#define SIGABRT 22
+
+#if !__ywstd_is_imported
+__ywstd_export namespace std {
+using sig_atomic_t = int;
+using signal_handler = void (__cdecl*)(int);
+inline signal_handler __cdecl signal(int sig, signal_handler handler) noexcept { return __ywstd_switch(::signal(sig, handler), {}); }
+inline int __cdecl raise(int sig) noexcept { return __ywstd_switch(::raise(sig), {}); }
+}
+#endif

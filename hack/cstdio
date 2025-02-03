@@ -1,0 +1,173 @@
+/// \file cstdio
+/// \copyright (c) 2025 ywx9.com
+
+// clang-format off
+#pragma once
+#include "abc.h"
+
+////////////////////////////////////////////////////////////////////////////////
+// internal definitions
+
+#if __ywstd_is_exported
+extern "C" {
+using fpos_t = long long;
+FILE* __cdecl fopen(const char*, const char*);
+FILE* __cdecl freopen(const char*, const char*, FILE*);
+int __cdecl fclose(FILE*);
+int __cdecl fflush(FILE*);
+void __cdecl setbuf(FILE*, char*);
+int __cdecl setvbuf(FILE*, char*, int, size_t);
+size_t __cdecl fread(void*, size_t, size_t, FILE*);
+size_t __cdecl fwrite(const void*, size_t, size_t, FILE*);
+int __cdecl getc(FILE*);
+int __cdecl fgetc(FILE*);
+char* __cdecl fgets(char*, int, FILE*);
+int __cdecl putc(int, FILE*);
+int __cdecl fputc(int, FILE*);
+int __cdecl fputs(const char* s, FILE*);
+int __cdecl getchar();
+int __cdecl putchar(int);
+int __cdecl puts(const char*);
+int __cdecl ungetc(int, FILE*);
+long __cdecl ftell(FILE*);
+int __cdecl fgetpos(FILE*, fpos_t*);
+int __cdecl fseek(FILE*, long int, int);
+int __cdecl fsetpos(FILE*, const fpos_t*);
+void __cdecl rewind(FILE*);
+void __cdecl clearerr(FILE*);
+int __cdecl feof(FILE*);
+int __cdecl ferror(FILE*);
+void __cdecl perror(const char*);
+int __cdecl remove(const char*);
+int __cdecl rename(const char*, const char*);
+FILE* __cdecl tmpfile();
+char* __cdecl tmpnam(char*);
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+// public definitions
+
+#define _IOFBF 0x0000
+#define _IOLBF 0x0040
+#define _IONBF 0x0004
+#define BUFSIZ 512
+#define FOPEN_MAX 20
+#define FILENAME_MAX 260
+#define L_tmpnam 260
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define SEEK_SET 0
+#define TMP_MAX 0x7fff
+
+#ifndef EOF
+#define EOF (-1)
+#endif
+
+#if !__ywstd_is_imported
+__ywstd_export namespace std {
+
+using FILE = ::FILE;
+using fpos_t = long long;
+using size_t = decltype(sizeof(0));
+
+inline FILE* __cdecl fopen(const char* name, const char* mode) {
+  return __ywstd_switch(::fopen(name, mode), {});
+}
+inline FILE* __cdecl freopen(const char* name, const char* mode, FILE* stream) {
+  return __ywstd_switch(::freopen(name, mode, stream), {});
+}
+inline int __cdecl fclose(FILE* stream) {
+  return __ywstd_switch(::fclose(stream), {});
+}
+inline int __cdecl fflush(FILE* stream) {
+  return __ywstd_switch(::fflush(stream), {});
+}
+inline void __cdecl setbuf(FILE* stream, char* buffer) {
+  __ywstd_switch(::setbuf(stream, buffer), void(0));
+}
+inline int __cdecl setvbuf(FILE* stream, char* buffer, int mode, size_t size) {
+  return __ywstd_switch(::setvbuf(stream, buffer, mode, size), {});
+}
+
+inline size_t __cdecl fread(void* buffer, size_t size, size_t count, FILE* stream) {
+  return __ywstd_switch(::fread(buffer, size, count, stream), {});
+}
+inline size_t __cdecl fwrite(const void* buffer, size_t size, size_t count, FILE* stream) {
+  return __ywstd_switch(::fwrite(buffer, size, count, stream), {});
+}
+
+inline int __cdecl getc(FILE* stream) {
+  return __ywstd_switch(::getc(stream), {});
+}
+inline int __cdecl fgetc(FILE* stream) {
+  return __ywstd_switch(::fgetc(stream), {});
+}
+inline char* __cdecl fgets(char* buffer, int count, FILE* stream) {
+  return __ywstd_switch(::fgets(buffer, count, stream), {});
+}
+inline int __cdecl putc(int character, FILE* stream) {
+  return __ywstd_switch(::putc(character, stream), {});
+}
+inline int __cdecl fputc(int character, FILE* stream) {
+  return __ywstd_switch(::fputc(character, stream), {});
+}
+inline int __cdecl fputs(const char* string, FILE* stream) {
+  return __ywstd_switch(::fputs(string, stream), {});
+}
+inline int __cdecl getchar() {
+  return __ywstd_switch(::getchar(), {});
+}
+inline int __cdecl putchar(int character) {
+  return __ywstd_switch(::putchar(character), {});
+}
+inline int __cdecl puts(const char* string) {
+  return __ywstd_switch(::puts(string), {});
+}
+inline int __cdecl ungetc(int character, FILE* stream) {
+  return __ywstd_switch(::ungetc(character, stream), {});
+}
+
+inline long __cdecl ftell(FILE* stream) {
+  return __ywstd_switch(::ftell(stream), {});
+}
+inline int __cdecl fgetpos(FILE* stream, fpos_t* position) {
+  return __ywstd_switch(::fgetpos(stream, position), {});
+}
+inline int __cdecl fseek(FILE* stream, long int offset, int origin) {
+  return __ywstd_switch(::fseek(stream, offset, origin), {});
+}
+inline int __cdecl fsetpos(FILE* stream, const fpos_t* position) {
+  return __ywstd_switch(::fsetpos(stream, position), {});
+}
+inline void __cdecl rewind(FILE* stream) {
+  __ywstd_switch(::rewind(stream), void(0));
+}
+
+inline void __cdecl clearerr(FILE* stream) {
+  __ywstd_switch(::clearerr(stream), void(0));
+}
+inline int __cdecl feof(FILE* stream) {
+  return __ywstd_switch(::feof(stream), {});
+}
+inline int __cdecl ferror(FILE* stream) {
+  return __ywstd_switch(::ferror(stream), {});
+}
+inline void __cdecl perror(const char* message) {
+  __ywstd_switch(::perror(message), void(0));
+}
+
+inline int __cdecl remove(const char* name) {
+  return __ywstd_switch(::remove(name), {});
+}
+inline int __cdecl rename(const char * oldname, const char* newname) {
+  return __ywstd_switch(::rename(oldname, newname), {});
+}
+inline FILE* __cdecl tmpfile() {
+  return __ywstd_switch(::tmpfile(), {});
+}
+inline char* __cdecl tmpnam(char* buffer) {
+  return __ywstd_switch(::tmpnam(buffer), {});
+}
+}
+#endif

@@ -1,0 +1,6 @@
+/// \file cstdarg
+/// \copyright (c) 2025 ywx9.com
+
+// clang-format off
+#pragma once
+#include "abc.h"

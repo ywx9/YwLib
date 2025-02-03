@@ -1,0 +1,65 @@
+/// \file cwctype
+/// \copyright (c) 2025 ywx9.com
+
+// clang-format off/
+#pragma once
+#include "abc.h"
+
+#define WEOF (static_cast<unsigned short>(0xffff))
+
+#if __ywstd_is_exported
+extern "C" {
+using wint_t = unsigned short;
+using wctype_t = unsigned short;
+using wctrans_t = wchar_t;
+
+int __cdecl iswalnum(wint_t);
+int __cdecl iswalpha(wint_t);
+int __cdecl iswlower(wint_t);
+int __cdecl iswupper(wint_t);
+int __cdecl iswdigit(wint_t);
+int __cdecl iswxdigit(wint_t);
+int __cdecl iswcntrl(wint_t);
+int __cdecl iswgraph(wint_t);
+int __cdecl iswspace(wint_t);
+int __cdecl iswblank(wint_t);
+int __cdecl iswprint(wint_t);
+int __cdecl iswpunct(wint_t);
+int __cdecl iswctype(wint_t, wctype_t);
+wctype_t __cdecl wctype(const char*);
+
+wint_t __cdecl towupper(wint_t);
+wint_t __cdecl towlower(wint_t);
+wint_t __cdecl towctrans(wint_t, wctrans_t);
+wctrans_t __cdecl wctrans(const char*);
+}
+#endif
+
+#if !__ywstd_is_imported
+__ywstd_export namespace std {
+
+using wint_t = unsigned short;
+using wctype_t = unsigned short;
+using wctrans_t = wchar_t;
+
+[[nodiscard]] inline int __cdecl iswalnum(wint_t c) noexcept { return __ywstd_switch(::iswalnum(c), {}); }
+[[nodiscard]] inline int __cdecl iswalpha(wint_t c) noexcept { return __ywstd_switch(::iswalpha(c), {}); }
+[[nodiscard]] inline int __cdecl iswlower(wint_t c) noexcept { return __ywstd_switch(::iswlower(c), {}); }
+[[nodiscard]] inline int __cdecl iswupper(wint_t c) noexcept { return __ywstd_switch(::iswupper(c), {}); }
+[[nodiscard]] inline int __cdecl iswdigit(wint_t c) noexcept { return __ywstd_switch(::iswdigit(c), {}); }
+[[nodiscard]] inline int __cdecl iswxdigit(wint_t c) noexcept { return __ywstd_switch(::iswxdigit(c), {}); }
+[[nodiscard]] inline int __cdecl iswcntrl(wint_t c) noexcept { return __ywstd_switch(::iswcntrl(c), {}); }
+[[nodiscard]] inline int __cdecl iswgraph(wint_t c) noexcept { return __ywstd_switch(::iswgraph(c), {}); }
+[[nodiscard]] inline int __cdecl iswspace(wint_t c) noexcept { return __ywstd_switch(::iswspace(c), {}); }
+[[nodiscard]] inline int __cdecl iswblank(wint_t c) noexcept { return __ywstd_switch(::iswblank(c), {}); }
+[[nodiscard]] inline int __cdecl iswprint(wint_t c) noexcept { return __ywstd_switch(::iswprint(c), {}); }
+[[nodiscard]] inline int __cdecl iswpunct(wint_t c) noexcept { return __ywstd_switch(::iswpunct(c), {}); }
+[[nodiscard]] inline int __cdecl iswctype(wint_t c, wctype_t mask) noexcept { return __ywstd_switch(::iswctype(c, mask), {}); }
+[[nodiscard]] inline wctype_t __cdecl wctype(const char* property) noexcept { return __ywstd_switch(::wctype(property), {}); }
+
+[[nodiscard]] inline wint_t __cdecl towupper(wint_t c) noexcept { return __ywstd_switch(::towupper(c), {}); }
+[[nodiscard]] inline wint_t __cdecl towlower(wint_t c) noexcept { return __ywstd_switch(::towlower(c), {}); }
+[[nodiscard]] inline wint_t __cdecl towctrans(wint_t c, wctrans_t t) noexcept { return __ywstd_switch(::towctrans(c, t), {}); }
+[[nodiscard]] inline wctrans_t __cdecl wctrans(const char* property) noexcept { return __ywstd_switch(::wctrans(property), {}); }
+}
+#endif
