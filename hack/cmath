@@ -1,50 +1,46 @@
-/// \file cmath
-/// \copyright (c) 2025 ywx9.com
-
-// clang-format off
 #pragma once
 #include "abc.h"
-#include "concepts"
+#include "math.h"
+#include "xtr1common"
 
-#define FP_INFINITE  1
-#define FP_NAN       2
-#define FP_NORMAL    (-1)
-#define FP_SUBNORMAL (-2)
-#define FP_ZERO      0
+#if __ywstd_is_exported or __ywstd_is_imported
+#define _CSTD ::
+#define __ywstd_cfunc_begin extern "C" {
+#define __ywstd_cfunc_end }
+#else
+#define _CSTD ::__ywstd_cfunc::
+#define __ywstd_cfunc_begin extern "C" { namespace __ywstd_cfunc {
+#define __ywstd_cfunc_end } }
+#endif
 
-#define INFINITY (static_cast<float>(1e300 * 1e300))
-#define NAN (-static_cast<float>(INFINITY * 0.0f))
-#define HUGE_VAL (static_cast<double>(INFINITY))
-#define HUGE_VALF (static_cast<float>(INFINITY))
-#define HUGE_VALL (static_cast<long double>(INFINITY))
+__ywstd_export namespace std {
 
-#define MATH_ERRNO        1
-#define MATH_ERREXCEPT    2
-#define math_errhandling  (MATH_ERRNO | MATH_ERREXCEPT)
+using ::float_t;
+using ::double_t;
+
+template<typename T> concept _arithmetic = is_arithmetic_v<T>;
+template<typename T, typename... Ts> concept _all_the_same = (is_same_v<T, Ts> && ...);
+
+template<_arithmetic... Ts> using _common_math_t =
+  decltype((conditional_t<is_integral_v<Ts>, double, Ts>{} + ...));
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // fpclassify
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 short __cdecl _dtest(double*);
 short __cdecl _fdtest(float*);
 short __cdecl _ldtest(long double*);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-using float_t = float;
-using double_t = double;
-template<typename T> concept _arithmetic = integral<T> || floating_point<T>;
-template<typename T, typename... Ts> concept _same_as = (same_as<T, Ts> && ...);
-template<_arithmetic... Ts> using _common_math_t =
-  decltype((declval<conditional_t<floating_point<Ts>, Ts, double>(&)()>()() + ...));
-template<_arithmetic T> [[nodiscard]] constexpr int fpclassify(T x) noexcept {
-  if constexpr (floating_point<T>) {
+template<_arithmetic T> constexpr int fpclassify(T x) noexcept {
+  if constexpr (is_floating_point_v<T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<T, float>) return __ywstd_switch(::_fdtest(&x), {});
-      else if constexpr (same_as<T, double>) return __ywstd_switch(::_dtest(&x), {});
-      else if constexpr (same_as<T, long double>) return __ywstd_switch(::_ldtest(&x), {});
+      if constexpr (is_same_v<T, float>) return _CSTD _fdtest(&x);
+      else if constexpr (is_same_v<T, double>) return _CSTD _dtest(&x);
+      else if constexpr (is_same_v<T, long double>) return _CSTD _ldtest(&x);
     } {
-      using UT = conditional_t<sizeof(T) == 4, unsigned int, unsigned long long>;
+      using UT = conditional_t<sizeof(T) == 4, unsigned, unsigned long long>;
       constexpr UT exp_mask = static_cast<UT>(sizeof(UT) == 4 ? 0x7F800000 : 0x7FF0000000000000);
       const UT u = __builtin_bit_cast(UT, x);
       if (x == T(0)) return FP_ZERO;
@@ -55,415 +51,383 @@ template<_arithmetic T> [[nodiscard]] constexpr int fpclassify(T x) noexcept {
   } else return std::fpclassify(static_cast<double>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // isfinite, isinf, isnan, isnormal
-#if !__ywstd_is_imported
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr bool isfinite(const T x) noexcept {
-  if constexpr (floating_point<T>) {
+template<_arithmetic T> constexpr bool isfinite(const T x) noexcept {
+  if constexpr (is_floating_point_v<T>) {
     const auto fp = fpclassify(x);
     return fp != FP_INFINITE && fp != FP_NAN;
   } else return std::isfinite(static_cast<double>(x));
 }
-template<_arithmetic T> [[nodiscard]] constexpr bool isinf(const T x) noexcept {
-  if constexpr (floating_point<T>) return fpclassify(x) == FP_INFINITE;
+template<_arithmetic T> constexpr bool isinf(const T x) noexcept {
+  if constexpr (is_floating_point_v<T>) return fpclassify(x) == FP_INFINITE;
   else return std::isinf(static_cast<double>(x));
 }
-template<_arithmetic T> [[nodiscard]] constexpr bool isnan(const T x) noexcept {
-  if constexpr (floating_point<T>) return fpclassify(x) == FP_NAN;
+template<_arithmetic T> constexpr bool isnan(const T x) noexcept {
+  if constexpr (is_floating_point_v<T>) return fpclassify(x) == FP_NAN;
   else return std::isnan(static_cast<double>(x));
 }
-template<_arithmetic T> [[nodiscard]] constexpr bool isnormal(const T x) noexcept {
-  if constexpr (floating_point<T>) return fpclassify(x) == FP_NORMAL;
+template<_arithmetic T> constexpr bool isnormal(const T x) noexcept {
+  if constexpr (is_floating_point_v<T>) return fpclassify(x) == FP_NORMAL;
   else return std::isnormal(static_cast<double>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // signbit
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 int __cdecl _dsign(double);
 int __cdecl _fdsign(float);
 int __cdecl _ldsign(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr bool signbit(const T x) noexcept {
-  if constexpr (floating_point<T>) {
+template<_arithmetic T> constexpr bool signbit(const T x) noexcept {
+  if constexpr (is_floating_point_v<T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<T, float>) return __ywstd_switch(::_fdsign(x), {});
-      else if constexpr (same_as<T, double>) return __ywstd_switch(::_dsign(x), {});
-      else if constexpr (same_as<T, long double>) return __ywstd_switch(::_ldsign(x), {});
+      if constexpr (is_same_v<T, float>) return _CSTD _fdsign(x);
+      else if constexpr (is_same_v<T, double>) return _CSTD _dsign(x);
+      else if constexpr (is_same_v<T, long double>) return _CSTD _ldsign(x);
     } else return x < T(0);
   } else return std::signbit(static_cast<double>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // isgreater, isgreaterequal, isless, islessequal, islessgreater, isunordered
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 int __cdecl _dpcomp(double, double);
 int __cdecl _fdpcomp(float, float);
 int __cdecl _ldpcomp(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr bool isgreater(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr bool isgreater(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(bool(::_fdpcomp(x, y) & 4), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(bool(::_dpcomp(x, y) & 4), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(bool(::_ldpcomp(x, y) & 4), {});
+      if constexpr (is_same_v<common, float>) __ywstd_cwrapr(bool(_CSTD _fdpcomp(x, y) & 4));
+      else if constexpr (is_same_v<common, double>) __ywstd_cwrapr(bool(_CSTD _dpcomp(x, y) & 4));
+      else if constexpr (is_same_v<common, long double>) __ywstd_cwrapr(bool(_CSTD _ldpcomp(x, y) & 4));
     } else return x > y;
   } else return std::isgreater(static_cast<double>(x), static_cast<double>(y));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr bool isgreaterequal(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr bool isgreaterequal(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(bool(::_fdpcomp(x, y) & 6), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(bool(::_dpcomp(x, y) & 6), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(bool(::_ldpcomp(x, y) & 6), {});
+      if constexpr (is_same_v<common, float>) __ywstd_cwrapr(bool(_CSTD _fdpcomp(x, y) & 6));
+      else if constexpr (is_same_v<common, double>) __ywstd_cwrapr(bool(_CSTD _dpcomp(x, y) & 6));
+      else if constexpr (is_same_v<common, long double>) __ywstd_cwrapr(bool(_CSTD _ldpcomp(x, y) & 6));
     } else return x >= y;
   } else return std::isgreaterequal(static_cast<double>(x), static_cast<double>(y));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr bool isless(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr bool isless(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(bool(::_fdpcomp(x, y) & 1), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(bool(::_dpcomp(x, y) & 1), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(bool(::_ldpcomp(x, y) & 1), {});
+      if constexpr (is_same_v<common, float>) __ywstd_cwrapr(bool(_CSTD _fdpcomp(x, y) & 1));
+      else if constexpr (is_same_v<common, double>) __ywstd_cwrapr(bool(_CSTD _dpcomp(x, y) & 1));
+      else if constexpr (is_same_v<common, long double>) __ywstd_cwrapr(bool(_CSTD _ldpcomp(x, y) & 1));
     } else return x < y;
   } else return std::isless(static_cast<double>(x), static_cast<double>(y));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr bool islessequal(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr bool islessequal(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(bool(::_fdpcomp(x, y) & 3), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(bool(::_dpcomp(x, y) & 3), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(bool(::_ldpcomp(x, y) & 3), {});
+      if constexpr (is_same_v<common, float>) __ywstd_cwrapr(bool(_CSTD _fdpcomp(x, y) & 3));
+      else if constexpr (is_same_v<common, double>) __ywstd_cwrapr(bool(_CSTD _dpcomp(x, y) & 3));
+      else if constexpr (is_same_v<common, long double>) __ywstd_cwrapr(bool(_CSTD _ldpcomp(x, y) & 3));
     } else return x <= y;
   } else return std::islessequal(static_cast<double>(x), static_cast<double>(y));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr bool islessgreater(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr bool islessgreater(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(bool(::_fdpcomp(x, y) & 5), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(bool(::_dpcomp(x, y) & 5), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(bool(::_ldpcomp(x, y) & 5), {});
+      if constexpr (is_same_v<common, float>) __ywstd_cwrapr(bool(_CSTD _fdpcomp(x, y) & 5));
+      else if constexpr (is_same_v<common, double>) __ywstd_cwrapr(bool(_CSTD _dpcomp(x, y) & 5));
+      else if constexpr (is_same_v<common, long double>) __ywstd_cwrapr(bool(_CSTD _ldpcomp(x, y) & 5));
     } else return x != y;
   } else return std::islessgreater(static_cast<double>(x), static_cast<double>(y));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr bool isunordered(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr bool isunordered(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::_fdpcomp(x, y) == 0, {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::_dpcomp(x, y) == 0, {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::_ldpcomp(x, y) == 0, {});
+      if constexpr (is_same_v<common, float>) return _CSTD _fdpcomp(x, y) == 0;
+      else if constexpr (is_same_v<common, double>) return _CSTD _dpcomp(x, y) == 0;
+      else if constexpr (is_same_v<common, long double>) return _CSTD _ldpcomp(x, y) == 0;
     } else return std::isnan(x) || std::isnan(y);
   } else return std::isunordered(static_cast<double>(x), static_cast<double>(y));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // fabs
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl fabs(double);
-extern "C" inline float __cdecl fabsf(float x) { return static_cast<float>(::fabs(x)); }
-extern "C" inline long double __cdecl fabsl(long double x) { return ::fabs(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline float __cdecl fabsf(float x) { return static_cast<float>(_CSTD fabs(x)); }
+extern "C" inline long double __cdecl fabsl(long double x) { return _CSTD fabs(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr _common_math_t<T> fabs(const T x) noexcept {
+template<_arithmetic T> constexpr _common_math_t<T> fabs(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::fabsf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::fabs(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::fabsl(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD fabsf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD fabs(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD fabsl(x);
     } else return static_cast<common>(x < 0 ? -x : x);
   } else return std::fabs(static_cast<common>(x));
 }
-[[nodiscard]] constexpr float fabsf(float x) noexcept { return std::fabs(x); }
-[[nodiscard]] constexpr long double fabsl(long double x) noexcept { return std::fabs(x); }
+constexpr float fabsf(float x) noexcept { return std::fabs(x); }
+constexpr long double fabsl(long double x) noexcept { return std::fabs(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // ceil
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl ceil(double);
 extern "C" float __cdecl ceilf(float);
-extern "C" inline long double __cdecl ceill(long double x) { return ::ceil(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl ceill(long double x) { return _CSTD ceil(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr _common_math_t<T> ceil(const T x) noexcept {
+template<_arithmetic T> constexpr _common_math_t<T> ceil(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::ceilf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::ceil(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::ceill(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD ceilf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD ceil(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD ceill(x);
     } else {
       const common i = static_cast<common>(static_cast<long long>(x));
       return static_cast<common>(i == x ? x : (x < 0 ? i : i + 1));
     }
   } else return std::ceil(static_cast<common>(x));
 }
-[[nodiscard]] constexpr float ceilf(float x) noexcept { return std::ceil(x); }
-[[nodiscard]] constexpr long double ceill(long double x) noexcept { return std::ceil(x); }
+constexpr float ceilf(float x) noexcept { return std::ceil(x); }
+constexpr long double ceill(long double x) noexcept { return std::ceil(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // floor
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl floor(double);
 extern "C" float __cdecl floorf(float);
-extern "C" inline long double __cdecl floorl(long double x) { return ::floor(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl floorl(long double x) { return _CSTD floor(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr _common_math_t<T> floor(const T x) noexcept {
+template<_arithmetic T> constexpr _common_math_t<T> floor(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::floorf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::floor(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::floorl(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD floorf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD floor(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD floorl(x);
     } else {
       const common i = static_cast<common>(static_cast<long long>(x));
       return static_cast<common>(i == x ? x : (x < 0 ? i - 1 : i));
     }
   } else return std::floor(static_cast<common>(x));
 }
-[[nodiscard]] constexpr float floorf(float x) noexcept { return std::floor(x); }
-[[nodiscard]] constexpr long double floorl(long double x) noexcept { return std::floor(x); }
+constexpr float floorf(float x) noexcept { return std::floor(x); }
+constexpr long double floorl(long double x) noexcept { return std::floor(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // trunc
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl trunc(double);
 extern "C" float __cdecl truncf(float);
-extern "C" inline long double __cdecl truncl(long double x) { return ::trunc(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl truncl(long double x) { return _CSTD trunc(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr _common_math_t<T> trunc(const T x) noexcept {
+template<_arithmetic T> constexpr _common_math_t<T> trunc(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::truncf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::trunc(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::truncl(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD truncf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD trunc(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD truncl(x);
     } else return static_cast<common>(static_cast<long long>(x));
   } else return std::trunc(static_cast<common>(x));
 }
-[[nodiscard]] constexpr float truncf(float x) noexcept { return std::trunc(x); }
-[[nodiscard]] constexpr long double truncl(long double x) noexcept { return std::trunc(x); }
+constexpr float truncf(float x) noexcept { return std::trunc(x); }
+constexpr long double truncl(long double x) noexcept { return std::trunc(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // round
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl round(double);
 extern "C" float __cdecl roundf(float);
 extern "C" long double __cdecl roundl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr _common_math_t<T> round(const T x) noexcept {
+template<_arithmetic T> constexpr _common_math_t<T> round(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::roundf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::round(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::roundl(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD roundf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD round(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD roundl(x);
     } else return static_cast<common>(static_cast<long long>(x + (x < 0 ? -0.5 : 0.5)));
   } else return std::round(static_cast<common>(x));
 }
-[[nodiscard]] constexpr float roundf(float x) noexcept { return std::round(x); }
-[[nodiscard]] constexpr long double roundl(long double x) noexcept { return std::round(x); }
+constexpr float roundf(float x) noexcept { return std::round(x); }
+constexpr long double roundl(long double x) noexcept { return std::round(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // lround
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" long __cdecl lround(double);
 extern "C" long __cdecl lroundf(float);
 extern "C" long __cdecl lroundl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr long lround(const T x) noexcept {
+template<_arithmetic T> constexpr long lround(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::lroundf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::lround(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::lroundl(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD lroundf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD lround(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD lroundl(x);
     } else return static_cast<long>(std::round(static_cast<double>(x)));
   } else return std::lround(static_cast<double>(x));
 }
-[[nodiscard]] constexpr long lroundf(float x) noexcept { return std::lround(x); }
-[[nodiscard]] constexpr long lroundl(long double x) noexcept { return std::lround(x); }
+constexpr long lroundf(float x) noexcept { return std::lround(x); }
+constexpr long lroundl(long double x) noexcept { return std::lround(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // llround
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" long long __cdecl llround(double);
 extern "C" long long __cdecl llroundf(float);
 extern "C" long long __cdecl llroundl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] constexpr long long llround(const T x) noexcept {
+template<_arithmetic T> constexpr long long llround(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
+  if constexpr (_all_the_same<common, T>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::llroundf(x), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::llround(x), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::llroundl(x), {});
+      if constexpr (is_same_v<common, float>) return _CSTD llroundf(x);
+      else if constexpr (is_same_v<common, double>) return _CSTD llround(x);
+      else if constexpr (is_same_v<common, long double>) return _CSTD llroundl(x);
     } else return static_cast<long long>(std::round(static_cast<double>(x)));
   } else return std::llround(static_cast<double>(x));
 }
-[[nodiscard]] constexpr long long llroundf(float x) noexcept { return std::llround(x); }
-[[nodiscard]] constexpr long long llroundl(long double x) noexcept { return std::llround(x); }
+constexpr long long llroundf(float x) noexcept { return std::llround(x); }
+constexpr long long llroundl(long double x) noexcept { return std::llround(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // nearbyint
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl nearbyint(double);
 extern "C" float __cdecl nearbyintf(float);
 extern "C" long double __cdecl nearbyintl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> nearbyint(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> nearbyint(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::nearbyintf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::nearbyint(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::nearbyintl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD nearbyintf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD nearbyint(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD nearbyintl(x);
   } else return std::nearbyint(static_cast<common>(x));
 }
-[[nodiscard]] float nearbyintf(float x) noexcept { return std::nearbyint(x); }
-[[nodiscard]] long double nearbyintl(long double x) noexcept { return std::nearbyint(x); }
+float nearbyintf(float x) noexcept { return std::nearbyint(x); }
+long double nearbyintl(long double x) noexcept { return std::nearbyint(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // rint
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl rint(double);
 extern "C" float __cdecl rintf(float);
 extern "C" long double __cdecl rintl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> rint(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> rint(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::rintf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::rint(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::rintl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD rintf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD rint(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD rintl(x);
   } else return std::rint(static_cast<common>(x));
 }
-[[nodiscard]] float rintf(float x) noexcept { return std::rint(x); }
-[[nodiscard]] long double rintl(long double x) noexcept { return std::rint(x); }
+float rintf(float x) noexcept { return std::rint(x); }
+long double rintl(long double x) noexcept { return std::rint(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // lrint
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" long __cdecl lrint(double);
 extern "C" long __cdecl lrintf(float);
 extern "C" long __cdecl lrintl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] long lrint(const T x) noexcept {
+template<_arithmetic T> long lrint(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::lrintf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::lrint(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::lrintl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD lrintf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD lrint(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD lrintl(x);
   } else return std::lrint(static_cast<common>(x));
 }
-[[nodiscard]] long lrintf(float x) noexcept { return std::lrint(x); }
-[[nodiscard]] long lrintl(long double x) noexcept { return std::lrint(x); }
+long lrintf(float x) noexcept { return std::lrint(x); }
+long lrintl(long double x) noexcept { return std::lrint(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // llrint
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" long long __cdecl llrint(double);
 extern "C" long long __cdecl llrintf(float);
 extern "C" long long __cdecl llrintl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] long long llrint(const T x) noexcept {
+template<_arithmetic T> long long llrint(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::llrintf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::llrint(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::llrintl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD llrintf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD llrint(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD llrintl(x);
   } else return std::llrint(static_cast<common>(x));
 }
-[[nodiscard]] long long llrintf(float x) noexcept { return std::llrint(x); }
-[[nodiscard]] long long llrintl(long double x) noexcept { return std::llrint(x); }
+long long llrintf(float x) noexcept { return std::llrint(x); }
+long long llrintl(long double x) noexcept { return std::llrint(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // fmod
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl fmod(double, double);
 extern "C" float __cdecl fmodf(float, float);
 extern "C" inline long double __cdecl fmodl(long double x, long double y)
-{ return ::fmod(static_cast<double>(x), static_cast<double>(y)); }
-#endif
-#if !__ywstd_is_imported
+{ return _CSTD fmod(static_cast<double>(x), static_cast<double>(y)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
 template<_arithmetic T, _arithmetic U> [[nodiscard]]
 constexpr _common_math_t<T, U> fmod(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::fmodf(x, y), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::fmod(x, y), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::fmodl(x, y), {});
+      if constexpr (is_same_v<common, float>) return _CSTD fmodf(x, y);
+      else if constexpr (is_same_v<common, double>) return _CSTD fmod(x, y);
+      else if constexpr (is_same_v<common, long double>) return _CSTD fmodl(x, y);
     } else return x - y * static_cast<common>(static_cast<long long>(x / y));
   } else return std::fmod(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] constexpr float fmodf(float x, float y) noexcept { return std::fmod(x, y); }
-[[nodiscard]] constexpr long double fmodl(long double x, long double y) noexcept { return std::fmod(x, y); }
+constexpr float fmodf(float x, float y) noexcept { return std::fmod(x, y); }
+constexpr long double fmodl(long double x, long double y) noexcept { return std::fmod(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // remainder
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl remainder(double, double);
 extern "C" float __cdecl remainderf(float, float);
 extern "C" inline long double __cdecl remainderl(long double x, long double y)
-{ return ::remainder(static_cast<double>(x), static_cast<double>(y)); }
-#endif
-#if !__ywstd_is_imported
+{ return _CSTD remainder(static_cast<double>(x), static_cast<double>(y)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr _common_math_t<T, U> remainder(T x, U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr _common_math_t<T, U> remainder(T x, U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::remainderf(x, y), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::remainder(x, y), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::remainderl(x, y), {});
+      if constexpr (is_same_v<common, float>) return _CSTD remainderf(x, y);
+      else if constexpr (is_same_v<common, double>) return _CSTD remainder(x, y);
+      else if constexpr (is_same_v<common, long double>) return _CSTD remainderl(x, y);
     } else {
       auto quo = std::llround(x / y);
       if (std::fabs(quo - x / y) == common(0.5) && quo % 2 != 0) quo += ((quo > 0) ? -1 : 1);
@@ -471,27 +435,25 @@ template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr _common_math_t<T,
     }
   } else return std::remainder(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] constexpr float remainderf(float x, float y) noexcept { return std::remainder(x, y); }
-[[nodiscard]] constexpr long double remainderl(long double x, long double y) noexcept { return std::remainder(x, y); }
+constexpr float remainderf(float x, float y) noexcept { return std::remainder(x, y); }
+constexpr long double remainderl(long double x, long double y) noexcept { return std::remainder(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // remquo
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl remquo(double, double, int*);
 extern "C" float __cdecl remquof(float, float, int*);
 extern "C" long double __cdecl remquol(long double, long double, int*);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
 template<_arithmetic T, _arithmetic U> [[nodiscard]]
 constexpr _common_math_t<T, U> remquo(T x, U y, int* quo) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::remquof(x, y, quo), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::remquo(x, y, quo), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::remquol(x, y, quo), {});
+      if constexpr (is_same_v<common, float>) return _CSTD remquof(x, y, quo);
+      else if constexpr (is_same_v<common, double>) return _CSTD remquo(x, y, quo);
+      else if constexpr (is_same_v<common, long double>) return _CSTD remquol(x, y, quo);
     } else {
       *quo = static_cast<int>(std::lround(x / y));
       if (std::fabs(*quo - x / y) == common(0.5) && *quo % 2 != 0) *quo += ((*quo > 0) ? -1 : 1);
@@ -499,1012 +461,919 @@ constexpr _common_math_t<T, U> remquo(T x, U y, int* quo) noexcept {
     }
   } else return std::remquo(static_cast<common>(x), static_cast<common>(y), quo);
 }
-[[nodiscard]] constexpr float remquof(float x, float y, int* quo) noexcept { return std::remquo(x, y, quo); }
-[[nodiscard]] constexpr long double remquol(
+constexpr float remquof(float x, float y, int* quo) noexcept { return std::remquo(x, y, quo); }
+constexpr long double remquol(
   long double x, long double y, int* quo) noexcept { return std::remquo(x, y, quo); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // fma
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl fma(double, double, double);
 extern "C" float __cdecl fmaf(float, float, float);
 extern "C" long double __cdecl fmal(long double, long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
 /// computes `x * y + z`
 template<_arithmetic T, _arithmetic U, _arithmetic V> [[nodiscard]]
 constexpr _common_math_t<T, U, V> fma(T x, U y, V z) noexcept {
   using common = _common_math_t<T, U, V>;
-  if constexpr (_same_as<common, T, U, V>) {
+  if constexpr (_all_the_same<common, T, U, V>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::fmaf(x, y, z), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::fma(x, y, z), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::fmal(x, y, z), {});
+      if constexpr (is_same_v<common, float>) return _CSTD fmaf(x, y, z);
+      else if constexpr (is_same_v<common, double>) return _CSTD fma(x, y, z);
+      else if constexpr (is_same_v<common, long double>) return _CSTD fmal(x, y, z);
     } else return x * y + z;
   } else return std::fma(static_cast<common>(x), static_cast<common>(y), static_cast<common>(z));
 }
-[[nodiscard]] constexpr float fmaf(float x, float y, float z) noexcept { return std::fma(x, y, z); }
-[[nodiscard]] constexpr long double fmal(
+constexpr float fmaf(float x, float y, float z) noexcept { return std::fma(x, y, z); }
+constexpr long double fmal(
   long double x, long double y, long double z) noexcept { return std::fma(x, y, z); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // fmax
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl fmax(double, double);
 extern "C" float __cdecl fmaxf(float, float);
 extern "C" long double __cdecl fmaxl(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr _common_math_t<T, U> fmax(T x, U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr _common_math_t<T, U> fmax(T x, U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::fmaxf(x, y), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::fmax(x, y), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::fmaxl(x, y), {});
+      if constexpr (is_same_v<common, float>) return _CSTD fmaxf(x, y);
+      else if constexpr (is_same_v<common, double>) return _CSTD fmax(x, y);
+      else if constexpr (is_same_v<common, long double>) return _CSTD fmaxl(x, y);
     } else return x > y ? x : y;
   } else return std::fmax(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] constexpr float fmaxf(float x, float y) noexcept { return std::fmax(x, y); }
-[[nodiscard]] constexpr long double fmaxl(long double x, long double y) noexcept { return std::fmax(x, y); }
+constexpr float fmaxf(float x, float y) noexcept { return std::fmax(x, y); }
+constexpr long double fmaxl(long double x, long double y) noexcept { return std::fmax(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // fmin
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl fmin(double, double);
 extern "C" float __cdecl fminf(float, float);
 extern "C" long double __cdecl fminl(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr _common_math_t<T, U> fmin(T x, U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr _common_math_t<T, U> fmin(T x, U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::fminf(x, y), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::fmin(x, y), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::fminl(x, y), {});
+      if constexpr (is_same_v<common, float>) return _CSTD fminf(x, y);
+      else if constexpr (is_same_v<common, double>) return _CSTD fmin(x, y);
+      else if constexpr (is_same_v<common, long double>) return _CSTD fminl(x, y);
     } else return x < y ? x : y;
   } else return std::fmin(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] constexpr float fminf(float x, float y) noexcept { return std::fmin(x, y); }
-[[nodiscard]] constexpr long double fminl(long double x, long double y) noexcept { return std::fmin(x, y); }
+constexpr float fminf(float x, float y) noexcept { return std::fmin(x, y); }
+constexpr long double fminl(long double x, long double y) noexcept { return std::fmin(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // fdim
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl fdim(double, double);
 extern "C" float __cdecl fdimf(float, float);
 extern "C" long double __cdecl fdiml(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] constexpr _common_math_t<T, U> fdim(T x, U y) noexcept {
+template<_arithmetic T, _arithmetic U> constexpr _common_math_t<T, U> fdim(T x, U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
+  if constexpr (_all_the_same<common, T, U>) {
     if (!is_constant_evaluated()) {
-      if constexpr (same_as<common, float>) return __ywstd_switch(::fdimf(x, y), {});
-      else if constexpr (same_as<common, double>) return __ywstd_switch(::fdim(x, y), {});
-      else if constexpr (same_as<common, long double>) return __ywstd_switch(::fdiml(x, y), {});
+      if constexpr (is_same_v<common, float>) return _CSTD fdimf(x, y);
+      else if constexpr (is_same_v<common, double>) return _CSTD fdim(x, y);
+      else if constexpr (is_same_v<common, long double>) return _CSTD fdiml(x, y);
     } else return x > y ? x - y : common(0);
   } else return std::fdim(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] constexpr float fdimf(float x, float y) noexcept { return std::fdim(x, y); }
-[[nodiscard]] constexpr long double fdiml(long double x, long double y) noexcept { return std::fdim(x, y); }
+constexpr float fdimf(float x, float y) noexcept { return std::fdim(x, y); }
+constexpr long double fdiml(long double x, long double y) noexcept { return std::fdim(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // nan
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl nan(const char*);
 extern "C" float __cdecl nanf(const char*);
 extern "C" long double __cdecl nanl(const char*);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-[[nodiscard]] inline float nanf(const char* tag) { return __ywstd_switch(::nanf(tag), {}); }
-[[nodiscard]] inline double nan(const char* tag) { return __ywstd_switch(::nan(tag), {}); }
-[[nodiscard]] inline long double nanl(const char* tag) { return __ywstd_switch(::nanl(tag), {}); }
+inline float nanf(const char* tag) { return _CSTD nanf(tag); }
+inline double nan(const char* tag) { return _CSTD nan(tag); }
+inline long double nanl(const char* tag) { return _CSTD nanl(tag); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // lerp
-#if !__ywstd_is_imported
 __ywstd_export namespace std {
 template<_arithmetic T, _arithmetic U, _arithmetic V> [[nodiscard]]
 constexpr _common_math_t<T, U, V> lerp(T a, U b, V t) noexcept {
   using common = _common_math_t<T, U, V>;
-  if constexpr (_same_as<common, T, U, V>) return std::fma(t, b - a, a);
+  if constexpr (_all_the_same<common, T, U, V>) return std::fma(t, b - a, a);
   else return std::lerp(static_cast<common>(a), static_cast<common>(b), static_cast<common>(t));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // exp
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl exp(double);
 extern "C" float __cdecl expf(float);
-extern "C" inline long double __cdecl expl(long double x) { return ::exp(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl expl(long double x) { return _CSTD exp(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> exp(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> exp(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::expf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::exp(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::expl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD expf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD exp(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD expl(x);
   } else return std::exp(static_cast<common>(x));
 }
-[[nodiscard]] float expf(float x) noexcept { return std::exp(x); }
-[[nodiscard]] long double expl(long double x) noexcept { return std::exp(x); }
+float expf(float x) noexcept { return std::exp(x); }
+long double expl(long double x) noexcept { return std::exp(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // exp2
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl exp2(double);
 extern "C" float __cdecl exp2f(float);
 extern "C" long double __cdecl exp2l(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> exp2(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> exp2(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::exp2f(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::exp2(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::exp2l(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD exp2f(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD exp2(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD exp2l(x);
   } else return std::exp2(static_cast<common>(x));
 }
-[[nodiscard]] float exp2f(float x) noexcept { return std::exp2(x); }
-[[nodiscard]] long double exp2l(long double x) noexcept { return std::exp2(x); }
+float exp2f(float x) noexcept { return std::exp2(x); }
+long double exp2l(long double x) noexcept { return std::exp2(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // expm1
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl expm1(double);
 extern "C" float __cdecl expm1f(float);
 extern "C" long double __cdecl expm1l(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> expm1(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> expm1(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::expm1f(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::expm1(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::expm1l(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD expm1f(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD expm1(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD expm1l(x);
   } else return std::expm1(static_cast<common>(x));
 }
-[[nodiscard]] float expm1f(float x) noexcept { return std::expm1(x); }
-[[nodiscard]] long double expm1l(long double x) noexcept { return std::expm1(x); }
+float expm1f(float x) noexcept { return std::expm1(x); }
+long double expm1l(long double x) noexcept { return std::expm1(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // log
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl log(double);
 extern "C" float __cdecl logf(float);
-extern "C" inline long double __cdecl logl(long double x) { return ::log(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl logl(long double x) { return _CSTD log(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> log(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> log(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::logf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::log(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::logl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD logf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD log(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD logl(x);
   } else return std::log(static_cast<common>(x));
 }
-[[nodiscard]] float logf(float x) noexcept { return std::log(x); }
-[[nodiscard]] long double logl(long double x) noexcept { return std::log(x); }
+float logf(float x) noexcept { return std::log(x); }
+long double logl(long double x) noexcept { return std::log(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // log2
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl log2(double);
 extern "C" float __cdecl log2f(float);
 extern "C" long double __cdecl log2l(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> log2(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> log2(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::log2f(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::log2(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::log2l(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD log2f(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD log2(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD log2l(x);
   } else return std::log2(static_cast<common>(x));
 }
-[[nodiscard]] float log2f(float x) noexcept { return std::log2(x); }
-[[nodiscard]] long double log2l(long double x) noexcept { return std::log2(x); }
+float log2f(float x) noexcept { return std::log2(x); }
+long double log2l(long double x) noexcept { return std::log2(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // log10
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl log10(double);
 extern "C" float __cdecl log10f(float);
-extern "C" inline long double __cdecl log10l(long double x) { return ::log10(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl log10l(long double x) { return _CSTD log10(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> log10(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> log10(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::log10f(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::log10(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::log10l(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD log10f(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD log10(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD log10l(x);
   } else return std::log10(static_cast<common>(x));
 }
-[[nodiscard]] float log10f(float x) noexcept { return std::log10(x); }
-[[nodiscard]] long double log10l(long double x) noexcept { return std::log10(x); }
+float log10f(float x) noexcept { return std::log10(x); }
+long double log10l(long double x) noexcept { return std::log10(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // log1p
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl log1p(double);
 extern "C" float __cdecl log1pf(float);
 extern "C" long double __cdecl log1pl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> log1p(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> log1p(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::log1pf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::log1p(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::log1pl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD log1pf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD log1p(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD log1pl(x);
   } else return std::log1p(static_cast<common>(x));
 }
-[[nodiscard]] float log1pf(float x) noexcept { return std::log1p(x); }
-[[nodiscard]] long double log1pl(long double x) noexcept { return std::log1p(x); }
+float log1pf(float x) noexcept { return std::log1p(x); }
+long double log1pl(long double x) noexcept { return std::log1p(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // sqrt
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl sqrt(double);
 extern "C" float __cdecl sqrtf(float);
-extern "C" inline long double __cdecl sqrtl(long double x) { return ::sqrt(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl sqrtl(long double x) { return _CSTD sqrt(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> sqrt(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> sqrt(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::sqrtf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::sqrt(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::sqrtl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD sqrtf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD sqrt(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD sqrtl(x);
   } else return std::sqrt(static_cast<common>(x));
 }
-[[nodiscard]] float sqrtf(float x) noexcept { return std::sqrt(x); }
-[[nodiscard]] long double sqrtl(long double x) noexcept { return std::sqrt(x); }
+float sqrtf(float x) noexcept { return std::sqrt(x); }
+long double sqrtl(long double x) noexcept { return std::sqrt(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // cbrt
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl cbrt(double);
 extern "C" float __cdecl cbrtf(float);
 extern "C" long double __cdecl cbrtl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> cbrt(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> cbrt(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::cbrtf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::cbrt(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::cbrtl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD cbrtf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD cbrt(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD cbrtl(x);
   } else return std::cbrt(static_cast<common>(x));
 }
-[[nodiscard]] float cbrtf(float x) noexcept { return std::cbrt(x); }
-[[nodiscard]] long double cbrtl(long double x) noexcept { return std::cbrt(x); }
+float cbrtf(float x) noexcept { return std::cbrt(x); }
+long double cbrtl(long double x) noexcept { return std::cbrt(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // hypot
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl hypot(double, double);
-extern "C" inline float __cdecl hypotf(float x, float y) { return static_cast<float>(::hypot(x, y)); }
+extern "C" inline float __cdecl hypotf(float x, float y) { return static_cast<float>(_CSTD hypot(x, y)); }
 extern "C" inline long double __cdecl hypotl(long double x, long double y)
-{ return ::hypot(static_cast<double>(x), static_cast<double>(y)); }
-[[nodiscard]] float __stdcall __std_smf_hypot3f(float, float, float) noexcept;
-[[nodiscard]] double __stdcall __std_smf_hypot3(double, double, double) noexcept;
-[[nodiscard]] inline long double __stdcall __std_smf_hypot3l(long double x, long double y, long double z) noexcept
-{ return ::__std_smf_hypot3(static_cast<double>(x), static_cast<double>(y), static_cast<double>(z)); }
-#endif
-#if !__ywstd_is_imported
+{ return _CSTD hypot(static_cast<double>(x), static_cast<double>(y)); }
+float __stdcall __std_smf_hypot3f(float, float, float) noexcept;
+double __stdcall __std_smf_hypot3(double, double, double) noexcept;
+inline long double __stdcall __std_smf_hypot3l(long double x, long double y, long double z) noexcept
+{ return _CSTD __std_smf_hypot3(static_cast<double>(x), static_cast<double>(y), static_cast<double>(z)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> hypot(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> hypot(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::hypotf(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::hypot(x, y), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::hypotl(x, y), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD hypotf(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD hypot(x, y);
+    else if constexpr (is_same_v<common, long double>) return _CSTD hypotl(x, y);
   } else return std::hypot(static_cast<common>(x), static_cast<common>(y));
 }
 template<_arithmetic T, _arithmetic U, _arithmetic V> [[nodiscard]]
 _common_math_t<T, U, V> hypot(const T x, const U y, const V z) noexcept {
   using common = _common_math_t<T, U, V>;
-  if constexpr (_same_as<common, T, U, V>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_hypot3f(x, y, z), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_hypot3(x, y, z), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::__std_smf_hypot3l(x, y, z), {});
+  if constexpr (_all_the_same<common, T, U, V>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_hypot3f(x, y, z);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_hypot3(x, y, z);
+    else if constexpr (is_same_v<common, long double>) return _CSTD __std_smf_hypot3l(x, y, z);
   } else return std::hypot(static_cast<common>(x), std::hypot(static_cast<common>(y), static_cast<common>(z)));
 }
-[[nodiscard]] float hypotf(float x, float y) noexcept { return std::hypot(x, y); }
-[[nodiscard]] long double hypotl(long double x, long double y) noexcept { return std::hypot(x, y); }
+float hypotf(float x, float y) noexcept { return std::hypot(x, y); }
+long double hypotl(long double x, long double y) noexcept { return std::hypot(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // pow
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl pow(double, double);
 extern "C" float __cdecl powf(float, float);
 extern "C" inline long double __cdecl powl(long double x, long double y)
-{ return ::pow(static_cast<double>(x), static_cast<double>(y)); }
-#endif
-#if !__ywstd_is_imported
+{ return _CSTD pow(static_cast<double>(x), static_cast<double>(y)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> pow(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> pow(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::powf(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::pow(x, y), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::powl(x, y), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD powf(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD pow(x, y);
+    else if constexpr (is_same_v<common, long double>) return _CSTD powl(x, y);
   } else return std::pow(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] float powf(float x, float y) noexcept { return std::pow(x, y); }
-[[nodiscard]] long double powl(long double x, long double y) noexcept { return std::pow(x, y); }
+float powf(float x, float y) noexcept { return std::pow(x, y); }
+long double powl(long double x, long double y) noexcept { return std::pow(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // sin
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl sin(double);
 extern "C" float __cdecl sinf(float);
-extern "C" inline long double __cdecl sinl(long double x) { return ::sin(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl sinl(long double x) { return _CSTD sin(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> sin(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> sin(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::sinf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::sin(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::sinl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD sinf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD sin(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD sinl(x);
   } else return std::sin(static_cast<common>(x));
 }
-[[nodiscard]] float sinf(float x) noexcept { return std::sin(x); }
-[[nodiscard]] long double sinl(long double x) noexcept { return std::sin(x); }
+float sinf(float x) noexcept { return std::sin(x); }
+long double sinl(long double x) noexcept { return std::sin(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // cos
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl cos(double);
 extern "C" float __cdecl cosf(float);
-extern "C" inline long double __cdecl cosl(long double x) { return ::cos(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl cosl(long double x) { return _CSTD cos(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> cos(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> cos(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::cosf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::cos(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::cosl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD cosf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD cos(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD cosl(x);
   } else return std::cos(static_cast<common>(x));
 }
-[[nodiscard]] float cosf(float x) noexcept { return std::cos(x); }
-[[nodiscard]] long double cosl(long double x) noexcept { return std::cos(x); }
+float cosf(float x) noexcept { return std::cos(x); }
+long double cosl(long double x) noexcept { return std::cos(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // tan
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl tan(double);
 extern "C" float __cdecl tanf(float);
-extern "C" inline long double __cdecl tanl(long double x) { return ::tan(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl tanl(long double x) { return _CSTD tan(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> tan(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> tan(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::tanf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::tan(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::tanl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD tanf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD tan(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD tanl(x);
   } else return std::tan(static_cast<common>(x));
 }
-[[nodiscard]] float tanf(float x) noexcept { return std::tan(x); }
-[[nodiscard]] long double tanl(long double x) noexcept { return std::tan(x); }
+float tanf(float x) noexcept { return std::tan(x); }
+long double tanl(long double x) noexcept { return std::tan(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // asin
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl asin(double);
 extern "C" float __cdecl asinf(float);
-extern "C" inline long double __cdecl asinl(long double x) { return ::asin(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl asinl(long double x) { return _CSTD asin(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> asin(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> asin(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::asinf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::asin(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::asinl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD asinf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD asin(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD asinl(x);
   } else return std::asin(static_cast<common>(x));
 }
-[[nodiscard]] float asinf(float x) noexcept { return std::asin(x); }
-[[nodiscard]] long double asinl(long double x) noexcept { return std::asin(x); }
+float asinf(float x) noexcept { return std::asin(x); }
+long double asinl(long double x) noexcept { return std::asin(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // acos
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl acos(double);
 extern "C" float __cdecl acosf(float);
-extern "C" inline long double __cdecl acosl(long double x) { return ::acos(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl acosl(long double x) { return _CSTD acos(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> acos(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> acos(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::acosf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::acos(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::acosl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD acosf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD acos(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD acosl(x);
   } else return std::acos(static_cast<common>(x));
 }
-[[nodiscard]] float acosf(float x) noexcept { return std::acos(x); }
-[[nodiscard]] long double acosl(long double x) noexcept { return std::acos(x); }
+float acosf(float x) noexcept { return std::acos(x); }
+long double acosl(long double x) noexcept { return std::acos(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // atan
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl atan(double);
 extern "C" float __cdecl atanf(float);
-extern "C" inline long double __cdecl atanl(long double x) { return ::atan(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl atanl(long double x) { return _CSTD atan(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> atan(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> atan(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::atanf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::atan(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::atanl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD atanf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD atan(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD atanl(x);
   } else return std::atan(static_cast<common>(x));
 }
-[[nodiscard]] float atanf(float x) noexcept { return std::atan(x); }
-[[nodiscard]] long double atanl(long double x) noexcept { return std::atan(x); }
+float atanf(float x) noexcept { return std::atan(x); }
+long double atanl(long double x) noexcept { return std::atan(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // atan2
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl atan2(double, double);
 extern "C" float __cdecl atan2f(float, float);
 extern "C" inline long double __cdecl atan2l(long double x, long double y)
-{ return ::atan2(static_cast<double>(x), static_cast<double>(y)); }
-#endif
-#if !__ywstd_is_imported
+{ return _CSTD atan2(static_cast<double>(x), static_cast<double>(y)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> atan2(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> atan2(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::atan2f(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::atan2(x, y), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::atan2l(x, y), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD atan2f(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD atan2(x, y);
+    else if constexpr (is_same_v<common, long double>) return _CSTD atan2l(x, y);
   } else return std::atan2(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] float atan2f(float x, float y) noexcept { return std::atan2(x, y); }
-[[nodiscard]] long double atan2l(long double x, long double y) noexcept { return std::atan2(x, y); }
+float atan2f(float x, float y) noexcept { return std::atan2(x, y); }
+long double atan2l(long double x, long double y) noexcept { return std::atan2(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // sinh
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl sinh(double);
 extern "C" float __cdecl sinhf(float);
-extern "C" inline long double __cdecl sinhl(long double x) { return ::sinh(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl sinhl(long double x) { return _CSTD sinh(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> sinh(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> sinh(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::sinhf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::sinh(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::sinhl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD sinhf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD sinh(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD sinhl(x);
   } else return std::sinh(static_cast<common>(x));
 }
-[[nodiscard]] float sinhf(float x) noexcept { return std::sinh(x); }
-[[nodiscard]] long double sinhl(long double x) noexcept { return std::sinh(x); }
+float sinhf(float x) noexcept { return std::sinh(x); }
+long double sinhl(long double x) noexcept { return std::sinh(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // cosh
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl cosh(double);
 extern "C" float __cdecl coshf(float);
-extern "C" inline long double __cdecl coshl(long double x) { return ::cosh(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl coshl(long double x) { return _CSTD cosh(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> cosh(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> cosh(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::coshf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::cosh(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::coshl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD coshf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD cosh(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD coshl(x);
   } else return std::cosh(static_cast<common>(x));
 }
-[[nodiscard]] float coshf(float x) noexcept { return std::cosh(x); }
-[[nodiscard]] long double coshl(long double x) noexcept { return std::cosh(x); }
+float coshf(float x) noexcept { return std::cosh(x); }
+long double coshl(long double x) noexcept { return std::cosh(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // tanh
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl tanh(double);
 extern "C" float __cdecl tanhf(float);
-extern "C" inline long double __cdecl tanhl(long double x) { return ::tanh(static_cast<double>(x)); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline long double __cdecl tanhl(long double x) { return _CSTD tanh(static_cast<double>(x)); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> tanh(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> tanh(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::tanhf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::tanh(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::tanhl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD tanhf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD tanh(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD tanhl(x);
   } else return std::tanh(static_cast<common>(x));
 }
-[[nodiscard]] float tanhf(float x) noexcept { return std::tanh(x); }
-[[nodiscard]] long double tanhl(long double x) noexcept { return std::tanh(x); }
+float tanhf(float x) noexcept { return std::tanh(x); }
+long double tanhl(long double x) noexcept { return std::tanh(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // asinh
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl asinh(double);
 extern "C" float __cdecl asinhf(float);
 extern "C" long double __cdecl asinhl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> asinh(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> asinh(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::asinhf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::asinh(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::asinhl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD asinhf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD asinh(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD asinhl(x);
   } else return std::asinh(static_cast<common>(x));
 }
-[[nodiscard]] float asinhf(float x) noexcept { return std::asinh(x); }
-[[nodiscard]] long double asinhl(long double x) noexcept { return std::asinh(x); }
+float asinhf(float x) noexcept { return std::asinh(x); }
+long double asinhl(long double x) noexcept { return std::asinh(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // acosh
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl acosh(double);
 extern "C" float __cdecl acoshf(float);
 extern "C" long double __cdecl acoshl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> acosh(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> acosh(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::acoshf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::acosh(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::acoshl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD acoshf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD acosh(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD acoshl(x);
   } else return std::acosh(static_cast<common>(x));
 }
-[[nodiscard]] float acoshf(float x) noexcept { return std::acosh(x); }
-[[nodiscard]] long double acoshl(long double x) noexcept { return std::acosh(x); }
+float acoshf(float x) noexcept { return std::acosh(x); }
+long double acoshl(long double x) noexcept { return std::acosh(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // atanh
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl atanh(double);
 extern "C" float __cdecl atanhf(float);
 extern "C" long double __cdecl atanhl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> atanh(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> atanh(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::atanhf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::atanh(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::atanhl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD atanhf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD atanh(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD atanhl(x);
   } else return std::atanh(static_cast<common>(x));
 }
-[[nodiscard]] float atanhf(float x) noexcept { return std::atanh(x); }
-[[nodiscard]] long double atanhl(long double x) noexcept { return std::atanh(x); }
+float atanhf(float x) noexcept { return std::atanh(x); }
+long double atanhl(long double x) noexcept { return std::atanh(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // erf
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl erf(double);
 extern "C" float __cdecl erff(float);
 extern "C" long double __cdecl erfl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> erf(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> erf(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::erff(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::erf(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::erfl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD erff(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD erf(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD erfl(x);
   } else return std::erf(static_cast<common>(x));
 }
-[[nodiscard]] float erff(float x) noexcept { return std::erf(x); }
-[[nodiscard]] long double erfl(long double x) noexcept { return std::erf(x); }
+float erff(float x) noexcept { return std::erf(x); }
+long double erfl(long double x) noexcept { return std::erf(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // erfc
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl erfc(double);
 extern "C" float __cdecl erfcf(float);
 extern "C" long double __cdecl erfcl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> erfc(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> erfc(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::erfcf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::erfc(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::erfcl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD erfcf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD erfc(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD erfcl(x);
   } else return std::erfc(static_cast<common>(x));
 }
-[[nodiscard]] float erfcf(float x) noexcept { return std::erfc(x); }
-[[nodiscard]] long double erfcl(long double x) noexcept { return std::erfc(x); }
+float erfcf(float x) noexcept { return std::erfc(x); }
+long double erfcl(long double x) noexcept { return std::erfc(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // tgamma
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl tgamma(double);
 extern "C" float __cdecl tgammaf(float);
 extern "C" long double __cdecl tgammal(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> tgamma(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> tgamma(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::tgammaf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::tgamma(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::tgammal(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD tgammaf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD tgamma(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD tgammal(x);
   } else return std::tgamma(static_cast<common>(x));
 }
-[[nodiscard]] float tgammaf(float x) noexcept { return std::tgamma(x); }
-[[nodiscard]] long double tgammal(long double x) noexcept { return std::tgamma(x); }
+float tgammaf(float x) noexcept { return std::tgamma(x); }
+long double tgammal(long double x) noexcept { return std::tgamma(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // lgamma
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl lgamma(double);
 extern "C" float __cdecl lgammaf(float);
 extern "C" long double __cdecl lgammal(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> lgamma(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> lgamma(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::lgammaf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::lgamma(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::lgammal(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD lgammaf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD lgamma(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD lgammal(x);
   } else return std::lgamma(static_cast<common>(x));
 }
-[[nodiscard]] float lgammaf(float x) noexcept { return std::lgamma(x); }
-[[nodiscard]] long double lgammal(long double x) noexcept { return std::lgamma(x); }
+float lgammaf(float x) noexcept { return std::lgamma(x); }
+long double lgammal(long double x) noexcept { return std::lgamma(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // frexp
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl frexp(double, int*);
-extern "C" inline float __cdecl frexpf(float x, int* exp) { return static_cast<float>(::frexp(x, exp)); }
-extern "C" inline long double __cdecl frexpl(long double x, int* exp) { return ::frexp(static_cast<double>(x), exp); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline float __cdecl frexpf(float x, int* exp) { return static_cast<float>(_CSTD frexp(x, exp)); }
+extern "C" inline long double __cdecl frexpl(long double x, int* exp) { return _CSTD frexp(static_cast<double>(x), exp); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> frexp(const T x, int* exp) noexcept {
+template<_arithmetic T> _common_math_t<T> frexp(const T x, int* exp) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::frexpf(x, exp), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::frexp(x, exp), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::frexpl(x, exp), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD frexpf(x, exp);
+    else if constexpr (is_same_v<common, double>) return _CSTD frexp(x, exp);
+    else if constexpr (is_same_v<common, long double>) return _CSTD frexpl(x, exp);
   } else return std::frexp(static_cast<common>(x), exp);
 }
-[[nodiscard]] float frexpf(float x, int* exp) noexcept { return std::frexp(x, exp); }
-[[nodiscard]] long double frexpl(long double x, int* exp) noexcept { return std::frexp(x, exp); }
+float frexpf(float x, int* exp) noexcept { return std::frexp(x, exp); }
+long double frexpl(long double x, int* exp) noexcept { return std::frexp(x, exp); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // ldexp
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl ldexp(double, int);
-extern "C" inline float __cdecl ldexpf(float x, int exp) { return static_cast<float>(::ldexp(x, exp)); }
-extern "C" inline long double __cdecl ldexpl(long double x, int exp) { return ::ldexp(static_cast<double>(x), exp); }
-#endif
-#if !__ywstd_is_imported
+extern "C" inline float __cdecl ldexpf(float x, int exp) { return static_cast<float>(_CSTD ldexp(x, exp)); }
+extern "C" inline long double __cdecl ldexpl(long double x, int exp) { return _CSTD ldexp(static_cast<double>(x), exp); }
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> ldexp(const T x, const int exp) noexcept {
+template<_arithmetic T> _common_math_t<T> ldexp(const T x, const int exp) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::ldexpf(x, exp), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::ldexp(x, exp), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::ldexpl(x, exp), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD ldexpf(x, exp);
+    else if constexpr (is_same_v<common, double>) return _CSTD ldexp(x, exp);
+    else if constexpr (is_same_v<common, long double>) return _CSTD ldexpl(x, exp);
   } else return std::ldexp(static_cast<common>(x), exp);
 }
-[[nodiscard]] float ldexpf(float x, int exp) noexcept { return std::ldexp(x, exp); }
-[[nodiscard]] long double ldexpl(long double x, int exp) noexcept { return std::ldexp(x, exp); }
+float ldexpf(float x, int exp) noexcept { return std::ldexp(x, exp); }
+long double ldexpl(long double x, int exp) noexcept { return std::ldexp(x, exp); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // scalbn
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl scalbn(double, int);
 extern "C" float __cdecl scalbnf(float, int);
 extern "C" long double __cdecl scalbnl(long double, int);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> scalbn(const T x, const int n) noexcept {
+template<_arithmetic T> _common_math_t<T> scalbn(const T x, const int n) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::scalbnf(x, n), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::scalbn(x, n), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::scalbnl(x, n), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD scalbnf(x, n);
+    else if constexpr (is_same_v<common, double>) return _CSTD scalbn(x, n);
+    else if constexpr (is_same_v<common, long double>) return _CSTD scalbnl(x, n);
   } else return std::scalbn(static_cast<common>(x), n);
 }
-[[nodiscard]] float scalbnf(float x, int n) noexcept { return std::scalbn(x, n); }
-[[nodiscard]] long double scalbnl(long double x, int n) noexcept { return std::scalbn(x, n); }
+float scalbnf(float x, int n) noexcept { return std::scalbn(x, n); }
+long double scalbnl(long double x, int n) noexcept { return std::scalbn(x, n); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // scalbln
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl scalbln(double, long);
 extern "C" float __cdecl scalblnf(float, long);
 extern "C" long double __cdecl scalblnl(long double, long);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> scalbln(const T x, const long n) noexcept {
+template<_arithmetic T> _common_math_t<T> scalbln(const T x, const long n) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::scalblnf(x, n), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::scalbln(x, n), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::scalblnl(x, n), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD scalblnf(x, n);
+    else if constexpr (is_same_v<common, double>) return _CSTD scalbln(x, n);
+    else if constexpr (is_same_v<common, long double>) return _CSTD scalblnl(x, n);
   } else return std::scalbln(static_cast<common>(x), n);
 }
-[[nodiscard]] float scalblnf(float x, long n) noexcept { return std::scalbln(x, n); }
-[[nodiscard]] long double scalblnl(long double x, long n) noexcept { return std::scalbln(x, n); }
+float scalblnf(float x, long n) noexcept { return std::scalbln(x, n); }
+long double scalblnl(long double x, long n) noexcept { return std::scalbln(x, n); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // logb
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl logb(double);
 extern "C" float __cdecl logbf(float);
 extern "C" long double __cdecl logbl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> logb(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> logb(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::logbf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::logb(x), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::logbl(x), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD logbf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD logb(x);
+    else if constexpr (is_same_v<common, long double>) return _CSTD logbl(x);
   } else return std::logb(static_cast<common>(x));
 }
-[[nodiscard]] float logbf(float x) noexcept { return std::logb(x); }
-[[nodiscard]] long double logbl(long double x) noexcept { return std::logb(x); }
+float logbf(float x) noexcept { return std::logb(x); }
+long double logbl(long double x) noexcept { return std::logb(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // ilogb
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" int __cdecl ilogb(double);
 extern "C" int __cdecl ilogbf(float);
 extern "C" int __cdecl ilogbl(long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] int ilogb(const T x) noexcept {
-  if constexpr (same_as<T, float>) return __ywstd_switch(::ilogbf(x), {});
-  else if constexpr (same_as<T, double>) return __ywstd_switch(::ilogb(x), {});
-  else if constexpr (same_as<T, long double>) return __ywstd_switch(::ilogbl(x), {});
+template<_arithmetic T> int ilogb(const T x) noexcept {
+  if constexpr (is_same_v<T, float>) return _CSTD ilogbf(x);
+  else if constexpr (is_same_v<T, double>) return _CSTD ilogb(x);
+  else if constexpr (is_same_v<T, long double>) return _CSTD ilogbl(x);
   else return std::ilogb(static_cast<_common_math_t<T>>(x));
 }
-[[nodiscard]] int ilogbf(float x) noexcept { return std::ilogb(x); }
-[[nodiscard]] int ilogbl(long double x) noexcept { return std::ilogb(x); }
+int ilogbf(float x) noexcept { return std::ilogb(x); }
+int ilogbl(long double x) noexcept { return std::ilogb(x); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // nextafter
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl nextafter(double, double);
 extern "C" float __cdecl nextafterf(float, float);
 extern "C" long double __cdecl nextafterl(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> nextafter(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> nextafter(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::nextafterf(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::nextafter(x, y), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::nextafterl(x, y), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD nextafterf(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD nextafter(x, y);
+    else if constexpr (is_same_v<common, long double>) return _CSTD nextafterl(x, y);
   } else return std::nextafter(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] float nextafterf(float x, float y) noexcept { return std::nextafter(x, y); }
-[[nodiscard]] long double nextafterl(long double x, long double y) noexcept { return std::nextafter(x, y); }
+float nextafterf(float x, float y) noexcept { return std::nextafter(x, y); }
+long double nextafterl(long double x, long double y) noexcept { return std::nextafter(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // nexttoward
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl nexttoward(double, long double);
 extern "C" float __cdecl nexttowardf(float, long double);
 extern "C" long double __cdecl nexttowardl(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> nexttoward(const T x, long double y) noexcept {
+template<_arithmetic T> _common_math_t<T> nexttoward(const T x, long double y) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::nexttowardf(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::nexttoward(x, y), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::nexttowardl(x, y), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD nexttowardf(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD nexttoward(x, y);
+    else if constexpr (is_same_v<common, long double>) return _CSTD nexttowardl(x, y);
   } else return std::nexttoward(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] float nexttowardf(float x, long double y) noexcept { return std::nexttoward(x, y); }
-[[nodiscard]] long double nexttowardl(long double x, long double y) noexcept { return std::nexttoward(x, y); }
+float nexttowardf(float x, long double y) noexcept { return std::nexttoward(x, y); }
+long double nexttowardl(long double x, long double y) noexcept { return std::nexttoward(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // copysign
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" double __cdecl copysign(double, double);
 extern "C" float __cdecl copysignf(float, float);
 extern "C" long double __cdecl copysignl(long double, long double);
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> copysign(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> copysign(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::copysignf(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::copysign(x, y), {});
-    else if constexpr (same_as<common, long double>) return __ywstd_switch(::copysignl(x, y), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD copysignf(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD copysign(x, y);
+    else if constexpr (is_same_v<common, long double>) return _CSTD copysignl(x, y);
   } else return std::copysign(static_cast<common>(x), static_cast<common>(y));
 }
-[[nodiscard]] float copysignf(float x, float y) noexcept { return std::copysign(x, y); }
-[[nodiscard]] long double copysignl(long double x, long double y) noexcept { return std::copysign(x, y); }
+float copysignf(float x, float y) noexcept { return std::copysign(x, y); }
+long double copysignl(long double x, long double y) noexcept { return std::copysign(x, y); }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // assoc_laguerre, assoc_legendre
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_assoc_laguerref(unsigned, unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_assoc_laguerre(unsigned, unsigned, double) noexcept;
 extern "C" float __stdcall __std_smf_assoc_legendref(unsigned, unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_assoc_legendre(unsigned, unsigned, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
 template<_arithmetic T> [[nodiscard]]
 _common_math_t<T> assoc_laguerre(const unsigned n, const unsigned m, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_assoc_laguerref(n, m, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_assoc_laguerre(n, m, x), {});
-    else return __ywstd_switch(::__std_smf_assoc_laguerre(n, m, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_assoc_laguerref(n, m, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_assoc_laguerre(n, m, x);
+    else return _CSTD __std_smf_assoc_laguerre(n, m, static_cast<double>(x));
   } else return std::assoc_laguerre(n, m, static_cast<common>(x));
 }
 template<_arithmetic T> [[nodiscard]]
 _common_math_t<T> assoc_legendre(const unsigned n, const unsigned m, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_assoc_legendref(n, m, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_assoc_legendre(n, m, x), {});
-    else return __ywstd_switch(::__std_smf_assoc_legendre(n, m, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_assoc_legendref(n, m, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_assoc_legendre(n, m, x);
+    else return _CSTD __std_smf_assoc_legendre(n, m, static_cast<double>(x));
   } else return std::assoc_legendre(n, m, static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // beta
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_betaf(float, float) noexcept;
 extern "C" double __stdcall __std_smf_beta(double, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> beta(const T x, const U y) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> beta(const T x, const U y) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_betaf(x, y), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_beta(x, y), {});
-    else return __ywstd_switch(::__std_smf_beta(static_cast<double>(x), static_cast<double>(y)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_betaf(x, y);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_beta(x, y);
+    else return _CSTD __std_smf_beta(static_cast<double>(x), static_cast<double>(y));
   } else return std::beta(static_cast<common>(x), static_cast<common>(y));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // comp_ellint_1, comp_ellint_2, comp_ellint_3
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_comp_ellint_1f(float) noexcept;
 extern "C" double __stdcall __std_smf_comp_ellint_1(double) noexcept;
 extern "C" float __stdcall __std_smf_comp_ellint_2f(float) noexcept;
 extern "C" double __stdcall __std_smf_comp_ellint_2(double) noexcept;
 extern "C" float __stdcall __std_smf_comp_ellint_3f(float, float) noexcept;
 extern "C" double __stdcall __std_smf_comp_ellint_3(double, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> comp_ellint_1(const T k) noexcept {
+template<_arithmetic T> _common_math_t<T> comp_ellint_1(const T k) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_comp_ellint_1f(k), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_comp_ellint_1(k), {});
-    else return __ywstd_switch(::__std_smf_comp_ellint_1(static_cast<double>(k)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_comp_ellint_1f(k);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_comp_ellint_1(k);
+    else return _CSTD __std_smf_comp_ellint_1(static_cast<double>(k));
   } else return std::comp_ellint_1(static_cast<common>(k));
 }
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> comp_ellint_2(const T k) noexcept {
+template<_arithmetic T> _common_math_t<T> comp_ellint_2(const T k) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_comp_ellint_2f(k), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_comp_ellint_2(k), {});
-    else return __ywstd_switch(::__std_smf_comp_ellint_2(static_cast<double>(k)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_comp_ellint_2f(k);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_comp_ellint_2(k);
+    else return _CSTD __std_smf_comp_ellint_2(static_cast<double>(k));
   } else return std::comp_ellint_2(static_cast<common>(k));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> comp_ellint_3(const T k, const U n) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> comp_ellint_3(const T k, const U n) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_comp_ellint_3f(k, n), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_comp_ellint_3(k, n), {});
-    else return __ywstd_switch(::__std_smf_comp_ellint_3(static_cast<double>(k), static_cast<double>(n)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_comp_ellint_3f(k, n);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_comp_ellint_3(k, n);
+    else return _CSTD __std_smf_comp_ellint_3(static_cast<double>(k), static_cast<double>(n));
   } else return std::comp_ellint_3(static_cast<common>(k), static_cast<common>(n));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // cyl_bessel_i, cyl_bessel_j, cyl_bessel_k, cyl_neumann
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_cyl_bessel_if(float, float) noexcept;
 extern "C" double __stdcall __std_smf_cyl_bessel_i(double, double) noexcept;
 extern "C" float __stdcall __std_smf_cyl_bessel_jf(float, float) noexcept;
@@ -1513,207 +1382,191 @@ extern "C" float __stdcall __std_smf_cyl_bessel_kf(float, float) noexcept;
 extern "C" double __stdcall __std_smf_cyl_bessel_k(double, double) noexcept;
 extern "C" float __stdcall __std_smf_cyl_neumannf(float, float) noexcept;
 extern "C" double __stdcall __std_smf_cyl_neumann(double, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> cyl_bessel_i(const T n, const U x) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> cyl_bessel_i(const T n, const U x) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_cyl_bessel_if(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_cyl_bessel_i(n, x), {});
-    else return __ywstd_switch(::__std_smf_cyl_bessel_i(static_cast<double>(n), static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_cyl_bessel_if(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_cyl_bessel_i(n, x);
+    else return _CSTD __std_smf_cyl_bessel_i(static_cast<double>(n), static_cast<double>(x));
   } else return std::cyl_bessel_i(static_cast<common>(n), static_cast<common>(x));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> cyl_bessel_j(const T n, const U x) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> cyl_bessel_j(const T n, const U x) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_cyl_bessel_jf(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_cyl_bessel_j(n, x), {});
-    else return __ywstd_switch(::__std_smf_cyl_bessel_j(static_cast<double>(n), static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_cyl_bessel_jf(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_cyl_bessel_j(n, x);
+    else return _CSTD __std_smf_cyl_bessel_j(static_cast<double>(n), static_cast<double>(x));
   } else return std::cyl_bessel_j(static_cast<common>(n), static_cast<common>(x));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> cyl_bessel_k(const T n, const U x) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> cyl_bessel_k(const T n, const U x) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_cyl_bessel_kf(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_cyl_bessel_k(n, x), {});
-    else return __ywstd_switch(::__std_smf_cyl_bessel_k(static_cast<double>(n), static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_cyl_bessel_kf(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_cyl_bessel_k(n, x);
+    else return _CSTD __std_smf_cyl_bessel_k(static_cast<double>(n), static_cast<double>(x));
   } else return std::cyl_bessel_k(static_cast<common>(n), static_cast<common>(x));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> cyl_neumann(const T n, const U x) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> cyl_neumann(const T n, const U x) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_cyl_neumannf(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_cyl_neumann(n, x), {});
-    else return __ywstd_switch(::__std_smf_cyl_neumann(static_cast<double>(n), static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_cyl_neumannf(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_cyl_neumann(n, x);
+    else return _CSTD __std_smf_cyl_neumann(static_cast<double>(n), static_cast<double>(x));
   } else return std::cyl_neumann(static_cast<common>(n), static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // ellint_1, ellint_2, ellint_3
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_ellint_1f(float, float) noexcept;
 extern "C" double __stdcall __std_smf_ellint_1(double, double) noexcept;
 extern "C" float __stdcall __std_smf_ellint_2f(float, float) noexcept;
 extern "C" double __stdcall __std_smf_ellint_2(double, double) noexcept;
 extern "C" float __stdcall __std_smf_ellint_3f(float, float, float) noexcept;
 extern "C" double __stdcall __std_smf_ellint_3(double, double, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> ellint_1(const T k, const U phi) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> ellint_1(const T k, const U phi) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_ellint_1f(k, phi), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_ellint_1(k, phi), {});
-    else return __ywstd_switch(::__std_smf_ellint_1(static_cast<double>(k), static_cast<double>(phi)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_ellint_1f(k, phi);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_ellint_1(k, phi);
+    else return _CSTD __std_smf_ellint_1(static_cast<double>(k), static_cast<double>(phi));
   } else return std::ellint_1(static_cast<common>(k), static_cast<common>(phi));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> ellint_2(const T k, const U phi) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> ellint_2(const T k, const U phi) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_ellint_2f(k, phi), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_ellint_2(k, phi), {});
-    else return __ywstd_switch(::__std_smf_ellint_2(static_cast<double>(k), static_cast<double>(phi)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_ellint_2f(k, phi);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_ellint_2(k, phi);
+    else return _CSTD __std_smf_ellint_2(static_cast<double>(k), static_cast<double>(phi));
   } else return std::ellint_2(static_cast<common>(k), static_cast<common>(phi));
 }
-template<_arithmetic T, _arithmetic U> [[nodiscard]] _common_math_t<T, U> ellint_3(const T k, const U n, const U phi) noexcept {
+template<_arithmetic T, _arithmetic U> _common_math_t<T, U> ellint_3(const T k, const U n, const U phi) noexcept {
   using common = _common_math_t<T, U>;
-  if constexpr (_same_as<common, T, U>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_ellint_3f(k, n, phi), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_ellint_3(k, n, phi), {});
-    else return __ywstd_switch(::__std_smf_ellint_3(static_cast<double>(k), static_cast<double>(n), static_cast<double>(phi)), {});
+  if constexpr (_all_the_same<common, T, U>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_ellint_3f(k, n, phi);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_ellint_3(k, n, phi);
+    else return _CSTD __std_smf_ellint_3(static_cast<double>(k), static_cast<double>(n), static_cast<double>(phi));
   } else return std::ellint_3(static_cast<common>(k), static_cast<common>(n), static_cast<common>(phi));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // expint
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_expintf(float) noexcept;
 extern "C" double __stdcall __std_smf_expint(double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> expint(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> expint(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_expintf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_expint(x), {});
-    else return __ywstd_switch(::__std_smf_expint(static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_expintf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_expint(x);
+    else return _CSTD __std_smf_expint(static_cast<double>(x));
   } else return std::expint(static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // hermite
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_hermitef(unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_hermite(unsigned, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> hermite(const unsigned n, const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> hermite(const unsigned n, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_hermitef(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_hermite(n, x), {});
-    else return __ywstd_switch(::__std_smf_hermite(n, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_hermitef(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_hermite(n, x);
+    else return _CSTD __std_smf_hermite(n, static_cast<double>(x));
   } else return std::hermite(n, static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // laguerre
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_laguerref(unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_laguerre(unsigned, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> laguerre(const unsigned n, const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> laguerre(const unsigned n, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_laguerref(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_laguerre(n, x), {});
-    else return __ywstd_switch(::__std_smf_laguerre(n, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_laguerref(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_laguerre(n, x);
+    else return _CSTD __std_smf_laguerre(n, static_cast<double>(x));
   } else return std::laguerre(n, static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // legendre
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_legendref(unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_legendre(unsigned, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> legendre(const unsigned n, const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> legendre(const unsigned n, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_legendref(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_legendre(n, x), {});
-    else return __ywstd_switch(::__std_smf_legendre(n, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_legendref(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_legendre(n, x);
+    else return _CSTD __std_smf_legendre(n, static_cast<double>(x));
   } else return std::legendre(n, static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // riemann_zeta
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_riemann_zetaf(float) noexcept;
 extern "C" double __stdcall __std_smf_riemann_zeta(double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> riemann_zeta(const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> riemann_zeta(const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_riemann_zetaf(x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_riemann_zeta(x), {});
-    else return __ywstd_switch(::__std_smf_riemann_zeta(static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_riemann_zetaf(x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_riemann_zeta(x);
+    else return _CSTD __std_smf_riemann_zeta(static_cast<double>(x));
   } else return std::riemann_zeta(static_cast<common>(x));
 }
 }
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 // sph_bessel, sph_legendre, sph_neumann
-#if __ywstd_is_exported
+__ywstd_cfunc_begin
 extern "C" float __stdcall __std_smf_sph_besself(unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_sph_bessel(unsigned, double) noexcept;
 extern "C" float __stdcall __std_smf_sph_legendref(unsigned, unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_sph_legendre(unsigned, unsigned, double) noexcept;
 extern "C" float __stdcall __std_smf_sph_neumannf(unsigned, float) noexcept;
 extern "C" double __stdcall __std_smf_sph_neumann(unsigned, double) noexcept;
-#endif
-#if !__ywstd_is_imported
+__ywstd_cfunc_end
 __ywstd_export namespace std {
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> sph_bessel(const unsigned n, const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> sph_bessel(const unsigned n, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_sph_besself(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_sph_bessel(n, x), {});
-    else return __ywstd_switch(::__std_smf_sph_bessel(n, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_sph_besself(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_sph_bessel(n, x);
+    else return _CSTD __std_smf_sph_bessel(n, static_cast<double>(x));
   } else return std::sph_bessel(n, static_cast<common>(x));
 }
 template<_arithmetic T> [[nodiscard]]
 _common_math_t<T> sph_legendre(const unsigned l, const unsigned m, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_sph_legendref(l, m, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_sph_legendre(l, m, x), {});
-    else return __ywstd_switch(::__std_smf_sph_legendre(l, m, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_sph_legendref(l, m, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_sph_legendre(l, m, x);
+    else return _CSTD __std_smf_sph_legendre(l, m, static_cast<double>(x));
   } else return std::sph_legendre(l, m, static_cast<common>(x));
 }
-template<_arithmetic T> [[nodiscard]] _common_math_t<T> sph_neumann(const unsigned n, const T x) noexcept {
+template<_arithmetic T> _common_math_t<T> sph_neumann(const unsigned n, const T x) noexcept {
   using common = _common_math_t<T>;
-  if constexpr (_same_as<common, T>) {
-    if constexpr (same_as<common, float>) return __ywstd_switch(::__std_smf_sph_neumannf(n, x), {});
-    else if constexpr (same_as<common, double>) return __ywstd_switch(::__std_smf_sph_neumann(n, x), {});
-    else return __ywstd_switch(::__std_smf_sph_neumann(n, static_cast<double>(x)), {});
+  if constexpr (_all_the_same<common, T>) {
+    if constexpr (is_same_v<common, float>) return _CSTD __std_smf_sph_neumannf(n, x);
+    else if constexpr (is_same_v<common, double>) return _CSTD __std_smf_sph_neumann(n, x);
+    else return _CSTD __std_smf_sph_neumann(n, static_cast<double>(x));
   } else return std::sph_neumann(n, static_cast<common>(x));
 }
 }
-#endif

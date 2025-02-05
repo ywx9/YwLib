@@ -2,12 +2,9 @@
 /// \copyright (c) 2025 ywx9.com
 
 #pragma once
-#include "abc.h"
 #include "xmmintrin.h"
 
-#if !__ywstd_is_imported
-
-__ywstd_export union __declspec(intrin_type) alignas(16) __m128i {
+export union __declspec(intrin_type) alignas(16) __m128i {
   __int8 m128i_i8[16];
   __int16 m128i_i16[8];
   __int32 m128i_i32[4];
@@ -18,13 +15,11 @@ __ywstd_export union __declspec(intrin_type) alignas(16) __m128i {
   unsigned __int64 m128i_u64[2];
 };
 
-__ywstd_export struct __declspec(intrin_type) alignas(16) __m128d {
+export struct __declspec(intrin_type) alignas(16) __m128d {
   double m128d_f64[2];
 };
 
-__ywstd_export extern "C" {
-
-#define _MM_SHUFFLE2(x, y) (((x) << 1) | (y))
+export extern "C" {
 
   __m128d _mm_add_sd(__m128d _A, __m128d _B);
   __m128d _mm_add_pd(__m128d _A, __m128d _B);
@@ -126,9 +121,9 @@ __ywstd_export extern "C" {
   void _mm_storeh_pd(double* _Dp, __m128d _A);
   void _mm_storel_pd(double* _Dp, __m128d _A);
 
-#define _mm_set_pd1(a) _mm_set1_pd(a)
-#define _mm_load_pd1(p) _mm_load1_pd(p)
-#define _mm_store_pd1(p, a) _mm_store1_pd((p), (a))
+  inline __m128 _mm_set_pd1(float a) { return _mm_set1_ps(a); }
+  inline __m128 _mm_load_pd1(const float* p) { return _mm_load1_ps(p); }
+  inline void _mm_store_pd1(float* p, const __m128& a) { _mm_store1_ps(p, a); }
 
   __m128i _mm_add_epi8(__m128i _A, __m128i _B);
   __m128i _mm_add_epi16(__m128i _A, __m128i _B);
@@ -221,8 +216,8 @@ __ywstd_export extern "C" {
   __m128i _mm_set_epi64x(__int64 _I1, __int64 _I0);
   __m128i _mm_set_epi32(int _I3, int _I2, int _I1, int _I0);
   __m128i _mm_set_epi16(short _W7, short _W6, short _W5, short _W4, short _W3, short _W2, short _W1, short _W0);
-  __m128i _mm_set_epi8(char _B15, char _B14, char _B13, char _B12, char _B11, char _B10, char _B9, char _B8,
-                              char _B7, char _B6, char _B5, char _B4, char _B3, char _B2, char _B1, char _B0);
+  __m128i _mm_set_epi8(char _B15, char _B14, char _B13, char _B12, char _B11, char _B10, char _B9, char _B8, char _B7,
+                       char _B6, char _B5, char _B4, char _B3, char _B2, char _B1, char _B0);
   __m128i _mm_set1_epi64x(__int64 i);
   __m128i _mm_set1_epi32(int _I);
   __m128i _mm_set1_epi16(short _W);
@@ -230,8 +225,8 @@ __ywstd_export extern "C" {
   __m128i _mm_setl_epi64(__m128i _Q);
   __m128i _mm_setr_epi32(int _I0, int _I1, int _I2, int _I3);
   __m128i _mm_setr_epi16(short _W0, short _W1, short _W2, short _W3, short _W4, short _W5, short _W6, short _W7);
-  __m128i _mm_setr_epi8(char _B15, char _B14, char _B13, char _B12, char _B11, char _B10, char _B9, char _B8,
-                               char _B7, char _B6, char _B5, char _B4, char _B3, char _B2, char _B1, char _B0);
+  __m128i _mm_setr_epi8(char _B15, char _B14, char _B13, char _B12, char _B11, char _B10, char _B9, char _B8, char _B7,
+                        char _B6, char _B5, char _B4, char _B3, char _B2, char _B1, char _B0);
   __m128i _mm_setzero_si128(void);
 
   void _mm_store_si128(__m128i * _P, __m128i _B);
@@ -258,16 +253,11 @@ __ywstd_export extern "C" {
   __m128 _mm_castsi128_ps(__m128i);
   __m128d _mm_castsi128_pd(__m128i);
 
-#if defined(_M_X64) || (defined(_M_ARM64) && defined(USE_SOFT_INTRINSICS))
   __int64 _mm_cvtsd_si64(__m128d);
   __int64 _mm_cvttsd_si64(__m128d);
   __m128d _mm_cvtsi64_sd(__m128d, __int64);
   __m128i _mm_cvtsi64_si128(__int64);
   __int64 _mm_cvtsi128_si64(__m128i);
-#define _mm_stream_si64 _mm_stream_si64x
-#endif
 
- void _mm_pause();
-
+  void _mm_pause();
 }
-#endif

@@ -7,6 +7,7 @@
   "editor.formatOnSave": false,
   "editor.formatOnPaste": false,
   "files.exclude": {
+    "_hack": true,
     "msvc/inc/**": true,
   },
   "files.associations": {

@@ -1,5 +1,10 @@
+/// \file crtdefs.h
+/// \copyright (c) 2025 ywx9.com
+
 #pragma once
+
 #include "corecrt.h"
+#include "vcruntime.h"
 
 #ifndef _CRTIMP2
 #if defined CRTDLL2 && defined _CRTBLD
