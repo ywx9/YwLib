@@ -1,24 +1,11 @@
 #pragma once
 #include "abc.h"
 #include "corecrt.h"
-#include "corecrt_wstdio.h"
+#include "corecrt_stdio_config.h"
 
 __ywstd_cfunc_begin
 
-#define BUFSIZ 512
-#define EOF (-1)
-#define _IOFBF 0x0000
-#define _IOLBF 0x0040
-#define _IONBF 0x0004
-#define L_tmpnam 260
-#define SEEK_CUR 1
-#define SEEK_END 2
-#define SEEK_SET 0
-#define FILENAME_MAX 260
-#define FOPEN_MAX 20
-#define TMP_MAX 2147483647
-
-  using size_t = unsigned long long;
+using size_t = unsigned long long;
 using fpos_t = long long;
 
 void __cdecl clearerr(FILE*);
@@ -51,6 +38,7 @@ void __cdecl setbuf(FILE*, char*);
 int __cdecl setvbuf(FILE*, char*, int, size_t);
 FILE* __cdecl tmpfile();
 char* tmpnam(char*);
+int __cdecl ungetc(int, FILE*);
 
 int __cdecl __stdio_common_vfprintf(unsigned __int64, FILE*, const char*, _locale_t, va_list);
 int __cdecl __stdio_common_vfprintf_s(unsigned __int64, FILE*, const char*, _locale_t, va_list);
@@ -615,8 +603,7 @@ inline int __cdecl _snscanf_s_l(const char* const buffer, size_t const count, co
   va_list args;
   __crt_va_start(args, locale);
   const auto options = _CRT_INTERNAL_LOCAL_SCANF_OPTIONS | _CRT_INTERNAL_SCANF_SECURECRT;
-  int result = _CSTD __stdio_common_vsscanf(_CRT_INTERNAL_LOCAL_SCANF_OPTIONS | _CRT_INTERNAL_SCANF_SECURECRT, buffer,
-                                            count, format, locale, args);
+  int result = _CSTD __stdio_common_vsscanf(options, buffer, count, format, locale, args);
   __crt_va_end(args);
   return result;
 }

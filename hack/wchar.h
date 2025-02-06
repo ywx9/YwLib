@@ -5,24 +5,55 @@
 
 __ywstd_cfunc_begin
 
-  using errno_t = int;
 using wint_t = unsigned short;
 
-struct FILE {
-  void* _Placeholder;
-};
-
-export FILE* __cdecl __acrt_iob_func(unsigned);
-
-wint_t __cdecl fgetwc(FILE*);
-wint_t __cdecl fputwc(wchar_t, FILE*);
+wchar_t* __cdecl wcscpy(wchar_t*, const wchar_t*);
+wchar_t* __cdecl wcsncpy(wchar_t*, const wchar_t*, size_t);
+wchar_t* __cdecl wcscat(wchar_t*, const wchar_t*);
+wchar_t* __cdecl wcsncat(wchar_t*, const wchar_t*, size_t);
+size_t __cdecl wcsxfrm(wchar_t*, const wchar_t*, size_t);
+size_t __cdecl wcslen(const wchar_t*);
+int __cdecl wcscmp(const wchar_t*, const wchar_t*);
+int __cdecl wcsncmp(const wchar_t*, const wchar_t*, size_t);
+int __cdecl wcscoll(const wchar_t*, const wchar_t*);
+const wchar_t* __cdecl wcschr(const wchar_t*, wchar_t);
+const wchar_t* __cdecl wcsrchr(const wchar_t*, wchar_t);
+size_t __cdecl wcsspn(const wchar_t*, const wchar_t*);
+size_t __cdecl wcscspn(const wchar_t*, const wchar_t*);
+const wchar_t* __cdecl wcspbrk(const wchar_t*, const wchar_t*);
+const wchar_t* __cdecl wcsstr(const wchar_t*, const wchar_t*);
+wchar_t* __cdecl wcstok(wchar_t*, const wchar_t*);
+const wchar_t* __cdecl wmemchr(const wchar_t*, wchar_t, size_t);
+int __cdecl wmemcmp(const wchar_t*, const wchar_t*, size_t);
+wchar_t* __cdecl wmemcpy(wchar_t*, const wchar_t*, size_t);
+wchar_t* __cdecl wmemmove(wchar_t*, const wchar_t*, size_t);
+wchar_t* __cdecl wmemset(wchar_t*, wchar_t, size_t);
+int __cdecl mbsinit(const mbstate_t*);
+wint_t __cdecl btowc(int);
+int __cdecl wctob(wint_t);
+size_t __cdecl mbrlen(const char*, size_t, mbstate_t*);
+size_t __cdecl mbrtowc(wchar_t*, const char*, size_t, mbstate_t*);
+size_t __cdecl wcrtomb(char*, wchar_t, mbstate_t*);
+size_t __cdecl mbsrtowcs(wchar_t*, const char**, size_t, mbstate_t*);
+size_t __cdecl wcsrtombs(char*, const wchar_t**, size_t, mbstate_t*);
 wint_t __cdecl getwc(FILE*);
-wint_t __cdecl getwchar();
+wint_t __cdecl fgetwc(FILE*);
 wchar_t* __cdecl fgetws(wchar_t*, int, FILE*);
+wint_t __cdecl putwc(wint_t, FILE*);
+wint_t __cdecl fputwc(wint_t, FILE*);
 int __cdecl fputws(const wchar_t*, FILE*);
-wint_t __cdecl putwc(wchar_t, FILE*);
-wint_t __cdecl putwchar(wchar_t);
+wint_t __cdecl getwchar();
+wint_t __cdecl putwchar(wint_t);
 wint_t __cdecl ungetwc(wint_t, FILE*);
+int __cdecl fwide(FILE*, int);
+long __cdecl wcstol(const wchar_t*, wchar_t**, int);
+long long __cdecl wcstoll(const wchar_t*, wchar_t**, int);
+unsigned long __cdecl wcstoul(const wchar_t*, wchar_t**, int);
+unsigned long long __cdecl wcstoull(const wchar_t*, wchar_t**, int);
+float __cdecl wcstof(const wchar_t*, wchar_t**);
+double __cdecl wcstod(const wchar_t*, wchar_t**);
+long double __cdecl wcstold(const wchar_t*, wchar_t**);
+size_t __cdecl wcsftime(wchar_t*, size_t, const wchar_t*, const tm*);
 
 int __cdecl __stdio_common_vfwprintf(unsigned __int64, FILE*, const wchar_t*, _locale_t, va_list);
 int __cdecl __stdio_common_vfwprintf_s(unsigned __int64, FILE*, const wchar_t*, _locale_t, va_list);

@@ -117,6 +117,7 @@
     "xtr1common": "cpp",
     "xutility": "cpp",
     "xmemory": "cpp",
-    "xlocinfo": "cpp"
+    "xlocinfo": "cpp",
+    "xiosbase": "cpp"
   }
 }

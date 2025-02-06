@@ -1,5 +1,33 @@
 #pragma once
+#include "abc.h"
 #include "vcruntime.h"
+
+__ywstd_cfunc_begin
+
+using __time64_t = long long;
+
+struct __crt_locale_pointers {
+  struct __crt_locale_data* locinfo;
+  struct __crt_multibyte_data* mbcinfo;
+};
+
+using _locale_t = __crt_locale_pointers*;
+
+struct FILE {
+  void* _Placeholder;
+};
+
+struct _Mbstatet {
+  unsigned long _Wchar;
+  unsigned short _Byte, _State;
+};
+using mbstate_t = _Mbstatet;
+
+struct tm {
+  int tm_sec, tm_min, tm_hour;
+  int tm_mday, tm_mon, tm_year;
+  int tm_wday, tm_yday, tm_isdst;
+};
 
 // #ifndef _CRT_USE_WINAPI_FAMILY_DESKTOP_APP
 // #ifdef WINAPI_FAMILY
@@ -64,17 +92,15 @@
 // #pragma warning(push)
 // #pragma warning(disable : _UCRT_DISABLED_WARNINGS)
 
-_CRT_BEGIN_C_HEADER
-
-// #ifndef _ACRTIMP
-// #if defined _CRTIMP && !defined _VCRT_DEFINED_CRTIMP
-// #define _ACRTIMP _CRTIMP
-// #elif !defined _CORECRT_BUILD && defined _DLL
-// #define _ACRTIMP __declspec(dllimport)
-// #else
-// #define _ACRTIMP
-// #endif
-// #endif
+#ifndef _ACRTIMP
+#if defined _CRTIMP && !defined _VCRT_DEFINED_CRTIMP
+#define _ACRTIMP _CRTIMP
+#elif !defined _CORECRT_BUILD && defined _DLL
+#define _ACRTIMP __declspec(dllimport)
+#else
+#define _ACRTIMP
+#endif
+#endif
 
 // #ifndef _ACRTIMP_ALT
 // #define _ACRTIMP_ALT _ACRTIMP
@@ -106,11 +132,11 @@ _CRT_BEGIN_C_HEADER
 // #define _CRT_JIT_INTRINSIC
 // #endif
 
-// #ifdef _GUARDOVERFLOW_CRT_ALLOCATORS
-// #define _CRT_GUARDOVERFLOW __declspec(guard(overflow))
-// #else
-// #define _CRT_GUARDOVERFLOW
-// #endif
+#ifdef _GUARDOVERFLOW_CRT_ALLOCATORS
+#define _CRT_GUARDOVERFLOW __declspec(guard(overflow))
+#else
+#define _CRT_GUARDOVERFLOW
+#endif
 
 // #ifndef _CRT_HYBRIDPATCHABLE
 // #define _CRT_HYBRIDPATCHABLE
@@ -229,21 +255,16 @@ _CRT_BEGIN_C_HEADER
 // #endif
 
 // _ACRTIMP_ALT void __cdecl _invalid_parameter_noinfo(void);
-// _ACRTIMP __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(void);
+[[noreturn]] void __cdecl _invalid_parameter_noinfo_noreturn();
 
 // __declspec(noreturn) _ACRTIMP void __cdecl _invoke_watson(_In_opt_z_ wchar_t const* _Expression,
 //                                                           _In_opt_z_ wchar_t const* _FunctionName,
 //                                                           _In_opt_z_ wchar_t const* _FileName,
 //                                                           _In_ unsigned int _LineNo, _In_ uintptr_t _Reserved);
 
-// #ifndef _CRT_SECURE_INVALID_PARAMETER
-// #ifdef _DEBUG
-// #define _CRT_SECURE_INVALID_PARAMETER(expr)                                     \
-//   ::_invalid_parameter(_CRT_WIDE(#expr), __FUNCTIONW__, __FILEW__, __LINE__, 0)
-// #else
-// #define _CRT_SECURE_INVALID_PARAMETER(expr) ::_invalid_parameter_noinfo_noreturn()
-// #endif
-// #endif
+#ifndef _CRT_SECURE_INVALID_PARAMETER
+#define _CRT_SECURE_INVALID_PARAMETER(expr) _CSTD _invalid_parameter_noinfo_noreturn()
+#endif
 
 // #define _CRT_WARNING_MESSAGE(NUMBER, MESSAGE) __FILE__ "(" _CRT_STRINGIZE(__LINE__) "): warning " NUMBER ": " MESSAGE
 
@@ -268,17 +289,9 @@ _CRT_BEGIN_C_HEADER
 // #endif
 // #endif
 
-// #ifndef _PGLOBAL
-// #ifdef _M_CEE
-// #ifdef __cplusplus_cli
-// #define _PGLOBAL __declspec(process)
-// #else
-// #define _PGLOBAL
-// #endif
-// #else
-// #define _PGLOBAL
-// #endif
-// #endif
+#ifndef _PGLOBAL
+#define _PGLOBAL
+#endif
 
 // #ifndef _AGLOBAL
 // #ifdef _M_CEE
@@ -422,27 +435,12 @@ _CRT_BEGIN_C_HEADER
 // typedef unsigned short wint_t;
 // typedef unsigned short wctype_t;
 // typedef long __time32_t;
-// typedef __int64 __time64_t;
 
 // typedef struct __crt_locale_data_public {
 //   unsigned short const* _locale_pctype;
 //   _Field_range_(1, 2) int _locale_mb_cur_max;
 //   unsigned int _locale_lc_codepage;
 // } __crt_locale_data_public;
-
-struct __crt_locale_pointers {
-  struct __crt_locale_data* locinfo;
-  struct __crt_multibyte_data* mbcinfo;
-};
-
-using _locale_t = __crt_locale_pointers*;
-
-// typedef struct _Mbstatet { // state of a multibyte translation
-//   unsigned long _Wchar;
-//   unsigned short _Byte, _State;
-// } _Mbstatet;
-
-// typedef _Mbstatet mbstate_t;
 
 // #if defined _USE_32BIT_TIME_T && defined _WIN64
 // #error You cannot use 32-bit time_t (_USE_32BIT_TIME_T) with _WIN64
@@ -1861,7 +1859,7 @@ using _locale_t = __crt_locale_pointers*;
 // #endif // !_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
 // #endif
 
-_CRT_END_C_HEADER
+__ywstd_cfunc_end
 
 // _UCRT_RESTORE_CLANG_WARNINGS
 // #pragma warning(pop) // _UCRT_DISABLED_WARNINGS

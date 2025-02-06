@@ -23,6 +23,7 @@ template<typename T, typename... Ts> concept _all_the_same = (is_same_v<T, Ts> &
 
 template<_arithmetic... Ts> using _common_math_t =
   decltype((conditional_t<is_integral_v<Ts>, double, Ts>{} + ...));
+template<typename T, typename U> using _Common_float_type_t = _common_math_t<float, T, U>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,9 @@
 #pragma once
 #include "abc.h"
 
-extern "C" {
+__ywstd_cfunc_begin
+
+export FILE* __cdecl __acrt_iob_func(unsigned);
 
 __declspec(noinline) inline unsigned long long* __cdecl __local_stdio_printf_options() {
   static unsigned long long _OptionsStorage;
@@ -12,10 +14,11 @@ __declspec(noinline) inline unsigned long long* __cdecl __local_stdio_scanf_opti
   static unsigned long long _OptionsStorage;
   return &_OptionsStorage;
 }
-}
 
-#define _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS (*__local_stdio_printf_options())
-#define _CRT_INTERNAL_LOCAL_SCANF_OPTIONS  (*__local_stdio_scanf_options ())
+__ywstd_cfunc_end
+
+#define _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS (*_CSTD __local_stdio_printf_options())
+#define _CRT_INTERNAL_LOCAL_SCANF_OPTIONS  (*_CSTD __local_stdio_scanf_options ())
 
 #define _CRT_INTERNAL_PRINTF_LEGACY_VSPRINTF_NULL_TERMINATION (1ULL << 0)
 #define _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR       (1ULL << 1)

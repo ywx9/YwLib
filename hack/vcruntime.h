@@ -78,13 +78,13 @@ _CRT_BEGIN_C_HEADER
 #define __CLR_OR_THIS_CALL
 #endif
 
-// #ifdef _M_CEE_PURE
-// #define __CLRCALL_PURE_OR_CDECL __clrcall
-// #else
-// #define __CLRCALL_PURE_OR_CDECL __cdecl
-// #endif
+#ifndef __CLRCALL_PURE_OR_CDECL
+#define __CLRCALL_PURE_OR_CDECL __cdecl
+#endif
 
-// #define __CRTDECL __CLRCALL_PURE_OR_CDECL
+#ifndef __CRTDECL
+#define __CRTDECL __cdecl
+#endif
 
 // #define _VCRT_NOALIAS __declspec(noalias)
 // #define _VCRT_RESTRICT __declspec(restrict)
@@ -225,16 +225,9 @@ using uintptr_t = unsigned long long;
 // #define _CRT_SECURE_NO_WARNINGS
 // #endif
 
-// #ifndef _CRT_INSECURE_DEPRECATE
-// #ifdef _CRT_SECURE_NO_WARNINGS
-// #define _CRT_INSECURE_DEPRECATE(_Replacement)
-// #else
-// #define _CRT_INSECURE_DEPRECATE(_Replacement)                                                  \
-//   _CRT_DEPRECATE_TEXT("This function or variable may be unsafe. Consider using " #_Replacement \
-//                       " instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. "        \
-//                       "See online help for details.")
-// #endif
-// #endif
+#ifndef _CRT_INSECURE_DEPRECATE
+#define _CRT_INSECURE_DEPRECATE(...)
+#endif
 
 // #if defined _CRT_SECURE_DEPRECATE_MEMORY && !defined _CRT_SECURE_WARNINGS_MEMORY
 // #define _CRT_SECURE_WARNINGS_MEMORY

@@ -561,22 +561,43 @@
 
 // <stdio.h>
 
+#define BUFSIZ 512
+#define EOF (-1)
 #define _IOFBF 0x0000
 #define _IOLBF 0x0040
 #define _IONBF 0x0004
-#define BUFSIZ 512
-#define FOPEN_MAX 20
-#define FILENAME_MAX 260
 #define L_tmpnam 260
 #define SEEK_CUR 1
 #define SEEK_END 2
 #define SEEK_SET 0
-#define TMP_MAX 0x7fff
+#define FILENAME_MAX 260
+#define FOPEN_MAX 20
+#define TMP_MAX 2147483647
 
 #define stdin  (_CSTD __acrt_iob_func(0))
 #define stdout (_CSTD __acrt_iob_func(1))
 #define stderr (_CSTD __acrt_iob_func(2))
 
+// <stdlib.h>
 
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 #define WEOF ((wint_t)(0xFFFF))
+
+// <xlocale>
+
+#define _UPPER   0x01
+#define _LOWER   0x02
+#define _DIGIT   0x04
+#define _SPACE   0x08
+#define _PUNCT   0x10
+#define _CONTROL 0x20
+#define _BLANK   0x40
+#define _HEX     0x80
+
+#define _SH_DENYRW 0x10
+#define _SH_DENYWR 0x20
+#define _SH_DENYRD 0x30
+#define _SH_DENYNO 0x40
+#define _SH_SECURE 0x80

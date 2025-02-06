@@ -17,6 +17,7 @@ if len(sys.argv) > 1:
   args = [MSVC_CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywstd_import", ]
   args+= ["/std:c++latest", "/EHsc", "/nologo", "/W4", "/O2", "/Qpar", "/utf-8", ]
   args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
+  print("compiling ", end="", flush=True)
   return_code = subprocess.run(args).returncode
   if os.path.exists(obj_file): os.remove(obj_file)
   if return_code == 0:
@@ -71,9 +72,6 @@ import ywstd;
 #include "msvc/inc/cstddef"
 #include "msvc/inc/cstdint"
 #include "msvc/inc/cstdio"
-
-#if 0
-
 #include "msvc/inc/cstdlib"
 #include "msvc/inc/cstring"
 #include "msvc/inc/ctime"
@@ -160,6 +158,7 @@ import ywstd;
 #include "msvc/inc/vector"
 #include "msvc/inc/version"
 
+#if 0
 #endif
 
 #pragma warning(pop)
