@@ -9,14 +9,19 @@ MY_INC   = fR"{HERE}\inc"
 IFC      = fR"{HERE}\ywstd.ifc"
 IXX      = fR"{HERE}\ywstd.ixx"
 OBJ      = fR"{HERE}\ywstd.obj"
+LIB_A = R"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\lib\x64"
+LIB_B = R"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64"
+LIB_C = R"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64"
+
 if len(sys.argv) > 1:
   cpp_file = sys.argv[1]
   if (os.path.splitext(cpp_file)[1] != ".cpp"): print("Usage: python ywstd [<cpp_file> [--run]]")
   exe_file = cpp_file.replace(".cpp", ".exe")
   obj_file = cpp_file.replace(".cpp", ".obj")
   args = [MSVC_CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywstd_import", ]
-  args+= ["/std:c++latest", "/EHsc", "/nologo", "/W4", "/O2", "/Qpar", "/utf-8", ]
-  args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
+  args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
+  #args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
+  args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{LIB_A}", f"/LIBPATH:{LIB_B}", f"/LIBPATH:{LIB_C}", ]
   print("compiling ", end="", flush=True)
   return_code = subprocess.run(args).returncode
   if os.path.exists(obj_file): os.remove(obj_file)
@@ -32,7 +37,7 @@ else:
   with open(IXX, "w") as f:
     f.write("export module ywstd;\n#include \"ywstd\"\n")
   args = [MSVC_CL, IXX, "/c", "/D__ywstd_export=export", ]
-  args+= ["/std:c++latest", "/EHsc", "/nologo", "/W4", "/O2", "/Qpar", "/utf-8", ]
+  args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
   args+= [f"/ifcOutput{IFC}", f"/Fo{OBJ}", f"/I{HACK}", f"/I{MSVC_INC}", ]
   print("compiling ", end="", flush=True)
   return_code = subprocess.run(args).returncode
@@ -47,6 +52,7 @@ else:
 
 #if __ywstd_is_imported
 import ywstd;
+#pragma comment(lib, "libcpmt.lib")
 #else
 #pragma warning(push)
 #pragma warning(disable: 5244)
@@ -66,7 +72,7 @@ import ywstd;
 #include "msvc/inc/climits"
 #include "msvc/inc/clocale"
 #include "cmath"
-#include "msvc/inc/csetjmp"
+#include "csetjmp"
 #include "msvc/inc/csignal"
 #include "msvc/inc/cstdarg"
 #include "msvc/inc/cstddef"

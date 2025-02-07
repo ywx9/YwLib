@@ -8,5 +8,4 @@ _NODISCARD __declspec(allocator) void* __cdecl operator new(size_t, int, const c
 _NODISCARD __declspec(allocator) void* __cdecl operator new[](size_t, int, const char*, int);
 void __cdecl operator delete(void*, int, const char*, int) noexcept;
 void __cdecl operator delete[](void*, int, const char*, int) noexcept;
-
 }

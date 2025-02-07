@@ -4,31 +4,6 @@
 
 __ywstd_cfunc_begin
 
-using __time64_t = long long;
-
-struct __crt_locale_pointers {
-  struct __crt_locale_data* locinfo;
-  struct __crt_multibyte_data* mbcinfo;
-};
-
-using _locale_t = __crt_locale_pointers*;
-
-struct FILE {
-  void* _Placeholder;
-};
-
-struct _Mbstatet {
-  unsigned long _Wchar;
-  unsigned short _Byte, _State;
-};
-using mbstate_t = _Mbstatet;
-
-struct tm {
-  int tm_sec, tm_min, tm_hour;
-  int tm_mday, tm_mon, tm_year;
-  int tm_wday, tm_yday, tm_isdst;
-};
-
 // #ifndef _CRT_USE_WINAPI_FAMILY_DESKTOP_APP
 // #ifdef WINAPI_FAMILY
 // #include <winapifamily.h>

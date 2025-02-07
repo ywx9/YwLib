@@ -4,6 +4,8 @@
 
 __ywstd_cfunc_begin // clang-format off
 
+__ywstd_export int __cdecl ___mb_cur_max_func();
+
 struct div_t { int quot, rem; };
 struct ldiv_t { long quot, rem; };
 struct lldiv_t { long long quot, rem; };
@@ -48,11 +50,9 @@ div_t __cdecl div(int, int);
 ldiv_t __cdecl ldiv(long, long);
 lldiv_t __cdecl lldiv(long long, long long);
 
-unsigned short __cdecl _byteswap_ushort(unsigned short);
-unsigned long __cdecl _byteswap_ulong(unsigned long);
-unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64);
+// clang-format on
 
-// clang-format off
+// int __cdecl _fseeki64_nolock(FILE*, __int64, int);
 
 void __cdecl _lock_file(FILE*);
 void __cdecl _unlock_file(FILE*);
@@ -63,7 +63,6 @@ int __cdecl _fflush_nolock(FILE*);
 // size_t __cdecl _fread_nolock(void*, size_t, size_t, FILE*);
 // size_t __cdecl _fread_nolock_s(void*, size_t, size_t, size_t, FILE*);
 // int __cdecl _fseek_nolock(FILE*, long, int);
-// int __cdecl _fseeki64_nolock(FILE*, __int64, int);
 // long __cdecl _ftell_nolock(FILE*);
 // __int64 __cdecl _ftelli64_nolock(FILE*);
 size_t __cdecl _fwrite_nolock(const void*, size_t, size_t, FILE*);
@@ -71,4 +70,16 @@ size_t __cdecl _fwrite_nolock(const void*, size_t, size_t, FILE*);
 // int __cdecl _putc_nolock(int, FILE*);
 // int __cdecl _ungetc_nolock(int, FILE*);
 
+// <__msvc_filebuf.hpp> requires
+
+int __cdecl _fseeki64(FILE*, __int64, int);
+
+errno_t __cdecl _get_stream_buffer_pointers(FILE*, char***, char***, int**);
+
 __ywstd_cfunc_end // clang-format on
+
+// <bit> requires
+
+extern "C" unsigned short __cdecl _byteswap_ushort(unsigned short);
+extern "C" unsigned long __cdecl _byteswap_ulong(unsigned long);
+extern "C" unsigned long long __cdecl _byteswap_uint64(unsigned long long);

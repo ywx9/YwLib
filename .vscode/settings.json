@@ -118,6 +118,7 @@
     "xutility": "cpp",
     "xmemory": "cpp",
     "xlocinfo": "cpp",
-    "xiosbase": "cpp"
+    "xiosbase": "cpp",
+    "bit": "cpp"
   }
 }

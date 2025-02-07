@@ -4,7 +4,7 @@
 
 __ywstd_cfunc_begin
 
-export FILE* __cdecl __acrt_iob_func(unsigned);
+__ywstd_export FILE* __cdecl __acrt_iob_func(unsigned);
 
 __declspec(noinline) inline unsigned long long* __cdecl __local_stdio_printf_options() {
   static unsigned long long _OptionsStorage;
