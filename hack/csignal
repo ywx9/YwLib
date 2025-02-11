@@ -1,0 +1,13 @@
+#pragma once
+#include "abc.h"
+__ywstd_cfunc_begin
+using signal_handler = void (__cdecl*)(int);
+signal_handler __cdecl signal(int, signal_handler);
+int __cdecl raise(int);
+__ywstd_cfunc_end
+__ywstd_export namespace std {
+using sig_atomic_t = int;
+using signal_handler = void (__cdecl*)(int);
+using _CSTD signal;
+using _CSTD raise;
+}

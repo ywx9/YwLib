@@ -57,33 +57,28 @@ import ywstd;
 #pragma warning(push)
 #pragma warning(disable: 5244)
 
-#include "msvc/inc/yvals_core.h"
-#if !__ywstd_is_exported
-#undef _CSTD
-#define _CSTD ::__ywstd_cfunc::
-#endif
-
-#include "msvc/inc/cassert"
-#include "msvc/inc/cctype"
-#include "msvc/inc/cerrno"
-#include "msvc/inc/cfenv"
-#include "msvc/inc/cfloat"
-#include "msvc/inc/cinttypes"
-#include "msvc/inc/climits"
-#include "msvc/inc/clocale"
-#include "cmath"
-#include "csetjmp"
-#include "msvc/inc/csignal"
-#include "msvc/inc/cstdarg"
-#include "msvc/inc/cstddef"
-#include "msvc/inc/cstdint"
-#include "msvc/inc/cstdio"
-#include "msvc/inc/cstdlib"
-#include "msvc/inc/cstring"
-#include "msvc/inc/ctime"
-#include "msvc/inc/cuchar"
-#include "msvc/inc/cwchar"
-#include "msvc/inc/cwctype"
+#include "hack/cassert"
+#include "hack/cctype"
+#include "hack/cerrno"
+#include "hack/cfenv"
+#include "hack/cfloat"
+#include "hack/cinttypes"
+#include "hack/climits"
+#include "hack/clocale"
+#include "hack/cmath"
+#include "hack/csetjmp"
+#include "hack/csignal"
+#include "hack/cstdarg"
+#include "hack/cstddef"
+#include "hack/cstdint"
+#include "hack/cstdio"
+#include "hack/cstdlib"
+#include "hack/cstring"
+#include "hack/ctime"
+#include "hack/cuchar"
+#include "hack/cwchar"
+#include "hack/cwctype"
+#if 0
 
 #include "msvc/inc/algorithm"
 #include "msvc/inc/any"
@@ -164,7 +159,6 @@ import ywstd;
 #include "msvc/inc/vector"
 #include "msvc/inc/version"
 
-#if 0
 #endif
 
 #pragma warning(pop)

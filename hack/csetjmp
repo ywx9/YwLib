@@ -1,0 +1,10 @@
+#pragma once
+#include "abc.h"
+__ywstd_cfunc_begin
+__ywstd_export int __cdecl setjmp(jmp_buf);
+[[noreturn]] void __cdecl longjmp(jmp_buf, int) noexcept(false);
+__ywstd_cfunc_end
+__ywstd_export namespace std {
+using ::jmp_buf;
+using _CSTD longjmp;
+}

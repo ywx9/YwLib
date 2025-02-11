@@ -119,6 +119,22 @@
     "xmemory": "cpp",
     "xlocinfo": "cpp",
     "xiosbase": "cpp",
-    "bit": "cpp"
+    "bit": "cpp",
+    "barrier": "cpp",
+    "codecvt": "cpp",
+    "expected": "cpp",
+    "hash_map": "cpp",
+    "hash_set": "cpp",
+    "strstream": "cpp",
+    "xfacet": "cpp",
+    "xhash": "cpp",
+    "xlocale": "cpp",
+    "xlocbuf": "cpp",
+    "xlocmes": "cpp",
+    "xlocmon": "cpp",
+    "xlocnum": "cpp",
+    "xloctime": "cpp",
+    "xstring": "cpp",
+    "xtree": "cpp"
   }
 }
