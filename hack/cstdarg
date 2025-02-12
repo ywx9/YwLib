@@ -1,1 +1,14 @@
 #pragma once
+#include "abc.h"
+__ywstd_cfunc_begin
+__ywstd_export void __cdecl __va_start(char**, ...);
+__ywstd_cfunc_end
+namespace ywstd::cstdarg {
+template<typename T> constexpr bool is_reference = false;
+template<typename T> constexpr bool is_reference<T&> = true;
+template<typename T> constexpr bool is_reference<T&&> = true;
+__ywstd_export template<typename T> struct va_check { static_assert(!is_reference<T>); };
+}
+namespace std {
+  __ywstd_export using ::va_list;
+}

@@ -8,6 +8,6 @@ __ywstd_cfunc_end
 __ywstd_export namespace std {
 using sig_atomic_t = int;
 using signal_handler = void (__cdecl*)(int);
-using _CSTD signal;
-using _CSTD raise;
+using __ywstd_cfunc signal;
+using __ywstd_cfunc raise;
 }

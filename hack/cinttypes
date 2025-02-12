@@ -10,3 +10,11 @@ uintmax_t __cdecl strtoumax(const char*, char**, int);
 intmax_t __cdecl wcstoimax(const wchar_t*, wchar_t**, int);
 uintmax_t __cdecl wcstoumax(const wchar_t*, wchar_t**, int);
 __ywstd_cfunc_end
+__ywstd_export namespace std {
+using __ywstd_cfunc imaxabs;
+using __ywstd_cfunc imaxdiv;
+using __ywstd_cfunc strtoimax;
+using __ywstd_cfunc strtoumax;
+using __ywstd_cfunc wcstoimax;
+using __ywstd_cfunc wcstoumax;
+}

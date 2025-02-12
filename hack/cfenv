@@ -39,17 +39,17 @@ inline int __cdecl feupdateenv(const fenv_t* env) {
 }
 __ywstd_cfunc_end
 __ywstd_export namespace std {
-using _CSTD fexcept_t;
-using _CSTD fenv_t;
-using _CSTD fegetround;
-using _CSTD fesetround;
-using _CSTD fegetenv;
-using _CSTD fesetenv;
-using _CSTD feclearexcept;
-using _CSTD feholdexcept;
-using _CSTD fetestexcept;
-using _CSTD fegetexceptflag;
-using _CSTD fesetexceptflag;
-using _CSTD feraiseexcept;
-using _CSTD feupdateenv;
+using __ywstd_cfunc fexcept_t;
+using __ywstd_cfunc fenv_t;
+using __ywstd_cfunc fegetround;
+using __ywstd_cfunc fesetround;
+using __ywstd_cfunc fegetenv;
+using __ywstd_cfunc fesetenv;
+using __ywstd_cfunc feclearexcept;
+using __ywstd_cfunc feholdexcept;
+using __ywstd_cfunc fetestexcept;
+using __ywstd_cfunc fegetexceptflag;
+using __ywstd_cfunc fesetexceptflag;
+using __ywstd_cfunc feraiseexcept;
+using __ywstd_cfunc feupdateenv;
 }

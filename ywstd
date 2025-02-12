@@ -41,11 +41,10 @@ else:
   args+= [f"/ifcOutput{IFC}", f"/Fo{OBJ}", f"/I{HACK}", f"/I{MSVC_INC}", ]
   print("compiling ", end="", flush=True)
   return_code = subprocess.run(args).returncode
-  if os.path.exists(IXX): os.remove(IXX)
-  if return_code == 0: sys.exit(0)
-  else:
+  if return_code != 0:
     print(f"failed to compile ywstd ({return_code})")
-    sys.exit(1)
+if os.path.exists(IXX): os.remove(IXX)
+sys.exit(0)
 # Python code end */
 
 #include "hack/abc.h"
@@ -78,8 +77,6 @@ import ywstd;
 #include "hack/cuchar"
 #include "hack/cwchar"
 #include "hack/cwctype"
-#if 0
-
 #include "msvc/inc/algorithm"
 #include "msvc/inc/any"
 #include "msvc/inc/array"
@@ -158,8 +155,6 @@ import ywstd;
 #include "msvc/inc/variant"
 #include "msvc/inc/vector"
 #include "msvc/inc/version"
-
-#endif
 
 #pragma warning(pop)
 #endif

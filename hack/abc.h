@@ -1,50 +1,49 @@
-/// \file abc.h
-#pragma once // clang-format off
+#pragma once
+// clang-format off
 
 #ifndef __ywstd_is_exported
 #ifndef __ywstd_export
 #define __ywstd_export
-#define __ywstd_is_exported false
+#define __ywstd_is_exported (false)
 #else
-#define __ywstd_is_exported true
+#define __ywstd_is_exported (true)
 #define _BUILD_STD_MODULE
 #endif
 #endif
 
 #ifndef __ywstd_is_imported
 #ifndef __ywstd_import
-#define __ywstd_is_imported 0
+#define __ywstd_is_imported (false)
 #else
-#define __ywstd_is_imported 1
+#define __ywstd_is_imported (true)
 #endif
 #endif
 
 #if __ywstd_is_exported or __ywstd_is_imported
-#define _CSTD ::
+#define __ywstd_cfunc ::
 #define __ywstd_cfunc_begin extern "C" {
 #define __ywstd_cfunc_end }
 #else
-#define _CSTD ::__ywstd_cfunc::
-#define __ywstd_cfunc_begin extern "C" { namespace __ywstd_cfunc {
+#define __ywstd_cfunc ::ywstd::
+#define __ywstd_cfunc_begin extern "C" { namespace ywstd {
 #define __ywstd_cfunc_end } }
 #endif
 
-#ifndef __ywstd_nodiscard
-#define __ywstd_nodiscard [[nodiscard]]
-#endif
+#define __ywstd_wide_(x) L##x
+#define __ywstd_wide(x) __ywstd_wide_(x)
 
 #pragma region [cassert] -------------------------------------------------------
 #ifndef assert
 #ifdef NDEBUG
 #define assert(e) (void(0))
 #else
-#define assert(e) (void(!(e) && (_CSTD _wassert(L#e, __ywstd_wide(__FILE__), unsigned(__LINE__)), 0)))
+#define assert(e) (void(!(e) && (__ywstd_cfunc _wassert(L#e, __ywstd_wide(__FILE__), unsigned(__LINE__)), 0)))
 #endif
 #endif
 #pragma endregion // ------------------------------------------------- [cassert]
 #pragma region [cerrno] --------------------------------------------------------
 #ifndef errno
-#define errno (*_CSTD _errno())
+#define errno (*__ywstd_cfunc _errno())
 #endif
 
 #define EPERM 1
@@ -147,10 +146,10 @@
 #define FE_DIVBYZERO 0x08
 #define FE_INVALID 0x10
 #define FE_ALL_EXCEPT 0x1f
-#define FE_DFL_ENV (&_CSTD _Fenv1)
+#define FE_DFL_ENV (&__ywstd_cfunc _Fenv1)
 #pragma endregion // --------------------------------------------------- [cfenv]
 #pragma region [cfloat] --------------------------------------------------------
-#define FLT_ROUNDS (_CSTD __fpe_flt_rounds())
+#define FLT_ROUNDS (__ywstd_cfunc __fpe_flt_rounds())
 #define FLT_RADIX 2
 #define DECIMAL_DIG 17
 #ifdef _M_FP_FAST
@@ -408,7 +407,7 @@
 extern "C" struct alignas(16) SETJMP_FLOAT128 { unsigned long long Part[2]; };
 using jmp_buf = SETJMP_FLOAT128[16];
 #pragma endregion // ------------------------------------------------- [csetjmp]
-#pragma region [signal.h] ------------------------------------------------------
+#pragma region [csignal] -------------------------------------------------------
 #define SIG_DFL (reinterpret_cast<void (__cdecl*)(int)>(0))
 #define SIG_IGN (reinterpret_cast<void (__cdecl*)(int)>(1))
 #define SIG_GET (reinterpret_cast<void (__cdecl*)(int)>(2))
@@ -424,3 +423,186 @@ using jmp_buf = SETJMP_FLOAT128[16];
 #define SIGBREAK 21
 #define SIGABRT 22
 #pragma endregion // ------------------------------------------------- [csignal]
+#pragma region [cstdarg] -------------------------------------------------------
+using va_list = char*;
+#define __crt_va_start(ap, x) ((void)(::ywstd::cstdarg::va_check<decltype(x)>(), __ywstd_cfunc __va_start(&ap, x)))
+#define __crt_va_end(ap) (void(ap = nullptr))
+#define __crt_va_arg(ap, t) ((sizeof(t) > 8 || (sizeof(t) & (sizeof(t) - 1)) != 0) ? **(t**)((ap += 8) - 8) : *(t*)((ap += 8) - 8))
+#pragma endregion // ------------------------------------------------- [cstdarg]
+#pragma region [cstddef] -------------------------------------------------------
+#ifndef NULL
+#define NULL 0
+#endif
+#define offsetof(s,m) ((size_t)&reinterpret_cast<char const volatile&>((((s*)0)->m)))
+#pragma endregion //------------------------------------------------- [stddef.h]
+#pragma region[stdint.h] -------------------------------------------------------
+#define INT8_MIN (-127i8 - 1)
+#define INT16_MIN (-32767i16 - 1)
+#define INT32_MIN (-2147483647i32 - 1)
+#define INT64_MIN (-9223372036854775807i64 - 1)
+#define INT8_MAX 127i8
+#define INT16_MAX 32767i16
+#define INT32_MAX 2147483647i32
+#define INT64_MAX 9223372036854775807i64
+#define UINT8_MAX 0xffui8
+#define UINT16_MAX 0xffffui16
+#define UINT32_MAX 0xffffffffui32
+#define UINT64_MAX 0xffffffffffffffffui64
+#define INT_LEAST8_MIN INT8_MIN
+#define INT_LEAST16_MIN INT16_MIN
+#define INT_LEAST32_MIN INT32_MIN
+#define INT_LEAST64_MIN INT64_MIN
+#define INT_LEAST8_MAX INT8_MAX
+#define INT_LEAST16_MAX INT16_MAX
+#define INT_LEAST32_MAX INT32_MAX
+#define INT_LEAST64_MAX INT64_MAX
+#define UINT_LEAST8_MAX UINT8_MAX
+#define UINT_LEAST16_MAX UINT16_MAX
+#define UINT_LEAST32_MAX UINT32_MAX
+#define UINT_LEAST64_MAX UINT64_MAX
+#define INT_FAST8_MIN INT8_MIN
+#define INT_FAST16_MIN INT32_MIN
+#define INT_FAST32_MIN INT32_MIN
+#define INT_FAST64_MIN INT64_MIN
+#define INT_FAST8_MAX INT8_MAX
+#define INT_FAST16_MAX INT32_MAX
+#define INT_FAST32_MAX INT32_MAX
+#define INT_FAST64_MAX INT64_MAX
+#define UINT_FAST8_MAX UINT8_MAX
+#define UINT_FAST16_MAX UINT32_MAX
+#define UINT_FAST32_MAX UINT32_MAX
+#define UINT_FAST64_MAX UINT64_MAX
+#define INTPTR_MIN INT64_MIN
+#define INTPTR_MAX INT64_MAX
+#define UINTPTR_MAX UINT64_MAX
+#define INTMAX_MIN INT64_MIN
+#define INTMAX_MAX INT64_MAX
+#define UINTMAX_MAX UINT64_MAX
+#define PTRDIFF_MIN INTPTR_MIN
+#define PTRDIFF_MAX INTPTR_MAX
+#ifndef SIZE_MAX
+#define SIZE_MAX 0xffffffffffffffffui64
+#endif
+#define SIG_ATOMIC_MIN INT32_MIN
+#define SIG_ATOMIC_MAX INT32_MAX
+#define WCHAR_MIN 0x0000
+#define WCHAR_MAX 0xffff
+#define WINT_MIN 0x0000
+#define WINT_MAX 0xffff
+#define INT8_C(x) (x)
+#define INT16_C(x) (x)
+#define INT32_C(x) (x)
+#define INT64_C(x) (x##LL)
+#define UINT8_C(x) (x)
+#define UINT16_C(x) (x)
+#define UINT32_C(x) (x##U)
+#define UINT64_C(x) (x##ULL)
+#define INTMAX_C(x) INT64_C(x)
+#define UINTMAX_C(x) UINT64_C(x)
+#pragma endregion //------------------------------------------------- [stdint.h]
+#pragma region [cstdio] --------------------------------------------------------
+#define BUFSIZ 512
+#define EOF (-1)
+#define _IOFBF 0x0000
+#define _IOLBF 0x0040
+#define _IONBF 0x0004
+#define L_tmpnam 260
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define SEEK_SET 0
+#define FILENAME_MAX 260
+#define FOPEN_MAX 20
+#define TMP_MAX 2147483647
+#define stdin  (__ywstd_cfunc __acrt_iob_func(0))
+#define stdout (__ywstd_cfunc __acrt_iob_func(1))
+#define stderr (__ywstd_cfunc __acrt_iob_func(2))
+typedef struct _iobuf { void* _Placeholder; } FILE;
+__ywstd_cfunc_begin
+__ywstd_export struct __crt_locale_pointers {
+  struct __crt_locale_data*    locinfo;
+  struct __crt_multibyte_data* mbcinfo;
+};
+__ywstd_export using _locale_t = __crt_locale_pointers*;
+#if not __ywstd_is_imported
+__ywstd_export FILE* __cdecl __acrt_iob_func(unsigned);
+__declspec(noinline) inline unsigned long long* __cdecl __local_stdio_printf_options() {
+  static unsigned long long _OptionsStorage;
+  return &_OptionsStorage;
+}
+__declspec(noinline) inline unsigned long long* __cdecl __local_stdio_scanf_options() {
+  static unsigned long long _OptionsStorage;
+  return &_OptionsStorage;
+}
+#endif
+__ywstd_cfunc_end
+#define _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS (*__ywstd_cfunc __local_stdio_printf_options())
+#define _CRT_INTERNAL_LOCAL_SCANF_OPTIONS  (*__ywstd_cfunc __local_stdio_scanf_options ())
+#define _CRT_INTERNAL_PRINTF_LEGACY_VSPRINTF_NULL_TERMINATION (1ULL << 0)
+#define _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR       (1ULL << 1)
+#define _CRT_INTERNAL_SCANF_SECURECRT                         (1ULL << 0)
+#pragma endregion // -------------------------------------------------- [cstdio]
+#pragma region [cstdib] --------------------------------------------------------
+#ifndef NULL
+#define NULL 0
+#endif
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+#define RAND_MAX 0x7FFF
+#define MB_CUR_MAX (__ywstd_cfunc __mb_cur_max_func())
+#pragma endregion // -------------------------------------------------- [cstdib]
+#pragma region [cstring] -------------------------------------------------------
+#ifndef NULL
+#define NULL 0
+#endif
+#pragma endregion // ------------------------------------------------- [cstring]
+#pragma region [ctime] ---------------------------------------------------------
+#ifndef NULL
+#define NULL 0
+#endif
+#define CLOCKS_PER_SEC ((std::clock_t)1000)
+#define TIME_UTC 1
+struct tm {
+  int tm_sec, tm_min, tm_hour;
+  int tm_mday, tm_mon, tm_year;
+  int tm_wday, tm_yday, tm_isdst;
+};
+#pragma endregion // --------------------------------------------------- [ctime]
+#pragma region [cuchar] --------------------------------------------------------
+#define __STDC_UTF_16__ 1
+#define __STDC_UTF_32__ 1
+typedef struct _Mbstatet {
+  unsigned long _Wchar;
+  unsigned short _Byte, _State;
+} _Mbstatet;
+using mbstate_t = _Mbstatet;
+#pragma endregion // -------------------------------------------------- [cuchar]
+#pragma region [cwchar] --------------------------------------------------------
+#define WEOF (std::wint_t)(0xFFFF)
+// NULL, WCHR_MIN and WCHR_MAX are already defined.
+#pragma endregion // -------------------------------------------------- [cwchar]
+#pragma region [cwctype] -------------------------------------------------------
+// WEOF is already defined.
+#pragma endregion // ------------------------------------------------- [cwctype]
+#pragma region[xlocale] --------------------------------------------------------
+#define _UPPER   0x01
+#define _LOWER   0x02
+#define _DIGIT   0x04
+#define _SPACE   0x08
+#define _PUNCT   0x10
+#define _CONTROL 0x20
+#define _BLANK   0x40
+#define _HEX     0x80
+#define _SH_DENYRW 0x10
+#define _SH_DENYWR 0x20
+#define _SH_DENYRD 0x30
+#define _SH_DENYNO 0x40
+#define _SH_SECURE 0x80
+#pragma endregion //-------------------------------------------------- [xlocale]
+#pragma region [emmintrin] -----------------------------------------------------
+#define _MM_SHUFFLE2(x,y) (((x)<<1) | (y))
+#define _mm_set_pd1(a)      ::_mm_set1_pd(a)
+#define _mm_load_pd1(p)     ::_mm_load1_pd(p)
+#define _mm_store_pd1(p, a) ::_mm_store1_pd((p), (a))
+#define _mm_bslli_si128     ::_mm_slli_si128
+#define _mm_bsrli_si128     ::_mm_srli_si128
+#pragma endregion //------------------------------------------------ [emmintrin]

@@ -1,0 +1,117 @@
+#pragma once
+#include "abc.h"
+__ywstd_cfunc_begin
+__ywstd_export int __cdecl ___mb_cur_max_func();
+struct div_t { int quot, rem; };
+struct ldiv_t { long quot, rem; };
+struct lldiv_t { long long quot, rem; };
+using atexit_handler = void (__cdecl*)();
+int __cdecl atexit(atexit_handler);
+int __cdecl at_quick_exit(atexit_handler);
+[[noreturn]] void __cdecl abort();
+[[noreturn]] void __cdecl exit(int);
+[[noreturn]] void __cdecl _Exit(int);
+[[noreturn]] void __cdecl quick_exit(int);
+char* __cdecl getenv(const char*);
+int __cdecl system(const char*);
+void __cdecl free(void*);
+__declspec(allocator) void* __cdecl malloc(size_t);
+__declspec(allocator) void* __cdecl calloc(size_t, size_t);
+__declspec(allocator) void* __cdecl realloc(void*, size_t);
+using compare_pred = int (__cdecl*)(const void*, const void*);
+void __cdecl qsort(void*, size_t, size_t, compare_pred);
+void* __cdecl bsearch(const void*, const void*, size_t, size_t, compare_pred);
+int __cdecl mblen(const char*, size_t);
+int __cdecl mbtowc(wchar_t*, const char*, size_t);
+int __cdecl wctomb(char*, wchar_t);
+size_t __cdecl mbstowcs(wchar_t*, const char*, size_t);
+size_t __cdecl wcstombs(char*, const wchar_t*, size_t);
+int __cdecl atoi(const char*);
+long __cdecl atol(const char*);
+long long __cdecl atoll(const char*);
+double __cdecl atof(const char*);
+long __cdecl strtol(const char*, char**, int);
+long long __cdecl strtoll(const char*, char**, int);
+unsigned long __cdecl strtoul(const char*, char**, int);
+unsigned long long __cdecl strtoull(const char*, char**, int);
+float __cdecl strtof(const char*, char**);
+double __cdecl strtod(const char*, char**);
+long double __cdecl strtold(const char*, char**);
+int __cdecl rand();
+void __cdecl srand(unsigned);
+int __cdecl abs(int);
+long __cdecl labs(long);
+long long __cdecl llabs(long long);
+div_t __cdecl div(int, int);
+ldiv_t __cdecl ldiv(long, long);
+lldiv_t __cdecl lldiv(long long, long long);
+__ywstd_cfunc_end
+__ywstd_export namespace std {
+using __ywstd_cfunc div_t;
+using __ywstd_cfunc ldiv_t;
+using __ywstd_cfunc lldiv_t;
+using __ywstd_cfunc atexit_handler;
+using __ywstd_cfunc atexit;
+using __ywstd_cfunc at_quick_exit;
+using __ywstd_cfunc abort;
+using __ywstd_cfunc exit;
+using __ywstd_cfunc _Exit;
+using __ywstd_cfunc quick_exit;
+using __ywstd_cfunc getenv;
+using __ywstd_cfunc system;
+using __ywstd_cfunc free;
+using __ywstd_cfunc malloc;
+using __ywstd_cfunc calloc;
+using __ywstd_cfunc realloc;
+using __ywstd_cfunc compare_pred;
+using __ywstd_cfunc qsort;
+using __ywstd_cfunc bsearch;
+using __ywstd_cfunc mblen;
+using __ywstd_cfunc mbtowc;
+using __ywstd_cfunc wctomb;
+using __ywstd_cfunc mbstowcs;
+using __ywstd_cfunc wcstombs;
+using __ywstd_cfunc atoi;
+using __ywstd_cfunc atol;
+using __ywstd_cfunc atoll;
+using __ywstd_cfunc atof;
+using __ywstd_cfunc strtol;
+using __ywstd_cfunc strtoll;
+using __ywstd_cfunc strtoul;
+using __ywstd_cfunc strtoull;
+using __ywstd_cfunc strtof;
+using __ywstd_cfunc strtod;
+using __ywstd_cfunc strtold;
+using __ywstd_cfunc rand;
+using __ywstd_cfunc srand;
+
+constexpr int abs(int x) noexcept {
+  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc abs(x);
+  else return x < 0 ? -x : x;
+}
+constexpr long abs(long x) noexcept {
+  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc labs(x);
+  else return x < 0 ? -x : x;
+}
+constexpr long long abs(long long x) noexcept {
+  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc llabs(x);
+  else return x < 0 ? -x : x;
+}
+constexpr long labs(long x) noexcept { return abs(x); }
+constexpr long long llabs(long long x) noexcept { return abs(x); }
+
+constexpr div_t div(int num, int den) noexcept {
+  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc div(num, den);
+  else return {num / den, num % den};
+}
+constexpr ldiv_t div(long num, long den) noexcept {
+  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc ldiv(num, den);
+  else return {num / den, num % den};
+}
+constexpr lldiv_t div(long long num, long long den) noexcept {
+  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc lldiv(num, den);
+  else return {num / den, num % den};
+}
+constexpr ldiv_t ldiv(long num, long den) noexcept { return div(num, den); }
+constexpr lldiv_t lldiv(long long num, long long den) noexcept { return div(num, den); }
+}

@@ -1,0 +1,62 @@
+#pragma once
+#include "abc.h"
+__ywstd_export extern "C" {
+using int8_t = signed char;
+using int16_t = short;
+using int32_t = int;
+using int64_t = long long;
+using uint8_t = unsigned char;
+using uint16_t = unsigned short;
+using uint32_t = unsigned int;
+using uint64_t = unsigned long long;
+using int_least8_t = signed char;
+using int_least16_t = short;
+using int_least32_t = int;
+using int_least64_t = long long;
+using uint_least8_t = unsigned char;
+using uint_least16_t = unsigned short;
+using uint_least32_t = unsigned int;
+using uint_least64_t = unsigned long long;
+using int_fast8_t = signed char;
+using int_fast16_t = int;
+using int_fast32_t = int;
+using int_fast64_t = long long;
+using uint_fast8_t = unsigned char;
+using uint_fast16_t = unsigned int;
+using uint_fast32_t = unsigned int;
+using uint_fast64_t = unsigned long long;
+using intmax_t = long long;
+using uintmax_t = unsigned long long;
+using intptr_t = long long;
+using uintptr_t = unsigned long long;
+}
+__ywstd_export namespace std {
+using ::int8_t;
+using ::int16_t;
+using ::int32_t;
+using ::int64_t;
+using ::uint8_t;
+using ::uint16_t;
+using ::uint32_t;
+using ::uint64_t;
+using ::int_least8_t;
+using ::int_least16_t;
+using ::int_least32_t;
+using ::int_least64_t;
+using ::uint_least8_t;
+using ::uint_least16_t;
+using ::uint_least32_t;
+using ::uint_least64_t;
+using ::int_fast8_t;
+using ::int_fast16_t;
+using ::int_fast32_t;
+using ::int_fast64_t;
+using ::uint_fast8_t;
+using ::uint_fast16_t;
+using ::uint_fast32_t;
+using ::uint_fast64_t;
+using ::intmax_t;
+using ::uintmax_t;
+using ::intptr_t;
+using ::uintptr_t;
+}

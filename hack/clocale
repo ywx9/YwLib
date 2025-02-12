@@ -12,3 +12,8 @@ struct lconv {
 char* __cdecl setlocale(int, const char*);
 lconv* __cdecl localeconv();
 __ywstd_cfunc_end
+__ywstd_export namespace std {
+using __ywstd_cfunc lconv;
+using __ywstd_cfunc setlocale;
+using __ywstd_cfunc localeconv;
+}

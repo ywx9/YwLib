@@ -16,3 +16,19 @@ int __cdecl ispunct(int);
 int __cdecl tolower(int);
 int __cdecl toupper(int);
 __ywstd_cfunc_end
+__ywstd_export namespace std {
+using __ywstd_cfunc isalnum;
+using __ywstd_cfunc isalpha;
+using __ywstd_cfunc islower;
+using __ywstd_cfunc isupper;
+using __ywstd_cfunc isdigit;
+using __ywstd_cfunc isxdigit;
+using __ywstd_cfunc iscntrl;
+using __ywstd_cfunc isgraph;
+using __ywstd_cfunc isspace;
+using __ywstd_cfunc isblank;
+using __ywstd_cfunc isprint;
+using __ywstd_cfunc ispunct;
+using __ywstd_cfunc tolower;
+using __ywstd_cfunc toupper;
+}

@@ -1,0 +1,66 @@
+#pragma once
+#include "abc.h"
+__ywstd_cfunc_begin
+void* __cdecl memcpy(void*, const void*, size_t);
+void* __cdecl memmove(void*, const void*, size_t);
+char* __cdecl strcpy(char*, const char*);
+char* __cdecl strncpy(char*, const char*, size_t);
+char* __cdecl strcat(char*, const char*);
+char* __cdecl strncat(char*, const char*, size_t);
+int __cdecl memcmp(const void*, const void*, size_t);
+int __cdecl strcmp(const char*, const char*);
+int __cdecl strcoll(const char*, const char*);
+int __cdecl strncmp(const char*, const char*, size_t);
+size_t __cdecl strxfrm(char*, const char*, size_t);
+const void* __cdecl memchr(const void*, int, size_t);
+const char* __cdecl strchr(const char*, int);
+size_t __cdecl strcspn(const char*, const char*);
+const char* __cdecl strpbrk(const char*, const char*);
+const char* __cdecl strrchr(const char*, int);
+size_t __cdecl strspn(const char*, const char*);
+const char* __cdecl strstr(const char*, const char*);
+char* __cdecl strtok(char*, const char*);
+void* __cdecl memset(void*, int, size_t);
+char* __cdecl strerror(int);
+size_t __cdecl strlen(const char*);
+__ywstd_cfunc_end
+__ywstd_export namespace std {
+using __ywstd_cfunc memcpy;
+using __ywstd_cfunc memmove;
+using __ywstd_cfunc strcpy;
+using __ywstd_cfunc strncpy;
+using __ywstd_cfunc strcat;
+using __ywstd_cfunc strncat;
+using __ywstd_cfunc memcmp;
+using __ywstd_cfunc strcmp;
+using __ywstd_cfunc strcoll;
+using __ywstd_cfunc strncmp;
+using __ywstd_cfunc strxfrm;
+using __ywstd_cfunc memchr;
+using __ywstd_cfunc strchr;
+using __ywstd_cfunc strcspn;
+using __ywstd_cfunc strpbrk;
+using __ywstd_cfunc strrchr;
+using __ywstd_cfunc strspn;
+using __ywstd_cfunc strstr;
+using __ywstd_cfunc strtok;
+using __ywstd_cfunc memset;
+using __ywstd_cfunc strerror;
+using __ywstd_cfunc strlen;
+
+inline void* memchr(void* s, int c, size_t n) noexcept {
+  return const_cast<void*>(memchr(const_cast<const void*>(s), c, n));
+}
+inline char* strchr(char* s, int c) noexcept {
+  return const_cast<char*>(strchr(const_cast<const char*>(s), c));
+}
+inline char* strpbrk(char* s, const char* accept) noexcept {
+  return const_cast<char*>(strpbrk(const_cast<const char*>(s), accept));
+}
+inline char* strrchr(char* s, int c) noexcept {
+  return const_cast<char*>(strrchr(const_cast<const char*>(s), c));
+}
+inline char* strstr(char* s, const char* substr) noexcept {
+  return const_cast<char*>(strstr(const_cast<const char*>(s), substr));
+}
+}

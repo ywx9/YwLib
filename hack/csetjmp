@@ -6,5 +6,6 @@ __ywstd_export int __cdecl setjmp(jmp_buf);
 __ywstd_cfunc_end
 __ywstd_export namespace std {
 using ::jmp_buf;
-using _CSTD longjmp;
+using __ywstd_cfunc longjmp;
+using __ywstd_cfunc setjmp;
 }
