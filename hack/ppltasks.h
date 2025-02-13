@@ -1585,8 +1585,7 @@ public:
   }
 
 private:
-  template<typename _Ty> friend class task;
-
+  template<typename T> friend class task;
   template<typename _InternalReturnType, typename _Function, typename _TypeSelection> struct _InitialTaskHandle :
     details::_PPLTaskHandle<_ReturnType, _InitialTaskHandle<_InternalReturnType, _Function, _TypeSelection>,
                             details::_UnrealizedChore_t> {

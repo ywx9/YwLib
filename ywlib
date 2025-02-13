@@ -1,0 +1,552 @@
+#pragma once
+#include "ywstd"
+#define uint uint8
+#define wchar wchar_t
+namespace yw {
+
+using int1 = signed char;
+using int2 = short;
+using int4 = int;
+using int8 = long long;
+using uint1 = unsigned char;
+using uint2 = unsigned short;
+using uint4 = unsigned int;
+using uint8 = unsigned long long;
+
+template<typename T> using string = std::basic_string<T>;
+template<typename T> using string_view = std::basic_string_view<T>;
+using path = std::filesystem::path;
+
+inline constexpr uint npos = static_cast<uint>(-1);
+inline constexpr auto unordered = std::partial_ordering::unordered;
+template<typename T> constexpr auto declval = []() noexcept -> T {};
+template<typename T> constexpr bool always_false = false;
+template<bool... Bs> constexpr bool counts = (Bs + ...);
+template<bool... Bs> constexpr bool inspects = 0;
+template<bool B, bool... Bs> constexpr bool inspects<B, Bs...> = B ? 0 : 1 + inspects<Bs...>;
+
+struct none {
+  constexpr none() noexcept = default;
+  constexpr none(auto&&...) noexcept {}
+  constexpr none& operator=(auto&&) noexcept { return *this; }
+  constexpr operator bool() const noexcept { return false; }
+  friend constexpr bool operator==(none, none) noexcept { return false; }
+  friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
+  friend constexpr none operator+(none) noexcept { return {}; }
+  friend constexpr none operator-(none) noexcept { return {}; }
+  friend constexpr none operator+(none, none) noexcept { return {}; }
+  friend constexpr none operator-(none, none) noexcept { return {}; }
+  friend constexpr none operator*(none, none) noexcept { return {}; }
+  friend constexpr none operator/(none, none) noexcept { return {}; }
+  constexpr none& operator+=(none) noexcept { return *this; }
+  constexpr none& operator-=(none) noexcept { return *this; }
+  constexpr none& operator*=(none) noexcept { return *this; }
+  constexpr none& operator/=(none) noexcept { return *this; }
+  template<typename Ct, typename Tr> friend auto& operator<<(std::basic_ostream<Ct, Tr>& os, none) {
+    if constexpr (std::same_as<Ct, char>) return os << "none";
+    else if constexpr (std::same_as<Ct, wchar>) return os << L"none";
+    else if constexpr (std::same_as<Ct, char8_t>) return os << u8"none";
+    else if constexpr (std::same_as<Ct, char16_t>) return os << u"none";
+    else if constexpr (std::same_as<Ct, char32_t>) return os << U"none";
+    else static_assert(always_false<Ct>, "unsupported character type");
+  }
+};
+
+struct source {
+  const char *const file, *const func;
+  const uint line, column;
+  source(const char*) = delete;
+  consteval source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
+                   uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
+    : file(File), func(Func), line(Line), column(Column) {}
+  template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
+    return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
+  }
+};
+
+template<typename T> concept valid = requires { typename std::type_identity_t<T>; };
+
+template<typename T> concept is_const = std::is_const_v<T>;
+template<typename T> concept is_volatile = std::is_volatile_v<T>;
+template<typename T> concept is_cv = is_const<T> && is_volatile<T>;
+template<typename T> concept is_lvref = std::is_lvalue_reference_v<T>;
+template<typename T> concept is_rvref = std::is_rvalue_reference_v<T>;
+template<typename T> concept is_ref = is_lvref<T> || is_rvref<T>;
+template<typename T> concept is_pointer = std::is_pointer_v<T>;
+template<typename T> concept is_bounded_array = std::is_bounded_array_v<T>;
+template<typename T> concept is_unbounded_array = std::is_unbounded_array_v<T>;
+template<typename T> concept is_array = is_bounded_array<T> || is_unbounded_array<T>;
+
+template<typename T> using remove_const = std::remove_const_t<T>;
+template<typename T> using remove_volatile = std::remove_volatile_t<T>;
+template<typename T> using remove_cv = remove_const<remove_volatile<T>>;
+template<typename T> using remove_ref = std::remove_reference_t<T>;
+template<typename T> using remove_rvref = std::conditional_t<is_lvref<T>, T, remove_ref<T>>;
+template<typename T> using remove_cvref = remove_cv<remove_ref<T>>;
+template<typename T> using remove_pointer = std::remove_pointer_t<T>;
+template<typename T> using remove_extent = std::remove_extent_t<T>;
+
+namespace _ {
+template<typename T> struct _add_const { using type = const T; };
+template<typename T> struct _add_const<T&> { using type = const T&; };
+template<typename T> struct _add_const<T&&> { using type = const T&&; };
+template<typename T> struct _add_volatile { using type = volatile T; };
+template<typename T> struct _add_volatile<T&> { using type = volatile T&; };
+template<typename T> struct _add_volatile<T&&> { using type = volatile T&&; };
+template<typename T> struct _add_pointer { using type = T*; };
+template<typename T> struct _add_pointer<T&> { using type = T*&; };
+template<typename T> struct _add_pointer<T&&> { using type = T*&&; };
+template<typename T, uint N> struct _add_extent { using type = T[N]; };
+template<typename T> struct _add_extent<T, 0> { using type = T[]; };
+}
+template<typename T> using add_const = _::_add_const<T>::type;
+template<typename T> using add_volatile = _::_add_volatile<T>::type;
+template<typename T> using add_cv = add_const<add_volatile<T>>;
+template<typename T> requires valid<T&&> using add_fwref = T&&;
+template<typename T> requires valid<T&> using add_lvref = T&;
+template<typename T> requires valid<remove_ref<T>&&> using add_rvref = remove_ref<T>&&;
+template<typename T> requires valid<typename _::_add_pointer<T>::type> using add_pointer = _::_add_pointer<T>::type;
+template<typename T, uint N> requires valid<typename _::_add_extent<T, N>::type> using add_extent = _::_add_extent<T, N>::type;
+
+template<typename T, typename... Ts> concept same_as = (std::same_as<T, Ts> && ...);
+template<typename T, typename... Ts> concept included_in = (std::same_as<T, Ts> || ...);
+template<typename T, typename... Ts> concept derived_from = (std::derived_from<T, Ts> || ...);
+template<typename T, typename... Ts> concept convertible_to = (std::convertible_to<T, Ts> || ...);
+template<typename T, typename... Ts> concept nt_convertible_to = convertible_to<T, Ts...> && (std::is_nothrow_constructible_v<T, Ts> && ...);
+template<typename T, typename... Ts> concept castable_to = requires { (static_cast<T>(std::declval<Ts>()), ...); };
+template<typename T, typename... Ts> concept nt_castable_to = castable_to<T, Ts...> && noexcept((static_cast<T>(std::declval<Ts>()), ...));
+
+template<typename T> concept is_bool = same_as<remove_cv<T>, bool>;
+template<typename T> concept character = included_in<remove_cv<T>, char, wchar, char8_t, char16_t, char32_t>;
+template<typename T> concept integral = character<T> || included_in<remove_cv<T>, bool, int1, int2, int4, int8, uint1, uint2, uint4, uint8, long, unsigned long>;
+template<typename T> concept floating = included_in<remove_cv<T>, float, double, long double>;
+template<typename T> concept arithmetic = integral<T> || floating<T>;
+template<typename T> concept numeric = nt_castable_to<T, bool, int4, int8, uint4, uint8, float, double>;
+
+template<typename F, typename... As> concept invocable = std::invocable<F, As...>;
+template<typename F, typename... As> concept nt_invocable = invocable<F, As...> && std::is_nothrow_invocable_v<F, As...>;
+template<typename F, typename... As> requires invocable<F, As...> using result =
+  std::conditional_t<same_as<remove_cv<std::invoke_result_t<F, As...>>, void>, none, std::invoke_result_t<F, As...>>;
+template<typename F, typename R, typename... As> concept invocable_r =
+  invocable<F, As...> && convertible_to<result<F, As...>, R>;
+template<typename F, typename R, typename... As> concept nt_invocable_r =
+  nt_invocable<F, As...> && nt_convertible_to<result<F, As...>, R>;
+inline constexpr auto invoke = []<typename F, typename... As>(F&& f, As&&... as)
+  noexcept(nt_invocable<F, As...>) -> result<F, As...> {
+  if constexpr (!std::is_void_v<result<F, As...>>) return std::invoke(static_cast<F&&>(f), static_cast<As&&>(as)...);
+  else return std::invoke(static_cast<F&&>(f), static_cast<As&&>(as)...), none{};
+};
+
+}
+
+
+#pragma region [constant] ----------------------------------------------------------------------------------------------
+namespace yw {
+
+/// structure to represent a constant value
+template<auto V, typename T = decltype(V)>
+requires convertible_to<decltype(V), T>
+struct constant {
+  using type = T;
+  static constexpr type value = V;
+  consteval operator type() const noexcept { return value; }
+  consteval type operator()() const noexcept { return value; }
+};
+}
+#pragma endregion // ---------------------------------------------------------------------------------------- [constant]
+
+#pragma region [select, select_type, select_value] ---------------------------------------------------------------------
+namespace yw {
+
+/// checks if `I` is valid for selecting one from `N`
+template<convertible_to<uint> auto I, uint N> constexpr bool selectable =
+  (is_bool<decltype(I)> && N == 2) || (!is_bool<decltype(I)> && uint(I) < N);
+
+/// selects a parameter
+template<auto I> inline constexpr auto select =
+[]<typename A, typename... As>(A&& a, As&&... as) noexcept
+  -> decltype(auto) requires selectable<I, 1 + sizeof...(As)> {
+  if constexpr (is_bool<decltype(I)>) {
+    return select<uint(!I)>(static_cast<A&&>(a), static_cast<As&&>(as)...);
+  } else if constexpr (same_as<decltype(I), uint>) {
+    if constexpr (I == 0) return static_cast<A&&>(a);
+    else return select<I - 1>(static_cast<As&&>(as)...);
+  } else return select<uint(I)>(static_cast<A&&>(a), static_cast<As&&>(as)...);
+};
+
+namespace _ {
+template<typename T, T I, typename... Ts> struct _select_type : _select_type<uint, I, Ts...> {};
+template<bool B, typename Tt, typename Tf> struct _select_type<bool, B, Tt, Tf> : std::conditional<B, Tt, Tf> {};
+template<uint I, typename T, typename... Ts> struct _select_type<uint, I, T, Ts...> : _select_type<uint, I - 1, Ts...> {};
+template<typename T, typename... Ts> struct _select_type<uint, 0, T, Ts...> { using type = T; };
+}
+
+/// selects a type
+template<auto I, typename... Ts> requires selectable<I, sizeof...(Ts)>
+using select_type = typename _::_select_type<decltype(I), I, Ts...>::type;
+
+/// selects a value
+template<auto I, auto... Vs> requires selectable<I, sizeof...(Vs)>
+inline constexpr auto select_value = select_type<I, constant<Vs>...>::value;
+
+
+}
+#pragma endregion // --------------------------------------------------------------- [select, select_type, select_value]
+
+#pragma region [caster, is_cev] ----------------------------------------------------------------------------------------
+namespace yw {
+/// creates an object that calls functions in coversion
+template<typename... Fs> struct caster : public Fs... {
+private:
+  template<typename T> static constexpr uint i = inspects<same_as<T, result<Fs>>...>;
+  template<typename T> static constexpr uint j = i<T> < sizeof...(Fs) ? i<T> : inspects<convertible_to<T, result<Fs>>...>;
+  template<typename... As> static constexpr uint k = inspects<invocable<Fs, As...>...>;
+public:
+  using Fs::operator()...;
+  template<typename T> requires (j<T> < sizeof...(Fs)) constexpr operator T() const
+    noexcept(noexcept(select_type<j<T>, Fs...>::operator()())) { return select_type<j<T>, Fs...>::operator()(); }
+  template<typename... As> requires (k<As...> < sizeof...(Fs)) constexpr decltype(auto) operator()(As&&... as) const
+    noexcept(noexcept(select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...))) {
+    return select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...);
+  }
+  /// output stream operator
+  template<typename Ct, typename Tr> friend auto& operator<<(
+    std::basic_ostream<Ct, Tr>& os, const caster& c) requires requires { os << c(); } { return os << c(); }
+};
+}
+#pragma endregion // ---------------------------------------------------------------------------------- [caster, is_cev]
+
+#pragma region [date, clock, time] -------------------------------------------------------------------------------------
+namespace yw {
+
+namespace _ {
+inline auto get_zoned_time() {
+  namespace ch = std::chrono;
+  return ch::zoned_time(ch::current_zone(), ch::system_clock::now()); }
+}
+
+/// structure to represent a date
+struct date {
+
+  /// year of the date
+  int year{};
+
+  /// month of the date
+  int month{};
+
+  /// day of the date
+  int day{};
+
+  /// default constructor; obtains the current date
+  date() : date(_::get_zoned_time().get_local_time()) {}
+
+  /// constructor with year, month, and day
+  date(numeric auto&& Year, numeric auto&& Month, numeric auto&& Day) noexcept
+    : year(int(Year)), month(int(Month)), day(int(Day)) {}
+
+  /// constructor from a `std::chrono::time_point`
+  template<typename Clock, typename Duration>
+  date(const std::chrono::time_point<Clock, Duration>& tp) {
+    const auto ymd = std::chrono::year_month_day(std::chrono::floor<std::chrono::days>(tp));
+    year = int(ymd.year()), month = int(uint4(ymd.month())), day = int(uint4(ymd.day()));
+  }
+
+  /// returns the formatted string; `YYYY-MM-DD`
+  template<character Ct> string<Ct> to_string() const {
+    string<Ct> s(10, {});
+    if constexpr (sizeof(Ct) == 4) {
+      auto t = std::format("{:04d}-{:02d}-{:02d}", year, month, day);
+      std::ranges::copy(t, s.data());
+    } else if constexpr (sizeof(Ct) == 1) std::format_to(s.data(), "{:04d}-{:02d}-{:02d}", year, month, day);
+    else if constexpr (sizeof(Ct) == 2) std::format_to(s.data(), L"{:04d}-{:02d}-{:02d}", year, month, day);
+    return s;
+  }
+
+  /// returns the formatted string; `YYYY-MM-DD`
+  string<char> to_string() const { return to_string<char>(); }
+
+  /// output stream operator
+  template<typename Ct, typename Tr> friend auto& operator<<(
+    std::basic_ostream<Ct, Tr>& os, const date& d) { return os << d.to_string<Ct>(); }
+};
+
+/// clock
+struct clock {
+
+  /// hour of the clock
+  int hour{};
+
+  /// minute of the clock
+  int minute{};
+
+  /// second of the clock
+  int second{};
+
+  /// default constructor; obtains the current time
+  clock() : clock(_::get_zoned_time().get_local_time()) {}
+
+  /// constructor with hour, minute, and second
+  clock(numeric auto&& Hour, numeric auto&& Minute, numeric auto&& Second) noexcept
+    : hour(int(Hour)), minute(int(Minute)), second(int(Second)) {}
+
+  /// constructor from a `std::time_point`
+  template<typename Clock, typename Duration>
+  clock(const std::chrono::time_point<Clock, Duration>& tp) {
+    namespace ch = std::chrono;
+    const ch::hh_mm_ss hms(ch::floor<ch::seconds>(tp - ch::floor<ch::days>(tp)));
+    hour = int(hms.hours().count());
+    minute = int(hms.minutes().count());
+    second = int(hms.seconds().count());
+  }
+
+  /// returns the formatted string; `HH:MM:SS`
+  template<character Ct> string<Ct> to_string() const {
+    string<Ct> s(8, {});
+    if constexpr (sizeof(Ct) == 4) {
+      auto t = std::format("{:02d}:{:02d}:{:02d}", hour, minute, second);
+      std::ranges::copy(t, s.data());
+    } else if constexpr (sizeof(Ct) == 1) std::format_to(s.data(), "{:02d}:{:02d}:{:02d}", hour, minute, second);
+    else if constexpr (sizeof(Ct) == 2) std::format_to(s.data(), L"{:02d}:{:02d}:{:02d}", hour, minute, second);
+    return s;
+  }
+
+  /// returns the formatted string; `HH:MM:SS`
+  string<char> to_string() const { return to_string<char>(); }
+
+  /// output stream operator
+  template<typename Ct, typename Tr> friend auto& operator<<(
+    std::basic_ostream<Ct, Tr>& os, const clock& c) { return os << c.to_string<Ct>(); }
+};
+
+/// date and clock
+struct time {
+
+  /// format string for `std::format`; `YYYY-MM-DD HH:MM:SS`
+  template<character Ct> static constexpr Ct format[] = {
+    Ct('{'), Ct(':'), Ct('0'), Ct('4'), Ct('d'), Ct('}'), Ct('-'),
+    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct('-'),
+    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct(' '),
+    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct(':'),
+    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct(':'),
+    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct('\0')};
+
+  /// date of the time
+  yw::date date;
+
+  /// clock of the time
+  yw::clock clock;
+
+  /// default constructor; obtains the current date and time
+  time() : time(_::get_zoned_time().get_local_time()) {}
+
+  /// constructor with date and clock
+  time(const yw::date& Date, const yw::clock& Clock) noexcept : date(Date), clock(Clock) {}
+
+  /// constructor from a `time_point`
+  template<typename Clock, typename Duration>
+  time(const std::chrono::time_point<Clock, Duration>& tp) : date(tp), clock(tp) {}
+
+  /// conversion operator to `yw::date`
+  operator yw::date() const { return date; }
+
+  /// conversion operator to `yw::clock`
+  operator yw::clock() const { return clock; }
+
+  /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
+  template<character Ct> string<Ct> to_string() const {
+    const auto& d = date;
+    const auto& c = clock;
+    string<Ct> s(19, {});
+    if constexpr (sizeof(Ct) == 4) {
+      auto t = std::format(format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
+      std::ranges::copy(t, s.data());
+    } else if constexpr (sizeof(Ct) == 1)
+      std::format_to(s.data(), format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
+    else if constexpr (sizeof(Ct) == 2)
+      std::format_to(s.data(), format<wchar>, d.year, d.month, d.day, c.hour, c.minute, c.second);
+    return s;
+  }
+
+  /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
+  string<char> to_string() const { return to_string<char>(); }
+
+  /// output stream operator
+  template<typename Ct, typename Tr> friend auto& operator<<(
+    std::basic_ostream<Ct, Tr>& os, const time& t) { return os << t.to_string<Ct>(); }
+};
+
+/// current time caster
+inline constexpr caster now{[] { return time{}; }};
+}
+#pragma endregion // ------------------------------------------------------------------------------- [date, clock, time]
+
+#pragma region [file] --------------------------------------------------------------------------------------------------
+namespace yw::file {
+
+/// `std::filesystem::path`
+using path = std::filesystem::path;
+
+/// checks if there is any file object
+inline bool exists(const path& Path) noexcept {
+  std::error_code ec;
+  auto r = std::filesystem::status(Path, ec);
+  return !ec && r.type() != std::filesystem::file_type::not_found;
+}
+
+/// checks if the file exists and is a regular file
+inline bool is_file(const path& Path) noexcept {
+  std::error_code ec;
+  auto r = std::filesystem::status(Path, ec);
+  return !ec && r.type() == std::filesystem::file_type::regular;
+}
+
+/// checks if the file exists and is a directory
+inline bool is_dir(const path& Path) noexcept {
+  std::error_code ec;
+  auto r = std::filesystem::status(Path, ec);
+  return !ec && r.type() == std::filesystem::file_type::directory;
+}
+
+/// checks if it is confirmed that the file is empty
+inline bool is_empty(const path& Path) noexcept {
+  std::error_code ec;
+  auto b = std::filesystem::is_empty(Path, ec);
+  return !ec && b;
+}
+
+/// returns the regular file size
+inline uint size(const path& Path) noexcept {
+  std::error_code ec;
+  auto s = std::filesystem::status(Path, ec);
+  if (ec || s.type() != std::filesystem::file_type::regular) return 0;
+  auto n = std::filesystem::file_size(Path, ec);
+  return ec ? 0 : n;
+}
+
+/// removes the file
+inline bool remove(const path& Path, const bool Recursive = false) noexcept {
+  std::error_code ec;
+  if (Recursive) return std::filesystem::remove_all(Path, ec);
+  else return std::filesystem::remove(Path, ec);
+}
+
+/// renames the file
+inline bool rename(const path& Old, const path& New) noexcept {
+  std::error_code ec;
+  std::filesystem::rename(Old, New, ec);
+  return !ec;
+}
+
+/// copies the file
+inline bool copy(const path& From, const path& To) noexcept {
+  std::error_code ec;
+  std::filesystem::copy(From, To, ec);
+  return !ec;
+}
+
+/// creates a directory
+inline bool create_dir(const path& Path, const bool Recursive = false) noexcept {
+  std::error_code ec;
+  if (Recursive) return std::filesystem::create_directories(Path, ec);
+  else return std::filesystem::create_directory(Path, ec);
+}
+
+/// reads the file
+
+
+
+}
+#pragma endregion // -------------------------------------------------------------------------------------------- [file]
+
+#pragma region [logger] ------------------------------------------------------------------------------------------------
+namespace yw {
+
+/// class to log messages and write them to a file when destructed
+class logger {
+  string<char> text{};
+public:
+
+  /// structure to represent a log level
+  struct level_t {
+    std::string_view name;
+    int value;
+    friend constexpr bool operator==(const level_t& l, const level_t& r) noexcept { return l.value == r.value; }
+    friend constexpr auto operator<=>(const level_t& l, const level_t& r) noexcept { return l.value <=> r.value; }
+  };
+
+  /// predefined log level; all(0)
+  static constexpr level_t all{"all", 0};
+
+  /// predefined log level; debug(10)
+  static constexpr level_t debug{"debug", 10};
+
+  /// predefined log level; info(20)
+  static constexpr level_t info{"info", 20};
+
+  /// predefined log level; warn(30)
+  static constexpr level_t warn{"warn", 30};
+
+  /// predefined log level; error(40)
+  static constexpr level_t error{"error", 40};
+
+  /// predefined log level; fatal(50)
+  static constexpr level_t fatal{"fatal", 50};
+
+  /// file path to write log messages when destructed
+  std::filesystem::path path{};
+
+  /// current log level
+  level_t level{info};
+
+  /// flag whether to stream log messages to the console
+  bool console{true};
+
+  /// default constructor
+  logger() noexcept = default;
+
+  /// constructor with a file path (, log level, and console flag)
+  logger(const std::filesystem::path& Path, level_t Level = info, bool Console = true) noexcept
+    : path(Path), level(Level), console(Console) {}
+
+  /// destructor; writes log messages to the file
+  ~logger() noexcept {
+    if (text.empty() || path.empty()) return;
+    try {
+      if (!file::exists(path)) throw std::runtime_error("file not found");
+      else if (!file::write(path, text)) throw std::runtime_error("failed to write file");
+    } catch (const std::exception& e) { std::cerr << "logger::~logger() failed: " << e.what() << std::endl;
+    } catch (...) { std::cerr << "logger::~logger() failed" << std::endl; }
+  }
+
+  /// appends text to the log; `{time} [{level}] {text}`
+  void operator()(level_t Level, stringable auto&& Text) noexcept {
+    if (level < Level) return;
+    try {
+      str s;
+      if constexpr (same_as<iter_value_t<decltype(Text)>, char>)
+        s = format("{} [{}] {}\n", now(), Level.name, str_view(Text));
+      else s = format("{} [{}] {}\n", now(), Level.name, cvt<char>(Text));
+      if (console) std::cout << s;
+      text += s;
+    } catch (const std::exception& e) { std::cerr << "logger::operator() failed: " << e.what() << std::endl;
+    } catch (...) { std::cerr << "logger::operator() failed" << std::endl; }
+  }
+
+  /// appends text to the log; `{time} [{level}] {text}`
+  void operator()(level_t Level, stringable auto&& Text, const source& _) noexcept {
+    if (level < Level) return;
+    try {
+      str s;
+      if constexpr (same_as<iter_value_t<decltype(Text)>, char>)
+        s = format("{} [{}] {}\n", now(), Level.name, str_view(Text));
+      else s = format("{} [{}] {}\n", now(), Level.name, cvt<char>(Text));
+      if (console) std::cout << _ << std::endl << s;
+      text += s;
+    } catch (const std::exception& e) { std::cerr << "logger::operator() failed: " << e.what() << std::endl;
+    } catch (...) { std::cerr << "logger::operator() failed" << std::endl; }
+  }
+
+};
+
+}
+#pragma endregion // ------------------------------------------------------------------------------------------ [logger]

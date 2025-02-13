@@ -607,4 +607,5 @@ inline float __cdecl ldexpf(float x, int exp) noexcept { return (float)__ywstd_c
 // for <xlocnum>
 extern "C" {
 long double __cdecl fabsl(long double);
+long double __cdecl frexpl(long double, int*);
 }

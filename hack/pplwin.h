@@ -37,9 +37,6 @@ public:
   bool _Is_scheduled() const noexcept { return _chore._work != nullptr; }
 };
 }
-}
-
-namespace Concurrency {
 
 using TaskProc_t = void(__cdecl*)(void*);
 
@@ -48,9 +45,8 @@ struct __declspec(novtable) scheduler_interface {
 };
 
 struct scheduler_ptr {
-  explicit scheduler_ptr(::std::shared_ptr<scheduler_interface> scheduler) : _shared(::std::move(scheduler)) {
-    _scheduler = _shared.get();
-  }
+  explicit scheduler_ptr(::std::shared_ptr<scheduler_interface> scheduler)
+    : _shared(::std::move(scheduler)) { _scheduler = _shared.get(); }
   explicit scheduler_ptr(_In_opt_ scheduler_interface* scheduler) : _scheduler(scheduler) {}
   scheduler_interface* operator->() const { return get(); }
   scheduler_interface* get() const { return _scheduler; }
@@ -88,8 +84,8 @@ enum _TaskInliningMode {
   _ForceInline = -1,
 };
 
-typedef ::std::atomic<long> atomic_long;
-typedef ::std::atomic<size_t> atomic_size_t;
+using atomic_long = ::std::atomic<long>;
+using atomic_size_t = ::std::atomic<size_t>;
 
 template<typename T> T atomic_compare_exchange(::std::atomic<T>& target, T value, T comparand) {
   T result = comparand;
@@ -101,11 +97,6 @@ template<typename T> T atomic_exchange(::std::atomic<T>& target, T value) { retu
 template<typename T> T atomic_increment(::std::atomic<T>& target) { return target.fetch_add(1) + 1; }
 template<typename T> T atomic_decrement(::std::atomic<T>& target) { return target.fetch_sub(1) - 1; }
 template<typename T> T atomic_add(::std::atomic<T>& target, T value) { return target.fetch_add(value) + value; }
-}
-}
-
-namespace Concurrency {
-namespace details {
 
 class _DefaultPPLTaskScheduler : public scheduler_interface {
 public:
@@ -113,7 +104,6 @@ public:
     _Threadpool_chore _M_Chore;
     TaskProc_t _M_proc;
     void* _M_param;
-
     static void __cdecl _Callback(void* _Args) {
       auto _Chore = ::std::unique_ptr<_PPLTaskChore>(static_cast<_PPLTaskChore*>(_Args));
       _Chore->_M_proc(_Chore->_M_param);
@@ -136,8 +126,6 @@ public:
 };
 
 inline ::std::shared_ptr<scheduler_interface>* _GetStaticAmbientSchedulerStorage() {
-
-#pragma warning(suppress : 4640)
   static ::std::shared_ptr<scheduler_interface> _S_scheduler;
   return &_S_scheduler;
 }
@@ -149,17 +137,6 @@ inline ::std::shared_ptr<scheduler_interface>& _GetStaticAmbientSchedulerRef() {
   return *_S_scheduler_address;
 }
 
-}
-
-inline const ::std::shared_ptr<scheduler_interface>& get_ambient_scheduler() {
-  return details::_GetStaticAmbientSchedulerRef();
-}
-
-inline void set_ambient_scheduler(const ::std::shared_ptr<scheduler_interface>& _Scheduler) {
-  details::_GetStaticAmbientSchedulerRef() = _Scheduler;
-}
-
-namespace details {
 void __cdecl _ReportUnobservedException();
 namespace platform {
 unsigned int __cdecl GetNextAsyncId();
@@ -167,11 +144,11 @@ size_t __cdecl CaptureCallstack(void**, size_t, size_t);
 long __cdecl GetCurrentThreadId();
 }
 }
-}
-}
 
-extern "C++" {
-namespace Concurrency {
+inline const ::std::shared_ptr<scheduler_interface>& get_ambient_scheduler() { return details::_GetStaticAmbientSchedulerRef(); }
+inline void set_ambient_scheduler(const ::std::shared_ptr<scheduler_interface>& _Scheduler) { details::_GetStaticAmbientSchedulerRef() = _Scheduler; }
+
+
 namespace details {
 
 class _RefCounter {
@@ -179,9 +156,8 @@ public:
   virtual ~_RefCounter() {}
   long _Reference() { return _InterlockedIncrement(&_M_refCount); }
   long _Release() {
-    const long _Refcount = _InterlockedDecrement(&_M_refCount);
-    if (_Refcount == 0) { _Destroy(); }
-    return _Refcount;
+    const auto refcount = _InterlockedDecrement(&_M_refCount);
+    return (refcount == 0 ? _Destroy() : void(0)), refcount;
   }
 protected:
   virtual void _Destroy() { delete this; }
@@ -197,6 +173,11 @@ class _CancellationTokenRegistration : public _RefCounter {
   static const long _STATE_DEFER_DELETE = 1;
   static const long _STATE_SYNCHRONIZE = 2;
   static const long _STATE_CALLED = 3;
+  atomic_long _M_state;
+  ::std::condition_variable _M_CondVar;
+  ::std::mutex _M_Mutex;
+  bool _M_signaled;
+  _CancellationTokenState* _M_pTokenState;
 public:
   _CancellationTokenRegistration(long init = 1)
     : _RefCounter(init), _M_state(_STATE_CALLED), _M_signaled(false), _M_pTokenState(nullptr) {}
@@ -207,41 +188,24 @@ protected:
 private:
   void _Invoke() {
     const long _Tid = ::Concurrency::details::platform::GetCurrentThreadId();
-
-    long _Result = atomic_compare_exchange(_M_state, _Tid, _STATE_CLEAR);
-
-    if (_Result == _STATE_CLEAR) {
-      _Exec();
-
-      _Result = atomic_compare_exchange(_M_state, _STATE_CALLED, _Tid);
-
-      if (_Result == _STATE_SYNCHRONIZE) {
-        {
-          ::std::lock_guard<::std::mutex> _Lock(_M_Mutex);
-          _M_signaled = true;
-        }
+    if (long result = atomic_compare_exchange(_M_state, _Tid, _STATE_CLEAR); result == _STATE_CLEAR) {
+      _Exec(), result = atomic_compare_exchange(_M_state, _STATE_CALLED, _Tid);
+      if (result == _STATE_SYNCHRONIZE) {
+        if (::std::lock_guard<::std::mutex> _Lock(_M_Mutex); true) _M_signaled = true;
         _M_CondVar.notify_all();
       }
     }
     _Release();
   }
 
-  atomic_long _M_state;
-  ::std::condition_variable _M_CondVar;
-  ::std::mutex _M_Mutex;
-  bool _M_signaled;
-  _CancellationTokenState* _M_pTokenState;
 };
 
-template<typename _Function> class _CancellationTokenCallback : public _CancellationTokenRegistration {
-public:
-  _CancellationTokenCallback(const _Function& _Func) : _M_function(_Func) {}
-
+template<typename F> class _CancellationTokenCallback : public _CancellationTokenRegistration {
+  F _M_function;
 protected:
   virtual void _Exec() override { _M_function(); }
-
-private:
-  _Function _M_function;
+public:
+  _CancellationTokenCallback(const F& _Func) : _M_function(_Func) {}
 };
 
 class CancellationTokenRegistration_TaskProc : public _CancellationTokenRegistration {
