@@ -139,7 +139,7 @@ extern "C" {
 inline int __cdecl _scprintf(const char* format, ...) {
   __ywstd_cstdio_va(format, (__ywstd_cfunc vsnprintf(nullptr, 0, format, args))); }
 
-int __cdecl __stdio_common_vsprintf_s(unsigned __int64, char*, size_t, const char*, _locale_t, va_list);
+int __cdecl __stdio_common_vsprintf_s(unsigned __int64, char*, size_t, const char*, __ywstd_cfunc _locale_t, va_list);
 inline int __cdecl vsprintf_s(char* buffer, size_t count, const char* format, va_list args) {
   const auto options = _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS;
   const int result = __stdio_common_vsprintf_s(options, buffer, count, format, nullptr, args);
@@ -147,4 +147,13 @@ inline int __cdecl vsprintf_s(char* buffer, size_t count, const char* format, va
 inline int __cdecl sprintf_s(char* buffer, size_t count, const char* format, ...) {
   __ywstd_cstdio_va(format, (vsprintf_s(buffer, count, format, args))); }
 
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// for <fstream>
+
+extern "C" {
+
+int __cdecl _fseeki64(FILE*, __int64, int);
+int __cdecl _get_stream_buffer_pointers(FILE*, char***, char***, int**);
 }

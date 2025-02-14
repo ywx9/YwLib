@@ -14,7 +14,7 @@ void __cdecl __std_exception_copy(const __std_exception_data*, __std_exception_d
 void __cdecl __std_exception_destroy(__std_exception_data*);
 __ywstd_cfunc_end
 
-namespace std {
+__ywstd_export namespace std {
 
 ///
 class exception {
