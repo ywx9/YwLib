@@ -20,8 +20,8 @@ if len(sys.argv) > 1:
   obj_file = cpp_file.replace(".cpp", ".obj")
   args = [MSVC_CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywstd_import", ]
   args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
-  #args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
-  args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{LIB_A}", f"/LIBPATH:{LIB_B}", f"/LIBPATH:{LIB_C}", ]
+  args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
+  #args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{LIB_A}", f"/LIBPATH:{LIB_B}", f"/LIBPATH:{LIB_C}", ]
   print("compiling ", end="", flush=True)
   return_code = subprocess.run(args).returncode
   if os.path.exists(obj_file): os.remove(obj_file)
@@ -77,6 +77,7 @@ import ywstd;
 #include "hack/cuchar"
 #include "hack/cwchar"
 #include "hack/cwctype"
+
 #include "msvc/inc/algorithm"
 #include "msvc/inc/any"
 #include "msvc/inc/array"
@@ -155,6 +156,8 @@ import ywstd;
 #include "msvc/inc/variant"
 #include "msvc/inc/vector"
 #include "msvc/inc/version"
+
+#include "hack/_windows.h"
 
 #pragma warning(pop)
 #endif
