@@ -40,44 +40,44 @@ int __cdecl ungetc(int, FILE*);
   va_list args; __crt_va_start(args, x); const int result = call; __crt_va_end(args); return result
 
 int __cdecl __stdio_common_vsscanf(unsigned __int64, const char*, size_t, const char*, _locale_t, va_list);
-inline int __cdecl vsscanf(const char* buffer, const char* format, va_list args) {
-  return __stdio_common_vsscanf(_CRT_INTERNAL_LOCAL_SCANF_OPTIONS, buffer, (size_t)-1, format, nullptr, args); }
-inline int __cdecl sscanf(const char* buffer, const char* format, ...) {
-  __ywstd_cstdio_va(format, (vsscanf(buffer, format, args))); }
+inline int __cdecl vsscanf(const char* buffer, const char* fmt, va_list args) {
+  return __stdio_common_vsscanf(_CRT_INTERNAL_LOCAL_SCANF_OPTIONS, buffer, (size_t)-1, fmt, nullptr, args); }
+inline int __cdecl sscanf(const char* buffer, const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vsscanf(buffer, fmt, args))); }
 
 int __cdecl __stdio_common_vfscanf(unsigned __int64, FILE*, const char*, _locale_t, va_list);
-inline int __cdecl vfscanf(FILE* const stream, const char* format, va_list args) {
-  return __stdio_common_vfscanf(_CRT_INTERNAL_LOCAL_SCANF_OPTIONS, stream, format, nullptr, args); }
-inline int __cdecl vscanf(const char* format, va_list args) {
-  return vfscanf(stdin, format, args); }
-inline int __cdecl fscanf(FILE* const stream, const char* format, ...) {
-  __ywstd_cstdio_va(format, (vfscanf(stream, format, args))); }
-inline int __cdecl scanf(const char* format, ...) {
-  __ywstd_cstdio_va(format, (vfscanf(stdin, format, args))); }
+inline int __cdecl vfscanf(FILE* const stream, const char* fmt, va_list args) {
+  return __stdio_common_vfscanf(_CRT_INTERNAL_LOCAL_SCANF_OPTIONS, stream, fmt, nullptr, args); }
+inline int __cdecl vscanf(const char* fmt, va_list args) {
+  return vfscanf(stdin, fmt, args); }
+inline int __cdecl fscanf(FILE* const stream, const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vfscanf(stream, fmt, args))); }
+inline int __cdecl scanf(const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vfscanf(stdin, fmt, args))); }
 
 int __cdecl __stdio_common_vsprintf(unsigned __int64, char*, size_t, const char*, _locale_t, va_list);
-inline int __cdecl vsnprintf(char* buffer, size_t count, const char* format, va_list args) {
+inline int __cdecl vsnprintf(char* buffer, size_t count, const char* fmt, va_list args) {
   const auto options = _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS | _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR;
-  const int result = __stdio_common_vsprintf(options, buffer, count, format, NULL, args);
+  const int result = __stdio_common_vsprintf(options, buffer, count, fmt, NULL, args);
   return result < 0 ? -1 : result; }
-inline int __cdecl vsprintf(char* buffer, const char* format, va_list args) {
+inline int __cdecl vsprintf(char* buffer, const char* fmt, va_list args) {
   const auto options = _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS | _CRT_INTERNAL_PRINTF_LEGACY_VSPRINTF_NULL_TERMINATION;
-  const int result = __stdio_common_vsprintf(options, buffer, (size_t)-1, format, nullptr, args);
+  const int result = __stdio_common_vsprintf(options, buffer, (size_t)-1, fmt, nullptr, args);
   return result < 0 ? -1 : result; }
-inline int __cdecl snprintf(char* buffer, size_t count, const char* format, ...) {
-  __ywstd_cstdio_va(format, (vsnprintf(buffer, count, format, args))); }
-inline int __cdecl sprintf(char* buffer, const char* format, ...) {
-  __ywstd_cstdio_va(format, (vsprintf(buffer, format, args))); }
+inline int __cdecl snprintf(char* buffer, size_t count, const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vsnprintf(buffer, count, fmt, args))); }
+inline int __cdecl sprintf(char* buffer, const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vsprintf(buffer, fmt, args))); }
 
 int __cdecl __stdio_common_vfprintf(unsigned __int64, FILE*, const char*, _locale_t, va_list);
-inline int __cdecl vfprintf(FILE* const stream, const char* format, va_list args) {
-  return __stdio_common_vfprintf(_CRT_INTERNAL_LOCAL_PRINTF_OPTIONS, stream, format, nullptr, args); }
-inline int __cdecl vprintf(const char* format, va_list args) {
-  return vfprintf(stdout, format, args); }
-inline int __cdecl fprintf(FILE* const stream, const char* format, ...) {
-  __ywstd_cstdio_va(format, (vfprintf(stream, format, args))); }
-inline int __cdecl printf(const char* format, ...) {
-  __ywstd_cstdio_va(format, (vfprintf(stdout, format, args))); }
+inline int __cdecl vfprintf(FILE* const stream, const char* fmt, va_list args) {
+  return __stdio_common_vfprintf(_CRT_INTERNAL_LOCAL_PRINTF_OPTIONS, stream, fmt, nullptr, args); }
+inline int __cdecl vprintf(const char* fmt, va_list args) {
+  return vfprintf(stdout, fmt, args); }
+inline int __cdecl fprintf(FILE* const stream, const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vfprintf(stream, fmt, args))); }
+inline int __cdecl printf(const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vfprintf(stdout, fmt, args))); }
 
 __ywstd_cfunc_end
 
@@ -136,16 +136,16 @@ using __ywstd_cfunc printf;
 
 extern "C" {
 
-inline int __cdecl _scprintf(const char* format, ...) {
-  __ywstd_cstdio_va(format, (__ywstd_cfunc vsnprintf(nullptr, 0, format, args))); }
+inline int __cdecl _scprintf(const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (__ywstd_cfunc vsnprintf(nullptr, 0, fmt, args))); }
 
 int __cdecl __stdio_common_vsprintf_s(unsigned __int64, char*, size_t, const char*, __ywstd_cfunc _locale_t, va_list);
-inline int __cdecl vsprintf_s(char* buffer, size_t count, const char* format, va_list args) {
+inline int __cdecl vsprintf_s(char* buffer, size_t count, const char* fmt, va_list args) {
   const auto options = _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS;
-  const int result = __stdio_common_vsprintf_s(options, buffer, count, format, nullptr, args);
+  const int result = __stdio_common_vsprintf_s(options, buffer, count, fmt, nullptr, args);
   return result < 0 ? -1 : result; }
-inline int __cdecl sprintf_s(char* buffer, size_t count, const char* format, ...) {
-  __ywstd_cstdio_va(format, (vsprintf_s(buffer, count, format, args))); }
+inline int __cdecl sprintf_s(char* buffer, size_t count, const char* fmt, ...) {
+  __ywstd_cstdio_va(fmt, (vsprintf_s(buffer, count, fmt, args))); }
 
 }
 

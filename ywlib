@@ -1,7 +1,9 @@
 #pragma once
 #include "ywstd"
-#define uint uint8
+#define uint size_t
 #define wchar wchar_t
+
+#pragma region [core] --------------------------------------------------------------------------------------------------
 namespace yw {
 
 using int1 = signed char;
@@ -13,55 +15,19 @@ using uint2 = unsigned short;
 using uint4 = unsigned int;
 using uint8 = unsigned long long;
 
-using path = std::filesystem::path;
-
 inline constexpr uint npos = static_cast<uint>(-1);
 inline constexpr auto unordered = std::partial_ordering::unordered;
-template<typename T> constexpr auto declval = []() noexcept -> T {};
+
 template<typename T> constexpr bool always_false = false;
-template<bool... Bs> constexpr bool counts = (Bs + ...);
+
+/// counts the number of `true` in the parameter pack
+template<bool... Bs> constexpr uint counts = (uint(Bs) + ...);
+
+/// returns the index of the first `true` in the parameter pack
 template<bool... Bs> constexpr bool inspects = 0;
 template<bool B, bool... Bs> constexpr bool inspects<B, Bs...> = B ? 0 : 1 + inspects<Bs...>;
 
-struct none {
-  constexpr none() noexcept = default;
-  constexpr none(auto&&...) noexcept {}
-  constexpr none& operator=(auto&&) noexcept { return *this; }
-  constexpr operator bool() const noexcept { return false; }
-  friend constexpr bool operator==(none, none) noexcept { return false; }
-  friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
-  friend constexpr none operator+(none) noexcept { return {}; }
-  friend constexpr none operator-(none) noexcept { return {}; }
-  friend constexpr none operator+(none, none) noexcept { return {}; }
-  friend constexpr none operator-(none, none) noexcept { return {}; }
-  friend constexpr none operator*(none, none) noexcept { return {}; }
-  friend constexpr none operator/(none, none) noexcept { return {}; }
-  constexpr none& operator+=(none) noexcept { return *this; }
-  constexpr none& operator-=(none) noexcept { return *this; }
-  constexpr none& operator*=(none) noexcept { return *this; }
-  constexpr none& operator/=(none) noexcept { return *this; }
-  template<typename Ct, typename Tr> friend auto& operator<<(std::basic_ostream<Ct, Tr>& os, none) {
-    if constexpr (std::same_as<Ct, char>) return os << "none";
-    else if constexpr (std::same_as<Ct, wchar>) return os << L"none";
-    else if constexpr (std::same_as<Ct, char8_t>) return os << u8"none";
-    else if constexpr (std::same_as<Ct, char16_t>) return os << u"none";
-    else if constexpr (std::same_as<Ct, char32_t>) return os << U"none";
-    else static_assert(always_false<Ct>, "unsupported character type");
-  }
-};
-
-struct source {
-  const char *const file, *const func;
-  const uint line, column;
-  source(const char*) = delete;
-  consteval source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
-                   uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
-    : file(File), func(Func), line(Line), column(Column) {}
-  template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
-    return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
-  }
-};
-
+/// checks if the type is valid
 template<typename T> concept valid = requires { typename std::type_identity_t<T>; };
 
 template<typename T> concept is_const = std::is_const_v<T>;
@@ -106,6 +72,28 @@ template<typename T> requires valid<remove_ref<T>&&> using add_rvref = remove_re
 template<typename T> requires valid<typename _::_add_pointer<T>::type> using add_pointer = _::_add_pointer<T>::type;
 template<typename T, uint N> requires valid<typename _::_add_extent<T, N>::type> using add_extent = _::_add_extent<T, N>::type;
 
+inline constexpr auto mv = []<typename T>(T&& a) noexcept -> remove_ref<T>&& { return static_cast<remove_ref<T>&&>(a); };
+template<typename T> constexpr auto fwd = [](auto&& a) noexcept -> T&& { return static_cast<T&&>(a); };
+template<typename T> constexpr auto declval = []() noexcept -> add_fwref<T> {};
+
+template<typename T> concept destructible = std::is_destructible_v<T>;
+template<typename T> concept nt_destructible = destructible<T> && std::is_nothrow_destructible_v<T>;
+template<typename T, typename... As> concept constructible = requires { T{declval<As>()...}; };
+template<typename T, typename... As> concept nt_constructible = constructible<T, As...> && noexcept(T{declval<As>()...});
+template<typename T, typename A> concept assignable = requires { declval<T>() = declval<A>(); };
+template<typename T, typename A> concept nt_assignable = assignable<T, A> && noexcept(declval<T>() = declval<A>());
+template<typename T, typename A> concept exchangeable = constructible<T, T> && assignable<T&, A>;
+template<typename T, typename A> concept nt_exchangeable = exchangeable<T, A> && nt_constructible<T, T> && nt_assignable<T&, A>;
+
+template<typename T> constexpr auto construct = []<typename... As>(As&&... as) noexcept(nt_constructible<T, As...>)
+  -> T requires constructible<T, As...> { return T{static_cast<As&&>(as)...}; };
+
+inline constexpr auto assign = []<typename T, typename A>(T& t, A&& a) noexcept(nt_assignable<T&, A>)
+  -> decltype(auto) requires assignable<T&, A> { return t = static_cast<A&&>(a); };
+
+inline constexpr auto exchange = []<typename T, typename A>(T& t, A&& a) noexcept(nt_exchangeable<T, A>)
+  -> T requires exchangeable<T, A> { T r(static_cast<T&&>(t)); t = static_cast<A&&>(a); return r; };
+
 template<typename T, typename... Ts> concept same_as = (std::same_as<T, Ts> && ...);
 template<typename T, typename... Ts> concept included_in = (std::same_as<T, Ts> || ...);
 template<typename T, typename... Ts> concept derived_from = (std::derived_from<T, Ts> || ...);
@@ -113,6 +101,16 @@ template<typename T, typename... Ts> concept convertible_to = (std::convertible_
 template<typename T, typename... Ts> concept nt_convertible_to = convertible_to<T, Ts...> && (std::is_nothrow_convertible_v<T, Ts> && ...);
 template<typename T, typename... Ts> concept castable_to = requires { (static_cast<T>(std::declval<Ts>()), ...); };
 template<typename T, typename... Ts> concept nt_castable_to = castable_to<T, Ts...> && noexcept((static_cast<T>(std::declval<Ts>()), ...));
+
+/// structure to represent a constant value
+template<auto V, typename T = decltype(V)>
+requires convertible_to<decltype(V), T>
+struct constant {
+  using type = T;
+  static constexpr type value = V;
+  consteval operator type() const noexcept { return value; }
+  consteval type operator()() const noexcept { return value; }
+};
 
 /// checks if the type is `bool`
 template<typename T> concept is_bool = same_as<remove_cv<T>, bool>;
@@ -138,14 +136,35 @@ template<typename T> concept arithmetic = integral<T> || float_type<T>;
 /// checks if the type is numeric; explicitly convertible to almost all arithmetic types
 template<typename T> concept numeric = nt_castable_to<T, bool, int4, int8, uint4, uint8, float, double>;
 
+namespace _ {
+template<typename T, template<typename...> typename Tm> constexpr bool _specialization_of = false;
+template<template<typename...> typename Tm, typename... Ts> constexpr bool _specialization_of<Tm<Ts...>, Tm> = true;
+}
+/// checks if the type is a specialization of a template
+template<typename T, template<typename...> typename Tm> concept specialization_of = _::_specialization_of<T, Tm>;
+
+struct none;
+
+///
 template<typename F, typename... As> concept invocable = std::invocable<F, As...>;
-template<typename F, typename... As> concept nt_invocable = invocable<F, As...> && std::is_nothrow_invocable_v<F, As...>;
+
+///
+template<typename F, typename... As> concept nt_invocable =
+  invocable<F, As...> && std::is_nothrow_invocable_v<F, As...>;
+
+///
 template<typename F, typename... As> requires invocable<F, As...> using result =
   std::conditional_t<same_as<remove_cv<std::invoke_result_t<F, As...>>, void>, none, std::invoke_result_t<F, As...>>;
+
+///
 template<typename F, typename R, typename... As> concept invocable_r =
   invocable<F, As...> && convertible_to<result<F, As...>, R>;
+
+///
 template<typename F, typename R, typename... As> concept nt_invocable_r =
   nt_invocable<F, As...> && nt_convertible_to<result<F, As...>, R>;
+
+///
 inline constexpr auto invoke = []<typename F, typename... As>(F&& f, As&&... as)
   noexcept(nt_invocable<F, As...>) -> result<F, As...> {
   if constexpr (!std::is_void_v<result<F, As...>>) return std::invoke(static_cast<F&&>(f), static_cast<As&&>(as)...);
@@ -157,7 +176,7 @@ template<typename T> concept trivial = std::is_trivially_copyable_v<T>;
 
 /// bit-casts the value to another type
 template<trivial T> constexpr auto bitcast = []<trivial U>(
-  const T& t) noexcept -> U requires (sizeof(T) == sizeof(U)) { return __builtin_bit_cast(U, t); };
+  const U& v) noexcept -> T requires (sizeof(T) == sizeof(U)) { return __builtin_bit_cast(T, v); };
 
 /// bit-casts the value to uint type
 constexpr auto uintcast = []<trivial T>(const T& t) noexcept {
@@ -169,23 +188,63 @@ constexpr auto uintcast = []<trivial T>(const T& t) noexcept {
 };
 
 
+
+using path = std::filesystem::path;
+
+struct source {
+  const char *const file, *const func;
+  const uint line, column;
+  source(const char*) = delete;
+  consteval source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
+                   uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
+    : file(File), func(Func), line(Line), column(Column) {}
+  template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
+    return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
+  }
+};
+
 }
+#pragma endregion // -------------------------------------------------------------------------------------------- [core]
 
-
-#pragma region [constant] ----------------------------------------------------------------------------------------------
+#pragma region [none] --------------------------------------------------------------------------------------------------
 namespace yw {
 
-/// structure to represent a constant value
-template<auto V, typename T = decltype(V)>
-requires convertible_to<decltype(V), T>
-struct constant {
-  using type = T;
-  static constexpr type value = V;
-  consteval operator type() const noexcept { return value; }
-  consteval type operator()() const noexcept { return value; }
+/// structure to represent a null value
+struct none {
+  constexpr none() noexcept = default;
+  constexpr none(auto&&...) noexcept {}
+  constexpr none& operator=(auto&&) noexcept { return *this; }
+  constexpr operator bool() const noexcept { return false; }
+  friend constexpr bool operator==(none, none) noexcept { return false; }
+  friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
+  friend constexpr none operator+(none) noexcept { return {}; }
+  friend constexpr none operator-(none) noexcept { return {}; }
+  friend constexpr none operator+(none, none) noexcept { return {}; }
+  friend constexpr none operator-(none, none) noexcept { return {}; }
+  friend constexpr none operator*(none, none) noexcept { return {}; }
+  friend constexpr none operator/(none, none) noexcept { return {}; }
+  constexpr none& operator+=(none) noexcept { return *this; }
+  constexpr none& operator-=(none) noexcept { return *this; }
+  constexpr none& operator*=(none) noexcept { return *this; }
+  constexpr none& operator/=(none) noexcept { return *this; }
+  template<typename C, typename Tr> friend auto& operator<<(std::basic_ostream<C, Tr>& os, none) {
+    if constexpr (std::same_as<C, char>) return os << "none";
+    else if constexpr (std::same_as<C, wchar>) return os << L"none";
+    else if constexpr (std::same_as<C, char8_t>) return os << u8"none";
+    else if constexpr (std::same_as<C, char16_t>) return os << u"none";
+    else if constexpr (std::same_as<C, char32_t>) return os << U"none";
+    else static_assert(always_false<C>, "unsupported character type");
+  }
 };
+
+/// checks if the type is `none`
+template<typename T> concept is_none = same_as<remove_cv<T>, none>;
 }
-#pragma endregion // ---------------------------------------------------------------------------------------- [constant]
+namespace std {
+template<typename T> struct common_type<T, yw::none> : type_identity<yw::none> {};
+template<typename T> struct common_type<yw::none, T> : type_identity<yw::none> {};
+}
+#pragma endregion // -------------------------------------------------------------------------------------------- [none]
 
 #pragma region [select, select_type, select_value] ---------------------------------------------------------------------
 namespace yw {
@@ -242,8 +301,8 @@ public:
     return select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...);
   }
   /// output stream operator
-  template<typename Ct, typename Tr> friend auto& operator<<(
-    std::basic_ostream<Ct, Tr>& os, const caster& c) requires requires { os << c(); } { return os << c(); }
+  template<typename C, typename Tr> friend auto& operator<<(
+    std::basic_ostream<C, Tr>& os, const caster& c) requires requires { os << c(); } { return os << c(); }
 };
 }
 #pragma endregion // ---------------------------------------------------------------------------------- [caster, is_cev]
@@ -349,7 +408,6 @@ template<uint I, typename T> struct tuple_element<I, yw::vector3<T>> : type_iden
 }
 #pragma endregion // -------------------------------------------------------------------------------- [vector2, vector3]
 
-
 #pragma region [iterator, ranges] --------------------------------------------------------------------------------------
 namespace yw {
 
@@ -417,7 +475,7 @@ template<typename T> using string_view = std::basic_string_view<T>;
 template<char_type C, typename... Ts> using format_string = std::basic_format_string<C, Ts...>;
 
 /// checks if the type can be converted to a string view
-template<typename T, typename Ct = iter_value<T>> concept stringable = nt_convertible_to<T&, string_view<Ct>>;
+template<typename T, typename C = iter_value<T>> concept stringable = nt_convertible_to<T&, string_view<C>>;
 
 using str = string<char>;
 using wstr = string<wchar>;
@@ -426,56 +484,125 @@ using wstr_view = string_view<wchar>;
 template<typename... Ts> using str_format = format_string<char, Ts...>;
 template<typename... Ts> using wstr_format = format_string<wchar, Ts...>;
 
+/// returns the length of a stringable object
+inline constexpr auto strlen = []<stringable S>(S&& s) -> uint {
+  if constexpr (is_array<remove_ref<S>>) return std::extent_v<S> - 1;
+  else if constexpr (is_pointer<remove_ref<S>>) return std::char_traits<iter_value<S>>::length(s);
+  else if constexpr (specialization_of<remove_cvref<S>, std::basic_string>) return s.size();
+  else if constexpr (specialization_of<remove_cvref<S>, std::basic_string_view>) return s.size();
+  else return string_view<iter_value<S>>(s).size();
+};
+
+/// changes the encoding of a string
+template<char_type C> inline constexpr auto cvt = [](
+  stringable auto&& s) noexcept -> string<C> requires same_as<C, remove_cvref<C>> {
+  using In = remove_cvref<iter_value<decltype(s)>>;
+  string_view<In> v(s);
+  if constexpr (sizeof(In) == sizeof(C)) return string<C>(bitcast<string_view<C>>(v));
+  else if constexpr (included_in<In, char, char8_t>) {
+    if constexpr (same_as<C, char32_t>) {
+      string<char32_t> r(v.size(), {});
+      auto p = r.data();
+      for (auto i = v.data(), last = i + v.size(); i < last;) {
+        char8_t c = *i++;
+        if (c < 0x80) *p++ = c;
+        else if (c < 0xc0) *p++ = 0xfffe;
+        else if (c < 0xe0) *p++ = (c & 0x1f) << 6 | (*i++ & 0x3f);
+        else if (c < 0xf0) *p++ = (c & 0x0f) << 12 | (*i++ & 0x3f) << 6 | (*i++ & 0x3f);
+        else if (c < 0xf8) *p++ = (c & 0x07) << 18 | (*i++ & 0x3f) << 12 | (*i++ & 0x3f) << 6 | (*i++ & 0x3f);
+        else *p++ = 0xfffe;
+      }
+      r.resize(p - r.data());
+      return r;
+    } else if constexpr (included_in<C, wchar, char16_t>) return cvt<C>(cvt<char32_t>(s));
+  } else if constexpr (included_in<In, wchar, char16_t>) {
+    if constexpr (same_as<C, char32_t>) {
+      string<char32_t> r(v.size(), {});
+      auto p = r.data();
+      for (auto i = v.data(), last = i + v.size(); i < last;) {
+        if (*i < 0xd800 || *i >= 0xe000) *p++ = *i++;
+        else *p++ = *i++ & 0x03ff | (*i++ & 0x03ff << 10);
+      }
+      r.resize(p - r.data());
+      return r;
+    } else if constexpr (included_in<C, char, char8_t>) return cvt<C>(cvt<char32_t>(s));
+  } else if constexpr (same_as<In, char32_t>) {
+    if constexpr (included_in<C, char, char8_t>) {
+      string<C> r(v.size() * 4, {});
+      auto p = r.data();
+      for (auto i = v.data(), last = i + v.size(); i < last;) {
+        if (char32_t c = *i++; c < 0x80) *p++ = C(c);
+        else if (c < 0x800) *p++ = C(0xc0 | c >> 6), *p++ = C(0x80 | c & 0x3f);
+        else if (c < 0x10000) *p++ = C(0xe0 | c >> 12), *p++ = C(0x80 | (c >> 6 & 0x3f)), *p++ = C(0x80 | (c & 0x3f));
+        else *p++ = C(0xf0 | c >> 18), *p++ = C(0x80 | (c >> 12 & 0x3f)),
+             *p++ = C(0x80 | (c >> 6 & 0x3f)), *p++ = C(0x80 | (c & 0x3f));
+      }
+      r.resize(p - r.data());
+      return r;
+    } else if constexpr (included_in<C, wchar, char16_t>) {
+      string<C> r(v.size() * 2, {});
+      auto p = r.data();
+      for (auto i = v.data(), last = i + v.size(); i < last;) {
+        auto c = *i++;
+        if (c < 0x10000) *p++ = C(c);
+        else *p++ = C(0xd800 | (c - 0x10000) >> 10), *p++ = C(0xdc00_u2 | ((c - 0x10000) & 0x3ff));
+      }
+      r.resize(p - r.data());
+      return r;
+    }
+  }
+};
+
 /// formats the arguments
-template<typename... Ts> str format(
-  str_format<Ts...> f, Ts&&... as) { return std::vformat(f.get(), std::make_format_args(as...)); }
+inline constexpr auto format = []<typename... Ts>(
+  str_view fmt, Ts&&... as) { return std::vformat(fmt, std::make_format_args(as...)); };
+
 /// formats the arguments
-template<typename... Ts> wstr format(
-  wstr_format<Ts...> f, Ts&&... as) { return std::vformat(f.get(), std::make_wformat_args(as...)); }
+inline constexpr auto wformat = []<typename... Ts>(
+  wstr_view fmt, Ts&&... as) { return std::vformat(fmt, std::make_wformat_args(as...)); };
 
 /// formats the arguments and writes to the output stream
-template<typename... Ts> requires (sizeof...(Ts) != 0) void print(
-  str_format<Ts...> f, Ts&&... as) { std::print(f, static_cast<Ts&&>(as)...); }
+inline constexpr auto print = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
+  if constexpr (sizeof...(Ts) == 0) {
+    if constexpr (stringable<T, char>) std::cout << str_view(a);
+    else if constexpr (requires { std::cout << a; }) std::cout << a;
+    else always_false<T>;
+  } else if constexpr (stringable<T, char>) {
+    std::cout << std::vformat(str_view(a), std::make_format_args(as...));
+  } else always_false<T>;
+};
 
 /// formats the arguments and writes to the output stream
-template<typename... Ts> requires (sizeof...(Ts) != 0) void print(
-  wstr_format<Ts...> f, Ts&&... as) { std::wcout << std::format(f, static_cast<Ts&&>(as)...); }
-
-/// writes to the output stream
-inline void print(str_view s) { std::cout << s; }
-
-/// writes to the output stream
-inline void print(wstr_view s) { std::wcout << s; }
-
-// /// formats the arguments and writes to the output stream with a newline
-// template<typename... Ts> requires (sizeof...(Ts) != 0) void println(
-//   str_format<Ts...> f, Ts&&... as) { std::println(f, static_cast<Ts&&>(as)...); }
-
-// /// formats the arguments and writes to the output stream with a newline
-// template<typename... Ts> requires (sizeof...(Ts) != 0) void println(
-//   wstr_format<Ts...> f, Ts&&... as) { std::wcout << std::format(f, static_cast<Ts&&>(as)...) << std::endl; }
-
-// /// writes to the output stream with a newline
-// inline void println(str_view s) { std::cout << s << std::endl; }
-
-// /// writes to the output stream with a newline
-// inline void println(wstr_view s) { std::wcout << s << std::endl; }
+inline constexpr auto wprint = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
+  if constexpr (sizeof...(Ts) == 0) {
+    if constexpr (stringable<T, wchar>) std::wcout << wstr_view(a);
+    else if constexpr (requires { std::wcout << a; }) std::wcout << a;
+    else always_false<T>;
+  } else if constexpr (stringable<T, wchar>) {
+    std::wcout << std::vformat(wstr_view(a), std::make_wformat_args(as...));
+  } else always_false<T>;
+};
 
 /// writes to the output stream with a newline
 inline constexpr auto println = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
   if constexpr (sizeof...(Ts) == 0) {
     if constexpr (stringable<T, char>) std::cout << a << std::endl;
-    else if constexpr (stringable<T, wchar>) std::wcout << a << std::endl;
     else if constexpr (requires { std::cout << a; }) std::cout << a << std::endl;
+    else always_false<T>;
+  } else if constexpr (stringable<T, char>) {
+    std::cout << std::vformat(str_view(a), std::make_format_args(as...)) << std::endl;
+  } else always_false<T>;
+};
+
+/// writes to the output stream with a newline
+inline constexpr auto wprintln = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
+  if constexpr (sizeof...(Ts) == 0) {
+    if constexpr (stringable<T, wchar>) std::wcout << a << std::endl;
     else if constexpr (requires { std::wcout << a; }) std::wcout << a << std::endl;
     else always_false<T>;
-  } else {
-    if constexpr (stringable<T, char>)
-      std::cout << std::vformat(str_view(a), std::make_format_args(as...)) << std::endl;
-    else if constexpr (stringable<T, wchar>)
-      std::wcout << std::vformat(wstr_view(a), std::make_wformat_args(as...)) << std::endl;
-    else always_false<T>;
-  }
+  } else if constexpr (stringable<T, wchar>) {
+    std::wcout << std::vformat(wstr_view(a), std::make_wformat_args(as...)) << std::endl;
+  } else always_false<T>;
 };
 
 /// confirms whether the character is a digit; `0-9`
@@ -585,6 +712,19 @@ template<float_type FloatType> constexpr auto from_string<FloatType> = []<string
   if constexpr (same_as<S, string_view<C>&>) s = string_view<C>(p, q - p);
   return neg ? -static_cast<FloatType>(v) : static_cast<FloatType>(v);
 };
+
+/// converts `none` to string
+template<char_type C> constexpr auto to_string(const is_none auto) noexcept {
+  constexpr C s[] = {C('n'), C('o'), C('n'), C('e'), C('\0')};
+  return string<C>(s);
+}
+
+/// converts `bool` to string
+template<char_type C> constexpr auto to_string(const is_bool auto b) noexcept {
+  constexpr C t[] = {C('t'), C('r'), C('u'), C('e'), C('\0')};
+  constexpr C f[] = {C('f'), C('a'), C('l'), C('s'), C('e'), C('\0')};
+  return b ? string<C>(t) : string<C>(f);
+}
 }
 #pragma endregion // ------------------------------------------------------------------------------------------ [string]
 
@@ -638,8 +778,8 @@ struct date {
   string<char> to_string() const { return to_string<char>(); }
 
   /// output stream operator
-  template<typename Ct, typename Tr> friend auto& operator<<(
-    std::basic_ostream<Ct, Tr>& os, const date& d) { return os << d.to_string<Ct>(); }
+  template<typename C, typename Tr> friend auto& operator<<(
+    std::basic_ostream<C, Tr>& os, const date& d) { return os << d.to_string<C>(); }
 };
 
 /// clock
@@ -672,13 +812,13 @@ struct clock {
   }
 
   /// returns the formatted string; `HH:MM:SS`
-  template<char_type Ct> string<Ct> to_string() const {
-    string<Ct> s(8, {});
-    if constexpr (sizeof(Ct) == 4) {
+  template<char_type C> string<C> to_string() const {
+    string<C> s(8, {});
+    if constexpr (sizeof(C) == 4) {
       auto t = std::format("{:02d}:{:02d}:{:02d}", hour, minute, second);
       std::ranges::copy(t, s.data());
-    } else if constexpr (sizeof(Ct) == 1) std::format_to(s.data(), "{:02d}:{:02d}:{:02d}", hour, minute, second);
-    else if constexpr (sizeof(Ct) == 2) std::format_to(s.data(), L"{:02d}:{:02d}:{:02d}", hour, minute, second);
+    } else if constexpr (sizeof(C) == 1) std::format_to(s.data(), "{:02d}:{:02d}:{:02d}", hour, minute, second);
+    else if constexpr (sizeof(C) == 2) std::format_to(s.data(), L"{:02d}:{:02d}:{:02d}", hour, minute, second);
     return s;
   }
 
@@ -686,21 +826,21 @@ struct clock {
   string<char> to_string() const { return to_string<char>(); }
 
   /// output stream operator
-  template<typename Ct, typename Tr> friend auto& operator<<(
-    std::basic_ostream<Ct, Tr>& os, const clock& c) { return os << c.to_string<Ct>(); }
+  template<typename C, typename Tr> friend auto& operator<<(
+    std::basic_ostream<C, Tr>& os, const clock& c) { return os << c.to_string<C>(); }
 };
 
 /// date and clock
 struct time {
 
   /// format string for `std::format`; `YYYY-MM-DD HH:MM:SS`
-  template<char_type Ct> static constexpr Ct format[] = {
-    Ct('{'), Ct(':'), Ct('0'), Ct('4'), Ct('d'), Ct('}'), Ct('-'),
-    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct('-'),
-    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct(' '),
-    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct(':'),
-    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct(':'),
-    Ct('{'), Ct(':'), Ct('0'), Ct('2'), Ct('d'), Ct('}'), Ct('\0')};
+  template<char_type C> static constexpr C format[] = {
+    C('{'), C(':'), C('0'), C('4'), C('d'), C('}'), C('-'),
+    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C('-'),
+    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(' '),
+    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(':'),
+    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(':'),
+    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C('\0')};
 
   /// date of the time
   yw::date date;
@@ -725,16 +865,16 @@ struct time {
   operator yw::clock() const { return clock; }
 
   /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
-  template<char_type Ct> string<Ct> to_string() const {
+  template<char_type C> string<C> to_string() const {
     const auto& d = date;
     const auto& c = clock;
-    string<Ct> s(19, {});
-    if constexpr (sizeof(Ct) == 4) {
+    string<C> s(19, {});
+    if constexpr (sizeof(C) == 4) {
       auto t = std::format(format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
       std::ranges::copy(t, s.data());
-    } else if constexpr (sizeof(Ct) == 1)
+    } else if constexpr (sizeof(C) == 1)
       std::format_to(s.data(), format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
-    else if constexpr (sizeof(Ct) == 2)
+    else if constexpr (sizeof(C) == 2)
       std::format_to(s.data(), format<wchar>, d.year, d.month, d.day, c.hour, c.minute, c.second);
     return s;
   }
@@ -743,23 +883,23 @@ struct time {
   string<char> to_string() const { return to_string<char>(); }
 
   /// output stream operator
-  template<typename Ct, typename Tr> friend auto& operator<<(
-    std::basic_ostream<Ct, Tr>& os, const time& t) { return os << t.to_string<Ct>(); }
+  template<typename C, typename Tr> friend auto& operator<<(
+    std::basic_ostream<C, Tr>& os, const time& t) { return os << t.to_string<C>(); }
 };
 
 /// current time caster
 inline constexpr caster now{[] { return time{}; }};
 }
 namespace std {
-template<typename Ct> struct formatter<yw::date, Ct> : formatter<basic_string<Ct>, Ct> {
+template<typename C> struct formatter<yw::date, C> : formatter<basic_string<C>, C> {
   auto format(const yw::date& d, auto& ctx) const {
-    return formatter<basic_string<Ct>, Ct>::format(d.to_string<Ct>(), ctx); } };
-template<typename Ct> struct formatter<yw::clock, Ct> : formatter<basic_string<Ct>, Ct> {
+    return formatter<basic_string<C>, C>::format(d.to_string<C>(), ctx); } };
+template<typename C> struct formatter<yw::clock, C> : formatter<basic_string<C>, C> {
   auto format(const yw::clock& c, auto& ctx) const {
-    return formatter<basic_string<Ct>, Ct>::format(c.to_string<Ct>(), ctx); } };
-template<typename Ct> struct formatter<yw::time, Ct> : formatter<basic_string<Ct>, Ct> {
+    return formatter<basic_string<C>, C>::format(c.to_string<C>(), ctx); } };
+template<typename C> struct formatter<yw::time, C> : formatter<basic_string<C>, C> {
   auto format(const yw::time& t, auto& ctx) const {
-    return formatter<basic_string<Ct>, Ct>::format(t.to_string<Ct>(), ctx); } };
+    return formatter<basic_string<C>, C>::format(t.to_string<C>(), ctx); } };
 }
 #pragma endregion // ------------------------------------------------------------------------------- [date, clock, time]
 
@@ -1445,8 +1585,227 @@ constexpr auto operator<=>(uint a, virtual_key b) noexcept { return a <=> uint(b
 }
 #pragma endregion // ------------------------------------------------------------------------------------- [virtual_key]
 
+#pragma region [wstyle] ------------------------------------------------------------------------------------------------
+namespace yw { // clang-format off
+
+/// window style enumerator
+enum class wstyle : uint {
+  ws_maximizebox      = 0x00010000,
+  ws_minimizebox      = 0x00020000,
+  ws_tabstop          = 0x00010000,
+  ws_group            = 0x00020000,
+  ws_thickframe       = 0x00040000,
+  ws_sizebox          = 0x00040000, // = ws_thickframe
+  ws_sysmenu          = 0x00080000,
+  ws_hscroll          = 0x00100000,
+  ws_vscroll          = 0x00200000,
+  ws_dlgframe         = 0x00400000,
+  ws_border           = 0x00800000,
+  ws_caption          = 0x00c00000, // = ws_border | ws_dlgframe,
+  ws_maximize         = 0x01000000,
+  ws_clipchildren     = 0x02000000,
+  ws_clipsiblings     = 0x04000000,
+  ws_disabled         = 0x08000000,
+  ws_visible          = 0x10000000,
+  ws_minimize         = 0x20000000,
+  ws_child            = 0x40000000,
+  ws_popup            = 0x80000000,
+  ws_overlapped       = 0x00000000,
+  ws_tiled            = 0x00000000, // = ws_overlapped
+  ws_iconic           = 0x20000000, // = ws_minimize
+  ws_childwindow      = 0x40000000, // = ws_child
+  ws_overlappedwindow = 0x00cf0000,
+  ws_popupwindow      = 0x80880000, // = ws_popup | ws_border | ws_sysmenu
+  ws_tiledwindow      = 0x00cf0000, // = ws_overlappedwindow
+
+  ws_ex_dlgsmodalframe      = 0x00000001ULL << 32,
+  ws_ex_noparentnotify      = 0x00000004ULL << 32,
+  ws_ex_topmost             = 0x00000008ULL << 32,
+  ws_ex_acceptfiles         = 0x00000010ULL << 32,
+  ws_ex_transparent         = 0x00000020ULL << 32,
+  ws_ex_mdichild            = 0x00000040ULL << 32,
+  ws_ex_toolwindow          = 0x00000080ULL << 32,
+  ws_ex_windowedge          = 0x00000100ULL << 32,
+  ws_ex_clientedge          = 0x00000200ULL << 32,
+  ws_ex_contexthelp         = 0x00000400ULL << 32,
+  ws_ex_right               = 0x00001000ULL << 32,
+  ws_ex_left                = 0x00000000ULL << 32,
+  ws_ex_rtlreading          = 0x00002000ULL << 32,
+  ws_ex_ltrreading          = 0x00000000ULL << 32,
+  ws_ex_leftscrollbar       = 0x00004000ULL << 32,
+  ws_ex_rightscrollbar      = 0x00000000ULL << 32,
+  ws_ex_controlparent       = 0x00010000ULL << 32,
+  ws_ex_staticedge          = 0x00020000ULL << 32,
+  ws_ex_appwindow           = 0x00040000ULL << 32,
+  ws_ex_overlappedwindow    = ws_ex_windowedge | ws_ex_clientedge,
+  ws_ex_palettewindow       = ws_ex_windowedge | ws_ex_toolwindow | ws_ex_topmost,
+  ws_ex_layered             = 0x00080000ULL << 32,
+  ws_ex_noinheritlayout     = 0x00100000ULL << 32,
+  ws_ex_noredirectionbitmap = 0x00200000ULL << 32,
+  ws_ex_layoutrtl           = 0x00400000ULL << 32,
+  ws_ex_composited          = 0x02000000ULL << 32,
+  ws_ex_noactivate          = 0x08000000ULL << 32,
+
+  bs_pushbutton      = 0x00000000,
+  bs_defpushbutton   = 0x00000001,
+  bs_checkbox        = 0x00000002,
+  bs_autocheckbox    = 0x00000003,
+  bs_radiobutton     = 0x00000004,
+  bs_3state          = 0x00000005,
+  bs_auto3state      = 0x00000006,
+  bs_groupbox        = 0x00000007,
+  bs_userbutton      = 0x00000008,
+  bs_autoradiobutton = 0x00000009,
+  bs_pushbox         = 0x0000000A,
+  bs_ownerdraw       = 0x0000000B,
+  bs_typemask        = 0x0000000F,
+  bs_lefttext        = 0x00000020,
+  bs_text            = 0x00000000,
+  bs_icon            = 0x00000040,
+  bs_bitmap          = 0x00000080,
+  bs_left            = 0x00000100,
+  bs_right           = 0x00000200,
+  bs_center          = 0x00000300,
+  bs_top             = 0x00000400,
+  bs_bottom          = 0x00000800,
+  bs_vcenter         = 0x00000C00,
+  bs_pushlike        = 0x00001000,
+  bs_multiline       = 0x00002000,
+  bs_notify          = 0x00004000,
+  bs_flat            = 0x00008000,
+  bs_rightbutton     = bs_lefttext,
+
+  es_left        = 0x0000,
+  es_center      = 0x0001,
+  es_right       = 0x0002,
+  es_multiline   = 0x0004,
+  es_uppercase   = 0x0008,
+  es_lowercase   = 0x0010,
+  es_password    = 0x0020,
+  es_autovscroll = 0x0040,
+  es_autohscroll = 0x0080,
+  es_nohidesel   = 0x0100,
+  es_oemconvert  = 0x0400,
+  es_readonly    = 0x0800,
+  es_wantreturn  = 0x1000,
+  es_number      = 0x2000,
+
+  ss_left            = 0x00000000,
+  ss_center          = 0x00000001,
+  ss_right           = 0x00000002,
+  ss_icon            = 0x00000003,
+  ss_blackrect       = 0x00000004,
+  ss_grayrect        = 0x00000005,
+  ss_whiterect       = 0x00000006,
+  ss_blackframe      = 0x00000007,
+  ss_grayframe       = 0x00000008,
+  ss_whiteframe      = 0x00000009,
+  ss_useritem        = 0x0000000A,
+  ss_simple          = 0x0000000B,
+  ss_leftnowrap      = 0x0000000C,
+  ss_ownerdraw       = 0x0000000D,
+  ss_bitmap          = 0x0000000E,
+  ss_enhmetafile     = 0x0000000F,
+  ss_etchedhorz      = 0x00000010,
+  ss_etchedvert      = 0x00000011,
+  ss_etchedframe     = 0x00000012,
+  ss_typemask        = 0x0000001F,
+  ss_realsizecontrol = 0x00000040,
+  ss_noprefix        = 0x00000080,
+  ss_notify          = 0x00000100,
+  ss_centerimage     = 0x00000200,
+  ss_rightjust       = 0x00000400,
+  ss_realsizeimage   = 0x00000800,
+  ss_sunken          = 0x00001000,
+  ss_editcontrol     = 0x00002000,
+  ss_endellipsis     = 0x00004000,
+  ss_patellipsis     = 0x00008000,
+  ss_wordellipsis    = 0x0000C000,
+  ss_ellipsis        = 0x0000C000,
+
+  lbs_notify            = 0x0001,
+  lbs_sort              = 0x0002,
+  lbs_noredraw          = 0x0004,
+  lbs_multiplesel       = 0x0008,
+  lbs_ownerdrawfixed    = 0x0010,
+  lbs_ownerdrawvariable = 0x0020,
+  lbs_hasstrings        = 0x0040,
+  lbs_usetabstops       = 0x0080,
+  lbs_nointegralheight  = 0x0100,
+  lbs_multicolumn       = 0x0200,
+  lbs_wantkeyboardinput = 0x0400,
+  lbs_extendedsel       = 0x0800,
+  lbs_disable           = 0x1000,
+  lbs_nodata            = 0x2000,
+  lbs_nosel             = 0x4000,
+  lbs_standard          = (lbs_notify | lbs_sort | ws_vscroll | ws_border),
+
+  cbs_simple                  = 0x0001,
+  cbs_dropdown                = 0x0002,
+  cbs_dropdownlist            = 0x0003,
+  cbs_ownerdrawfixed          = 0x0010,
+  cbs_ownerdrawvariable       = 0x0020,
+  cbs_autohscroll             = 0x0040,
+  cbs_oemconvert              = 0x0080,
+  cbs_sort                    = 0x0100,
+  cbs_hasstrings              = 0x0200,
+  cbs_nointegralheight        = 0x0400,
+  cbs_disablenoscroll         = 0x0800,
+  cbs_uppercase               = 0x2000,
+  cbs_lowercase               = 0x4000,
+  sbs_horz                    = 0x0000,
+  sbs_vert                    = 0x0001,
+  sbs_topalign                = 0x0002,
+  sbs_leftalign               = 0x0002,
+  sbs_bottomalign             = 0x0004,
+  sbs_rightalign              = 0x0004,
+  sbs_sizeboxtopleftalign     = 0x0002,
+  sbs_sizeboxbottomrightalign = 0x0004,
+  sbs_sizebox                 = 0x0008,
+  sbs_sizegrip                = 0x0010,
+};
+using enum wstyle;
+
+constexpr wstyle operator~(wstyle a) noexcept { return wstyle(~uint(a)); }
+constexpr wstyle operator|(wstyle a, wstyle b) noexcept { return wstyle(uint(a) | uint(b)); }
+constexpr wstyle operator&(wstyle a, wstyle b) noexcept { return wstyle(uint(a) & uint(b)); }
+constexpr wstyle operator^(wstyle a, wstyle b) noexcept { return wstyle(uint(a) ^ uint(b)); }
+constexpr wstyle& operator|=(wstyle& a, wstyle b) noexcept { return a = a | b; }
+constexpr wstyle& operator&=(wstyle& a, wstyle b) noexcept { return a = a & b; }
+constexpr wstyle& operator^=(wstyle& a, wstyle b) noexcept { return a = a ^ b; }
+} // clang-format on
+#pragma endregion // ------------------------------------------------------------------------------------------ [wstyle]
+
 #pragma region [window] ------------------------------------------------------------------------------------------------
 namespace yw {
+
+class window;
+
+namespace system {
+
+/// instance handle
+win::HINSTANCE hinstance = win::GetModuleHandleW(nullptr);
+
+/// default window procedure
+int8 __stdcall wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp);
+
+/// default window class
+unsigned short wclass = [] {
+  win::WNDCLASSEXW wc{sizeof(win::WNDCLASSEXW)};
+  wc.style = 0x0001 | 0x0002 | 0x0020; // CS_VREDRAW | CS_HREDRAW | CS_OWNDC
+  wc.lpfnWndProc = wproc;
+  wc.cbClsExtra = 0;
+  wc.cbWndExtra = sizeof(void*);
+  wc.hInstance = hinstance;
+  wc.hIcon = nullptr;
+  wc.hCursor = win::LoadCursorW(nullptr, reinterpret_cast<const wchar*>(32512)); // IDC_ARROW
+  wc.hbrBackground = reinterpret_cast<win::HBRUSH>(5); // COLOR_WINDOW
+  wc.lpszMenuName = nullptr;
+  wc.lpszClassName = L"__ywlib";
+  wc.hIconSm = nullptr;
+  return win::RegisterClassExW(&wc);
+}();
+}
 
 /// class to create and manage a window
 class window {
@@ -1457,391 +1816,261 @@ protected:
   window(win::HWND hw) noexcept : _hwnd(hw) {}
 public:
 
-  /// \brief window styles; upper 32 bits are extended styles
-  enum class style : uint {
-    ws_maximizebox = 0x10000,
-    ws_minimizebox = 0x20000,
-    ws_tabstop = 0x10000,
-    ws_group = 0x20000,
-    ws_thickframe = 0x40000,
-    ws_sizebox = ws_thickframe,
-    ws_sysmenu = 0x80000,
-    ws_hscroll = 0x100000,
-    ws_vscroll = 0x200000,
-    ws_dlgframe = 0x400000,
-    ws_border = 0x800000,
-    ws_caption = ws_border | ws_dlgframe,
-    ws_maximize = 0x1000000,
-    ws_clipchildren = 0x2000000,
-    ws_clipsiblings = 0x4000000,
-    ws_disabled = 0x8000000,
-    ws_visible = 0x10000000,
-    ws_minimize = 0x20000000,
-    ws_child = 0x40000000,
-    ws_popup = 0x80000000,
-    ws_overlapped = 0x00000000,
-    ws_tiled = ws_overlapped,
-    ws_iconic = ws_minimize,
-    ws_childwindow = ws_child,
-    ws_overlappedwindow = ws_overlapped | ws_caption | ws_sysmenu | ws_thickframe | ws_minimizebox | ws_maximizebox,
-    ws_popupwindow = ws_popup | ws_border | ws_sysmenu,
-    ws_tiledwindow = ws_overlappedwindow,
-    ws_ex_dlgsmodalframe = 0x00000001ULL << 32,
-    ws_ex_noparentnotify = 0x00000004ULL << 32,
-    ws_ex_topmost = 0x00000008ULL << 32,
-    ws_ex_acceptfiles = 0x00000010ULL << 32,
-    ws_ex_transparent = 0x00000020ULL << 32,
-    ws_ex_mdichild = 0x00000040ULL << 32,
-    ws_ex_toolwindow = 0x00000080ULL << 32,
-    ws_ex_windowedge = 0x00000100ULL << 32,
-    ws_ex_clientedge = 0x00000200ULL << 32,
-    ws_ex_contexthelp = 0x00000400ULL << 32,
-    ws_ex_right = 0x00001000ULL << 32,
-    ws_ex_left = 0x00000000ULL << 32,
-    ws_ex_rtlreading = 0x00002000ULL << 32,
-    ws_ex_ltrreading = 0x00000000ULL << 32,
-    ws_ex_leftscrollbar = 0x00004000ULL << 32,
-    ws_ex_rightscrollbar = 0x00000000ULL << 32,
-    ws_ex_controlparent = 0x00010000ULL << 32,
-    ws_ex_staticedge = 0x00020000ULL << 32,
-    ws_ex_appwindow = 0x00040000ULL << 32,
-    ws_ex_overlappedwindow = ws_ex_windowedge | ws_ex_clientedge,
-    ws_ex_palettewindow = ws_ex_windowedge | ws_ex_toolwindow | ws_ex_topmost,
-    ws_ex_layered = 0x00080000ULL << 32,
-    ws_ex_noinheritlayout = 0x00100000ULL << 32,
-    ws_ex_noredirectionbitmap = 0x00200000ULL << 32,
-    ws_ex_layoutrtl = 0x00400000ULL << 32,
-    ws_ex_composited = 0x02000000ULL << 32,
-    ws_ex_noactivate = 0x08000000ULL << 32,
-    es_left = 0x0000,
-    es_center = 0x0001,
-    es_right = 0x0002,
-    es_multiline = 0x0004,
-    es_uppercase = 0x0008,
-    es_lowercase = 0x0010,
-    es_password = 0x0020,
-    es_autovscroll = 0x0040,
-    es_autohscroll = 0x0080,
-    es_nohidesel = 0x0100,
-    es_oemconvert = 0x0400,
-    es_readonly = 0x0800,
-    es_wantreturn = 0x1000,
-    es_number = 0x2000,
-    bs_pushbutton = 0x00000000,
-    bs_defpushbutton = 0x00000001,
-    bs_checkbox = 0x00000002,
-    bs_autocheckbox = 0x00000003,
-    bs_radiobutton = 0x00000004,
-    bs_3state = 0x00000005,
-    bs_auto3state = 0x00000006,
-    bs_groupbox = 0x00000007,
-    bs_userbutton = 0x00000008,
-    bs_autoradiobutton = 0x00000009,
-    bs_pushbox = 0x0000000A,
-    bs_ownerdraw = 0x0000000B,
-    bs_typemask = 0x0000000F,
-    bs_lefttext = 0x00000020,
-    bs_text = 0x00000000,
-    bs_icon = 0x00000040,
-    bs_bitmap = 0x00000080,
-    bs_left = 0x00000100,
-    bs_right = 0x00000200,
-    bs_center = 0x00000300,
-    bs_top = 0x00000400,
-    bs_bottom = 0x00000800,
-    bs_vcenter = 0x00000C00,
-    bs_pushlike = 0x00001000,
-    bs_multiline = 0x00002000,
-    bs_notify = 0x00004000,
-    bs_flat = 0x00008000,
-    bs_rightbutton = bs_lefttext,
-    ss_left = 0x00000000,
-    ss_center = 0x00000001,
-    ss_right = 0x00000002,
-    ss_icon = 0x00000003,
-    ss_blackrect = 0x00000004,
-    ss_grayrect = 0x00000005,
-    ss_whiterect = 0x00000006,
-    ss_blackframe = 0x00000007,
-    ss_grayframe = 0x00000008,
-    ss_whiteframe = 0x00000009,
-    ss_useritem = 0x0000000A,
-    ss_simple = 0x0000000B,
-    ss_leftnowrap = 0x0000000C,
-    ss_ownerdraw = 0x0000000D,
-    ss_bitmap = 0x0000000E,
-    ss_enhmetafile = 0x0000000F,
-    ss_etchedhorz = 0x00000010,
-    ss_etchedvert = 0x00000011,
-    ss_etchedframe = 0x00000012,
-    ss_typemask = 0x0000001F,
-    ss_realsizecontrol = 0x00000040,
-    ss_noprefix = 0x00000080,
-    ss_notify = 0x00000100,
-    ss_centerimage = 0x00000200,
-    ss_rightjust = 0x00000400,
-    ss_realsizeimage = 0x00000800,
-    ss_sunken = 0x00001000,
-    ss_editcontrol = 0x00002000,
-    ss_endellipsis = 0x00004000,
-    ss_patellipsis = 0x00008000,
-    ss_wordellipsis = 0x0000C000,
-    ss_ellipsis = 0x0000C000,
-    lbs_notify = 0x0001,
-    lbs_sort = 0x0002,
-    lbs_noredraw = 0x0004,
-    lbs_multiplesel = 0x0008,
-    lbs_ownerdrawfixed = 0x0010,
-    lbs_ownerdrawvariable = 0x0020,
-    lbs_hasstrings = 0x0040,
-    lbs_usetabstops = 0x0080,
-    lbs_nointegralheight = 0x0100,
-    lbs_multicolumn = 0x0200,
-    lbs_wantkeyboardinput = 0x0400,
-    lbs_extendedsel = 0x0800,
-    lbs_disable = 0x1000,
-    lbs_nodata = 0x2000,
-    lbs_nosel = 0x4000,
-    lbs_standard = (lbs_notify | lbs_sort | ws_vscroll | ws_border),
-    cbs_simple = 0x0001,
-    cbs_dropdown = 0x0002,
-    cbs_dropdownlist = 0x0003,
-    cbs_ownerdrawfixed = 0x0010,
-    cbs_ownerdrawvariable = 0x0020,
-    cbs_autohscroll = 0x0040,
-    cbs_oemconvert = 0x0080,
-    cbs_sort = 0x0100,
-    cbs_hasstrings = 0x0200,
-    cbs_nointegralheight = 0x0400,
-    cbs_disablenoscroll = 0x0800,
-    cbs_uppercase = 0x2000,
-    cbs_lowercase = 0x4000,
-    sbs_horz = 0x0000,
-    sbs_vert = 0x0001,
-    sbs_topalign = 0x0002,
-    sbs_leftalign = 0x0002,
-    sbs_bottomalign = 0x0004,
-    sbs_rightalign = 0x0004,
-    sbs_sizeboxtopleftalign = 0x0002,
-    sbs_sizeboxbottomrightalign = 0x0004,
-    sbs_sizebox = 0x0008,
-    sbs_sizegrip = 0x0010,
-  };
-  friend constexpr style operator~(style a) noexcept { return style(~uint(a)); }
-  friend constexpr style operator|(style a, style b) noexcept { return style(uint(a) | uint(b)); }
-  friend constexpr style operator&(style a, style b) noexcept { return style(uint(a) & uint(b)); }
-  friend constexpr style operator^(style a, style b) noexcept { return style(uint(a) ^ uint(b)); }
+  /// user-defined window procedure; returns `true` if the message is processed
+  bool (*proc)(window&, wmessage, uint8, int8) = nullptr;
 
-  /// \brief window message structure
-  struct message_t {
-    HWND hwnd;
-    wmessage message;
-    uint wparam;
-    int8 lparam;
-    nat4 time;
-    vector2<int> pt;
-    /// \brief conversion to `wmessage`
-    operator wmessage() const noexcept { return message; }
-    /// \brief translates message
-    void translate() noexcept { ::TranslateMessage(reinterpret_cast<MSG*>(this)); }
-    /// \brief dispatches message to window procedure
-    void dispatch() noexcept { ::DispatchMessageW(reinterpret_cast<MSG*>(this)); }
-  };
-  /// \brief recent window message
-  message_t& message = reinterpret_cast<message_t&>(_msg);
-  /// \brief creates uninitialized window
+  /// default constructor; uninitialized
   window() noexcept = default;
-  /// \brief move constructor
+
+  /// move constructor
   window(window&& w) noexcept : _hwnd(exchange(w._hwnd, nullptr)), _msg(w._msg), _pad(w._pad) {}
-  /// \brief conversion to `HWND`
-  operator HWND() const noexcept { return _hwnd; }
-  /// \brief conversion to `bool`; checks if the window is valid
+
+  /// conversion to `bool`; checks if the window is initialized
   explicit operator bool() const noexcept { return _hwnd != nullptr; }
-  /// \brief creates a window; `Width` and `Height` are the client area size
-  [[nodiscard]] window(                                                                            //
-    const wclass& Class, stringable auto&& Title, style Style, numeric auto&& X, numeric auto&& Y, //
-    numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    try {
-      if (!Class) throw "window class is not registered";
-      const auto title = cvt<cat2>(Title);
-      const bool visible = bool(Style & style::ws_visible);
-      const int size = 500;
-      _hwnd = ::CreateWindowExW(int(nat8(Style) >> 32), Class.name.data(), title.data(), int((nat(Style) & 0xEfffffff)), //
-                                0, 0, size, size, nullptr, nullptr, main::hinstance, nullptr);
-      if (!_hwnd) throw "CreateWindowEx failed";
-      [&](RECT r) { ::GetClientRect(_hwnd, &r), _pad.x = (size - r.right) / 2, _pad.y = size - r.bottom - _pad.x; }({});
-      ::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
-      if (visible) ::ShowWindow(_hwnd, SW_SHOW), ::SetFocus(_hwnd);
-    } catch (const std::exception& e) {
-      main::log(logger::error, e.what());
-      main::log(logger::error, "failed to create window", _);
-    }
+
+  /// creates a window
+  window(stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
+         numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
+    const auto title = cvt<wchar>(Title);
+    const bool visible = bool(Style & ws_visible);
+    const int t = 500;
+    _hwnd = win::CreateWindowExW(int(uint(Style) >> 32), L"__ywlib", title.data(),
+                                 int(uint4(Style)), 0, 0, t, t, 0, 0, system::hinstance, 0);
+    if (!_hwnd) return;
+    [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
+    win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
+    win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
+    if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
   }
-  /// \brief creates a child window; `Width` and `Height` are the client area size
-  [[nodiscard]] window(                                                                                //
-    const window& Parent, const wclass& Class, stringable auto&& Title, style Style, numeric auto&& X, //
-    numeric auto&& Y, numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    try {
-      if (!Class) throw "window class is not registered";
-      auto title = cvt<cat2>(Title);
-      _hwnd = ::CreateWindowExW(int(nat8(Style) >> 32), Class.name.data(), title.data(), int(nat8(Style) & 0xffffffff), //
-                                int(X), int(Y), int(Width), int(Height), Parent, nullptr, main::hinstance, nullptr);
-      if (!_hwnd) throw "CreateWindowEx failed";
-    } catch (const std::exception& e) {
-      main::log(logger::error, e.what());
-      main::log(logger::error, "failed to create child window", _);
-    }
+
+  /// creates a child window
+  window(const window& Parent, stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
+         numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
+    const auto title = cvt<wchar>(Title);
+    const bool visible = bool(Style & ws_visible);
+    const int t = 500;
+    Style |= ws_child;
+    _hwnd = win::CreateWindowExW(int(uint(Style) >> 32), L"__ywlib", title.data(),
+                                 int(uint4(Style)), 0, 0, t, t, Parent._hwnd, 0, system::hinstance, 0);
+    if (!_hwnd) return;
+    [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
+    win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
+    win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
+    if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
   }
-  /// \brief move assignment
+
+  // /// \brief window message structure
+  // struct message_t {
+  //   HWND hwnd;
+  //   wmessage message;
+  //   uint wparam;
+  //   int8 lparam;
+  //   nat4 time;
+  //   vector2<int> pt;
+  //   /// \brief conversion to `wmessage`
+  //   operator wmessage() const noexcept { return message; }
+  //   /// \brief translates message
+  //   void translate() noexcept { ::TranslateMessage(reinterpret_cast<MSG*>(this)); }
+  //   /// \brief dispatches message to window procedure
+  //   void dispatch() noexcept { ::DispatchMessageW(reinterpret_cast<MSG*>(this)); }
+  // };
+  // /// \brief recent window message
+  // message_t& message = reinterpret_cast<message_t&>(_msg);
+
+  // /// \brief conversion to `HWND`
+  // operator HWND() const noexcept { return _hwnd; }
+
+
+  /// move assignment
   window& operator=(window&& w) noexcept {
-    if (_hwnd) {
-      if (!::DestroyWindow(_hwnd)) {
-        auto e = ::GetLastError();
-        if (e == ERROR_INVALID_WINDOW_HANDLE) return *this;
-        main::log(logger::error, format_error(e));
-        main::log(logger::error, "failed to destroy window");
-      }
-    }
+    if (_hwnd == w._hwnd) return *this;
+    if (_hwnd) win::DestroyWindow(_hwnd);
     _hwnd = exchange(w._hwnd, nullptr);
+    _msg = w._msg, _pad = w._pad, proc = w.proc;
     return *this;
   }
-  /// \brief destructor
+
+  /// destructor
   ~window() noexcept {
-    if (_hwnd) {
-      if (!::DestroyWindow(_hwnd)) {
-        auto e = ::GetLastError();
-        if (e == ERROR_INVALID_WINDOW_HANDLE) return;
-        main::log(logger::error, format_error(e));
-        main::log(logger::error, "failed to destroy window");
-      }
-    }
+    if (_hwnd) win::DestroyWindow(exchange(_hwnd, nullptr));
   }
 
-  /// \brief gets window text
-  [[nodiscard]] string<cat1> text() const {
-    auto len = ::GetWindowTextLengthA(_hwnd);
+  /// gets window text
+  str text() const {
+    const auto len = win::GetWindowTextLengthA(_hwnd);
     if (!len) return {};
-    string<cat1> s(len, L'\0');
-    ::GetWindowTextA(_hwnd, s.data(), len + 1);
+    str s(len, char{});
+    win::GetWindowTextA(_hwnd, s.data(), len + 1);
     return s;
   }
 
-  /// \brief gets window text
-  template<character Ct> [[nodiscard]] string<Ct> text() const {
-    if constexpr (sizeof(Ct) == 1) {
-      auto len = ::GetWindowTextLengthA(_hwnd);
+  /// gets window text
+  template<char_type C> string<C> text() const {
+    if constexpr (sizeof(C) == 1) {
+      const auto len = win::GetWindowTextLengthA(_hwnd);
       if (!len) return {};
-      string<Ct> s(len, L'\0');
-      ::GetWindowTextA(_hwnd, reinterpret_cast<char*>(s.data()), len + 1);
+      string<C> s(len, C{});
+      win::GetWindowTextA(_hwnd, reinterpret_cast<char*>(s.data()), len + 1);
       return s;
-    } else if constexpr (sizeof(Ct) == 2) {
-      auto len = ::GetWindowTextLengthW(_hwnd);
+    } else if constexpr (sizeof(C) == 2) {
+      const auto len = ::GetWindowTextLengthW(_hwnd);
       if (!len) return {};
-      string<Ct> s(len, L'\0');
-      ::GetWindowTextW(_hwnd, reinterpret_cast<wchar_t*>(s.data()), len + 1);
+      string<C> s(len, C{});
+      ::GetWindowTextW(_hwnd, reinterpret_cast<wchar*>(s.data()), len + 1);
       return s;
-    } else return cvt<uct4>(text<cat2>());
+    } else return cvt<char32_t>(text<wchar>());
   }
 
-  /// \brief sets window text
+  /// sets window text
   void text(stringable auto&& Text) noexcept {
-    using Ct = remove_cvref<iter_value<decltype(Text)>>;
-    if constexpr (sizeof(Ct) == 1) {
-      string<Ct> temp(string_view<Ct>(fwd<decltype(Text)>(Text)));
-      ::SetWindowTextA(_hwnd, reinterpret_cast<const char*>(temp.data()));
-    } else if constexpr (sizeof(Ct) == 2) {
-      string<Ct> temp(string_view<Ct>(fwd<decltype(Text)>(Text)));
-      ::SetWindowTextW(_hwnd, reinterpret_cast<const wchar_t*>(temp.data()));
-    } else text(cvt<cat2>(fwd<decltype(Text)>(Text)));
+    using C = remove_cvref<iter_value<decltype(Text)>>;
+    if constexpr (sizeof(C) == 1) {
+      string<C> temp(string_view<C>(fwd<decltype(Text)>(Text)));
+      win::SetWindowTextA(_hwnd, reinterpret_cast<const char*>(temp.data()));
+    } else if constexpr (sizeof(C) == 2) {
+      string<C> temp(string_view<C>(fwd<decltype(Text)>(Text)));
+      win::SetWindowTextW(_hwnd, reinterpret_cast<const wchar*>(temp.data()));
+    } else text(cvt<wchar>(fwd<decltype(Text)>(Text)));
   }
 
-  /// \brief gets window position; `{x = left, y = top, z = right, w = bottom}`
-  [[nodiscard]] vector<int> position() const noexcept {
-    return [this](vector<int> v) { return ::GetWindowRect(_hwnd, reinterpret_cast<RECT*>(&v)), mv(v); }({});
-  }
+  /// gets window position; `{x = left, y = top, z = right, w = bottom}`
+  // vector<int> position() const noexcept {
+  //   return [this](vector<int> v) { return ::GetWindowRect(_hwnd, reinterpret_cast<RECT*>(&v)), mv(v); }({});
+  // }
 
   /// \brief sets window position
-  bool position(numeric auto&& X, numeric auto&& Y) noexcept { //
-    return ::SetWindowPos(_hwnd, 0, int(X), int(Y), 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-  }
+  // bool position(numeric auto&& X, numeric auto&& Y) noexcept { //
+  //   return ::SetWindowPos(_hwnd, 0, int(X), int(Y), 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+  // }
 
   /// \brief sets window position and size
-  bool position(numeric auto&& X, numeric auto&& Y, numeric auto&& Width, numeric auto&& Height) noexcept { //
-    return ::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width), int(Height), SWP_NOZORDER);
-  }
+  // bool position(numeric auto&& X, numeric auto&& Y, numeric auto&& Width, numeric auto&& Height) noexcept { //
+  //   return ::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width), int(Height), SWP_NOZORDER);
+  // }
 
   /// \brief gets client area size; `{x = width, y = height}`
-  [[nodiscard]] vector2<int> size() const noexcept {
-    return [this](RECT r) { return ::GetClientRect(_hwnd, &r), vector2<int>(r.right, r.bottom); }({});
+  // vector2<int> size() const noexcept {
+  //   return [this](RECT r) { return ::GetClientRect(_hwnd, &r), vector2<int>(r.right, r.bottom); }({});
+  // }
+
+  /// displays a message box with an OK button
+  bool ok(stringable auto&& Text, stringable auto&& Caption) const noexcept {
+    constexpr uint4 type = /*MB_ICONINFORMATION*/0x40u | /*MB_OK*/0u;
+    const auto text = cvt<wchar>(fwd<decltype(Text)>(Text));
+    const auto caption = cvt<wchar>(fwd<decltype(Caption)>(Caption));
+    return win::MessageBoxW(_hwnd, text.c_str(), caption.c_str(), type);
   }
 
-  /// \brief displays a message box with an OK button
-  bool ok(const string<cat1>& Text, const string<cat1>& Caption = "OK?") const noexcept { //
-    return ::MessageBoxA(_hwnd, Text.c_str(), Caption.c_str(), MB_ICONEXCLAMATION | MB_OK) == IDOK;
-  }
-  /// \brief displays a message box with an OK button
-  bool ok(const string<cat2>& Text, const string<cat2>& Caption = L"OK?") const noexcept { //
-    return ::MessageBoxW(_hwnd, Text.c_str(), Caption.c_str(), MB_ICONEXCLAMATION | MB_OK) == IDOK;
-  }
-  /// \brief displays a message box with an OK button
-  bool ok(stringable auto&& Text, stringable auto&& Caption) const noexcept   //
-    requires different_from<remove_cvref<decltype(Text)>, string<cat1>> &&    //
-             different_from<remove_cvref<decltype(Caption)>, string<cat1>> && //
-             different_from<remove_cvref<decltype(Text)>, string<cat2>> &&    //
-             different_from<remove_cvref<decltype(Caption)>, string<cat2>> {
-    return ok(cvt<cat1>(fwd<decltype(Text)>(Text)), cvt<cat1>(fwd<decltype(Caption)>(Caption)));
-  }
-  /// \brief displays a message box with an OK button
-  bool ok(stringable auto&& Text) const noexcept                           //
-    requires different_from<remove_cvref<decltype(Text)>, string<cat1>> && //
-             different_from<remove_cvref<decltype(Text)>, string<cat2>> {
-    return ok(cvt<cat1>(fwd<decltype(Text)>(Text)));
+  /// displays a message box with an OK button
+  bool ok(stringable auto&& Text) const noexcept {
+    return ok(fwd<decltype(Text)>(Text), L"OK?");
   }
 
-  /// \brief displays a message box with Yes and No buttons
-  [[nodiscard]] bool yes(const string<cat1>& Text, const string<cat1>& Caption = "Yes?") const noexcept { //
-    return ::MessageBoxA(_hwnd, Text.c_str(), Caption.c_str(), MB_ICONQUESTION | MB_YESNO) == IDYES;
-  }
-  /// \brief displays a message box with Yes and No buttons
-  [[nodiscard]] bool yes(const string<cat2>& Text, const string<cat2>& Caption = L"Yes?") const noexcept { //
-    return ::MessageBoxW(_hwnd, Text.c_str(), Caption.c_str(), MB_ICONQUESTION | MB_YESNO) == IDYES;
-  }
-  /// \brief displays a message box with Yes and No buttons
-  [[nodiscard]] bool yes(stringable auto&& Text, stringable auto&& Caption) const noexcept //
-    requires different_from<remove_cvref<decltype(Text)>, string<cat1>> &&                 //
-             different_from<remove_cvref<decltype(Caption)>, string<cat1>> &&              //
-             different_from<remove_cvref<decltype(Text)>, string<cat2>> &&                 //
-             different_from<remove_cvref<decltype(Caption)>, string<cat2>> {
-    return yes(cvt<cat1>(fwd<decltype(Text)>(Text)), cvt<cat1>(fwd<decltype(Caption)>(Caption)));
-  }
-  /// \brief displays a message box with Yes and No buttons
-  [[nodiscard]] bool yes(stringable auto&& Text) const noexcept            //
-    requires different_from<remove_cvref<decltype(Text)>, string<cat1>> && //
-             different_from<remove_cvref<decltype(Text)>, string<cat2>> {
-    return yes(cvt<cat1>(fwd<decltype(Text)>(Text)));
+  /// displays a message box with Yes and No buttons
+  bool yes(stringable auto&& Text, stringable auto&& Caption) const noexcept {
+    constexpr uint4 type = /*MB_ICONQUESTION*/0x20u | /*MB_YESNO*/0x4u;
+    const auto text = cvt<wchar>(fwd<decltype(Text)>(Text));
+    const auto caption = cvt<wchar>(fwd<decltype(Caption)>(Caption));
+    return win::MessageBoxW(_hwnd, text.c_str(), caption.c_str(), type) == /*IDYES*/6;
   }
 
-  /// \brief waits and gets window message
-  bool wait_message() noexcept { return ::GetMessageW(&_msg, _hwnd, 0, 0) > 0; }
-  /// \brief waits and gets window message in range
-  bool wait_message(nat4 Min, nat4 Max) noexcept { return ::GetMessageW(&_msg, _hwnd, Min, Max) > 0; }
+  /// displays a message box with Yes and No buttons
+  bool yes(stringable auto&& Text) const noexcept {
+    return yes(fwd<decltype(Text)>(Text), L"Yes?");
+  }
 
-  /// \brief peeks window message
-  bool peek_message(nat4 Remove = 1) noexcept { return ::PeekMessageW(&_msg, _hwnd, 0, 0, Remove); }
-  /// \brief peeks window message in range
-  bool peek_message(nat4 Min, nat4 Max, nat4 Remove = 1) noexcept { return ::PeekMessageW(&_msg, _hwnd, Min, Max, Remove); }
+  /// waits and gets window message
+  bool wait_message() noexcept { return win::GetMessageW(&_msg, _hwnd, 0, 0) > 0; }
 
-  /// \brief sends message
-  void send_message(wmessage Message, nat8 WParam = 0, int8 LParam = 0) noexcept { ::SendMessageW(_hwnd, nat4(Message), WParam, LParam); }
+  /// waits and gets window message in range
+  bool wait_message(uint4 Min, uint4 Max) noexcept { return win::GetMessageW(&_msg, _hwnd, Min, Max) > 0; }
 
-  /// \brief posts message
-  void post_message(wmessage Message, nat8 WParam = 0, int8 LParam = 0) noexcept { ::PostMessageW(_hwnd, nat4(Message), WParam, LParam); }
+  /// peeks window message
+  bool peek_message(uint4 Remove = 1) noexcept { return win::PeekMessageW(&_msg, _hwnd, 0, 0, Remove); }
 
-  /// \brief posts quit message
-  void post_quit_message(nat4 ExitCode = 0) noexcept { ::PostQuitMessage(ExitCode); }
+  /// peeks window message in range
+  bool peek_message(uint4 Min, uint4 Max, uint4 Remove = 1) noexcept { return win::PeekMessageW(&_msg, _hwnd, Min, Max, Remove); }
+
+  /// sends message
+  void send_message(wmessage Message, uint8 WParam = 0, int8 LParam = 0) noexcept { win::SendMessageW(_hwnd, uint4(Message), WParam, LParam); }
+
+  /// posts message
+  void post_message(wmessage Message, uint8 WParam = 0, int8 LParam = 0) noexcept { win::PostMessageW(_hwnd, uint4(Message), WParam, LParam); }
+
+  /// posts quit message
+  void post_quit_message(uint4 ExitCode = 0) noexcept { win::PostQuitMessage(ExitCode); }
+
+  /// dispatches message
+  void dispatch_message() noexcept { win::DispatchMessageW(&_msg); }
+
+  /// translates message
+  void translate_message() noexcept { win::TranslateMessage(&_msg); }
 };
 
-using enum window::style;
-
+int8 __stdcall system::wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp) {
+  window* w = reinterpret_cast<window*>(win::GetWindowLongPtrW(hw, /* GWLP_USERDATA */ -21));
+  if (w && w->proc && w->proc(*w, wmessage(msg), wp, lp)) return 0;
+  else return win::DefWindowProcW(hw, msg, wp, lp);
+}
 }
 #pragma endregion // ------------------------------------------------------------------------------------------ [window]
+
+#pragma region [directx] -----------------------------------------------------------------------------------------------
+namespace yw { // clang-format off
+
+#define IID_PPV_ARGS(ppType) __uuidof(**(ppType)), reinterpret_cast<void**>(ppType)
+
+/// deleter for COM objects
+template<typename Com> struct com_deleter {
+  constexpr com_deleter() noexcept = default;
+  template<typename U> constexpr com_deleter(const com_deleter<U>&) noexcept {}
+  constexpr void operator()(Com* p) const noexcept { p ? void(p->Release()) : void(); }
+};
+
+/// COM smart pointer
+template<typename Com> class comptr : public std::unique_ptr<Com, com_deleter<Com>> {
+public:
+  using base = std::unique_ptr<Com, com_deleter<Com>>;
+  using base::base;
+  using base::operator=;
+  using base::operator->;
+  using base::operator bool;
+  constexpr operator Com*() const noexcept { return base::get(); }
+  Com** init(const source& _ = {}) & {
+    if (bool(*this)) throw std::logic_error(std::format("{}: already initialized", _));
+    return reinterpret_cast<Com**>(this);
+  }
+  template<typename OtherCom> HRESULT as(comptr<OtherCom>& other) const noexcept {
+    return base::get()->QueryInterface(IID_PPV_ARGS(other.init()));
+  }
+};
+} // clang-format on
+namespace yw::system { // clang-format off
+
+class com_init {
+  bool _initialized{};
+public:
+  explicit operator bool() const noexcept { return _initialized; }
+  ~com_init() noexcept { _initialized ? win::CoUninitialize() : void(); }
+  com_init(win::COINIT coinit) noexcept {
+    if (auto r = win::CoInitializeEx(0, coinit); !r) _initialized = true;
+  }
+};
+inline const com_init com_initialized{win::COINIT::COINIT_APARTMENTTHREADED};
+
+comptr<win::ID3D11Device>        d3d_device{};
+// comptr<win::ID3D11Device5>       d3d_device5{};
+comptr<win::ID3D11DeviceContext> d3d_context{};
+// comptr<win::IDXGIFactory2>       dxgi_factory{};
+// comptr<win::IDXGIDevice2>        dxgi_device{};
+// comptr<win::ID2D1Factory1>       d2d_factory{};
+// comptr<win::ID2D1Device>         d2d_device{};
+// comptr<win::ID2D1DeviceContext>  d2d_context{};
+// comptr<win::IDWriteFactory1>     dwrite_factory{};
+// comptr<win::IWICImagingFactory>  wic_factory{};
+
+inline const bool d3d_initialized = [] {
+
+}();
+} // clang-format on
+#pragma endregion // ----------------------------------------------------------------------------------------- [directx]
