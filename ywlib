@@ -15,6 +15,8 @@ using uint2 = unsigned short;
 using uint4 = unsigned int;
 using uint8 = unsigned long long;
 
+using nullptr_t = decltype(nullptr);
+
 inline constexpr uint npos = static_cast<uint>(-1);
 inline constexpr auto unordered = std::partial_ordering::unordered;
 
@@ -191,224 +193,10 @@ constexpr auto uintcast = []<trivial T>(const T& t) noexcept {
 
 using path = std::filesystem::path;
 
-struct source {
-  const char *const file, *const func;
-  const uint line, column;
-  source(const char*) = delete;
-  consteval source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
-                   uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
-    : file(File), func(Func), line(Line), column(Column) {}
-  template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
-    return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
-  }
-};
-
 }
 #pragma endregion // -------------------------------------------------------------------------------------------- [core]
 
-#pragma region [none] --------------------------------------------------------------------------------------------------
-namespace yw {
-
-/// structure to represent a null value
-struct none {
-  constexpr none() noexcept = default;
-  constexpr none(auto&&...) noexcept {}
-  constexpr none& operator=(auto&&) noexcept { return *this; }
-  constexpr operator bool() const noexcept { return false; }
-  friend constexpr bool operator==(none, none) noexcept { return false; }
-  friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
-  friend constexpr none operator+(none) noexcept { return {}; }
-  friend constexpr none operator-(none) noexcept { return {}; }
-  friend constexpr none operator+(none, none) noexcept { return {}; }
-  friend constexpr none operator-(none, none) noexcept { return {}; }
-  friend constexpr none operator*(none, none) noexcept { return {}; }
-  friend constexpr none operator/(none, none) noexcept { return {}; }
-  constexpr none& operator+=(none) noexcept { return *this; }
-  constexpr none& operator-=(none) noexcept { return *this; }
-  constexpr none& operator*=(none) noexcept { return *this; }
-  constexpr none& operator/=(none) noexcept { return *this; }
-  template<typename C, typename Tr> friend auto& operator<<(std::basic_ostream<C, Tr>& os, none) {
-    if constexpr (std::same_as<C, char>) return os << "none";
-    else if constexpr (std::same_as<C, wchar>) return os << L"none";
-    else if constexpr (std::same_as<C, char8_t>) return os << u8"none";
-    else if constexpr (std::same_as<C, char16_t>) return os << u"none";
-    else if constexpr (std::same_as<C, char32_t>) return os << U"none";
-    else static_assert(always_false<C>, "unsupported character type");
-  }
-};
-
-/// checks if the type is `none`
-template<typename T> concept is_none = same_as<remove_cv<T>, none>;
-}
-namespace std {
-template<typename T> struct common_type<T, yw::none> : type_identity<yw::none> {};
-template<typename T> struct common_type<yw::none, T> : type_identity<yw::none> {};
-}
-#pragma endregion // -------------------------------------------------------------------------------------------- [none]
-
-#pragma region [select, select_type, select_value] ---------------------------------------------------------------------
-namespace yw {
-
-/// checks if `I` is valid for selecting one from `N`
-template<convertible_to<uint> auto I, uint N> constexpr bool selectable =
-  (is_bool<decltype(I)> && N == 2) || (!is_bool<decltype(I)> && uint(I) < N);
-
-/// selects a parameter
-template<auto I> inline constexpr auto select =
-[]<typename A, typename... As>(A&& a, As&&... as) noexcept
-  -> decltype(auto) requires selectable<I, 1 + sizeof...(As)> {
-  if constexpr (is_bool<decltype(I)>) {
-    return select<uint(!I)>(static_cast<A&&>(a), static_cast<As&&>(as)...);
-  } else if constexpr (same_as<decltype(I), uint>) {
-    if constexpr (I == 0) return static_cast<A&&>(a);
-    else return select<I - 1>(static_cast<As&&>(as)...);
-  } else return select<uint(I)>(static_cast<A&&>(a), static_cast<As&&>(as)...);
-};
-
-namespace _ {
-template<typename T, T I, typename... Ts> struct _select_type : _select_type<uint, I, Ts...> {};
-template<bool B, typename Tt, typename Tf> struct _select_type<bool, B, Tt, Tf> : std::conditional<B, Tt, Tf> {};
-template<uint I, typename T, typename... Ts> struct _select_type<uint, I, T, Ts...> : _select_type<uint, I - 1, Ts...> {};
-template<typename T, typename... Ts> struct _select_type<uint, 0, T, Ts...> { using type = T; };
-}
-
-/// selects a type
-template<auto I, typename... Ts> requires selectable<I, sizeof...(Ts)>
-using select_type = typename _::_select_type<decltype(I), I, Ts...>::type;
-
-/// selects a value
-template<auto I, auto... Vs> requires selectable<I, sizeof...(Vs)>
-inline constexpr auto select_value = select_type<I, constant<Vs>...>::value;
-
-
-}
-#pragma endregion // --------------------------------------------------------------- [select, select_type, select_value]
-
-#pragma region [caster, is_cev] ----------------------------------------------------------------------------------------
-namespace yw {
-/// creates an object that calls functions in coversion
-template<typename... Fs> struct caster : public Fs... {
-private:
-  template<typename T> static constexpr uint i = inspects<same_as<T, result<Fs>>...>;
-  template<typename T> static constexpr uint j = i<T> < sizeof...(Fs) ? i<T> : inspects<convertible_to<T, result<Fs>>...>;
-  template<typename... As> static constexpr uint k = inspects<invocable<Fs, As...>...>;
-public:
-  using Fs::operator()...;
-  template<typename T> requires (j<T> < sizeof...(Fs)) constexpr operator T() const
-    noexcept(noexcept(select_type<j<T>, Fs...>::operator()())) { return select_type<j<T>, Fs...>::operator()(); }
-  template<typename... As> requires (k<As...> < sizeof...(Fs)) constexpr decltype(auto) operator()(As&&... as) const
-    noexcept(noexcept(select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...))) {
-    return select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...);
-  }
-  /// output stream operator
-  template<typename C, typename Tr> friend auto& operator<<(
-    std::basic_ostream<C, Tr>& os, const caster& c) requires requires { os << c(); } { return os << c(); }
-};
-}
-#pragma endregion // ---------------------------------------------------------------------------------- [caster, is_cev]
-
-#pragma region [vector2, vector3] --------------------------------------------------------------------------------------
-namespace yw {
-
-/// structure with two elements; `x` and `y`
-template<typename T> struct vector2 {
-
-  /// number of elements
-  static constexpr uint count = 2;
-
-  /// first element
-  T x{};
-
-  /// second element
-  T y{};
-
-  /// default constructor
-  constexpr vector2() noexcept = default;
-
-  /// fills the elements with the same value
-  explicit constexpr vector2(const T& v) noexcept : x(v), y(v) {}
-
-  /// sets the elements
-  template<convertible_to<T> U, convertible_to<T> V>
-  constexpr vector2(U&& X, V&& Y) noexcept
-    : x(static_cast<U&&>(X)), y(static_cast<V&&>(Y)) {}
-
-  /// gets the element
-  template<uint I> requires (I < 2) constexpr T& get() &
-    noexcept { return select<I>(x, y); }
-
-  /// gets the element
-  template<uint I> requires (I < 2) constexpr const T& get() const&
-    noexcept { return select<I>(x, y); }
-
-  /// gets the element
-  template<uint I> requires (I < 2) constexpr T&& get() &&
-    noexcept { return static_cast<T&&>(select<I>(x, y)); }
-
-  /// gets the element
-  template<uint I> requires (I < 2) constexpr const T&& get() const&&
-    noexcept { return static_cast<const T&&>(select<I>(x, y)); }
-};
-
-template<typename T1, typename T2> vector2(T1&&, T2&&) -> vector2<float>;
-
-/// structure with three elements; `x`, `y`, and `z`
-template<typename T> struct vector3 {
-
-  /// number of elements
-  static constexpr uint count = 3;
-
-  /// first element
-  T x{};
-
-  /// second element
-  T y{};
-
-  /// third element
-  T z{};
-
-  /// default constructor
-  constexpr vector3() noexcept = default;
-
-  /// fills the elements with the same value
-  explicit constexpr vector3(const T& v) noexcept : x(v), y(v), z(v) {}
-
-  /// sets the elements
-  template<convertible_to<T> U, convertible_to<T> V, convertible_to<T> W>
-  constexpr vector3(U&& X, V&& Y, W&& Z) noexcept
-    : x(static_cast<U&&>(X)), y(static_cast<V&&>(Y)), z(static_cast<W&&>(Z)) {}
-
-  /// gets the element
-  template<uint I> requires (I < 3) constexpr T& get() &
-    noexcept { return select<I>(x, y, z); }
-
-  /// gets the element
-  template<uint I> requires (I < 3) constexpr const T& get() const&
-    noexcept { return select<I>(x, y, z); }
-
-  /// gets the element
-  template<uint I> requires (I < 3) constexpr T&& get() &&
-    noexcept { return static_cast<T&&>(select<I>(x, y, z)); }
-
-  /// gets the element
-  template<uint I> requires (I < 3) constexpr const T&& get() const&&
-    noexcept { return static_cast<const T&&>(select<I>(x, y, z)); }
-};
-
-template<typename T1, typename T2, typename T3> vector3(T1&&, T2&&, T3&&) -> vector3<float>;
-}
-
-namespace std {
-
-template<typename T> struct tuple_size<yw::vector2<T>> : integral_constant<uint, 2> {};
-template<typename T> struct tuple_size<yw::vector3<T>> : integral_constant<uint, 3> {};
-
-template<uint I, typename T> struct tuple_element<I, yw::vector2<T>> : type_identity<T> {};
-template<uint I, typename T> struct tuple_element<I, yw::vector3<T>> : type_identity<T> {};
-}
-#pragma endregion // -------------------------------------------------------------------------------- [vector2, vector3]
-
-#pragma region [iterator, ranges] --------------------------------------------------------------------------------------
+#pragma region [iterator, ranges] ------------------------------------------------------------------------------------------------
 namespace yw {
 
 /// checks if the type is an iterator
@@ -416,6 +204,34 @@ template<typename I> concept iterator = std::input_or_output_iterator<I>;
 
 /// checks if the type is a range
 template<typename R> concept range = std::ranges::range<R>;
+
+/// obtains the begin iterator of the range
+inline constexpr auto begin = []<range R>(R&& r)
+  noexcept(noexcept(std::ranges::begin(static_cast<R&&>(r))))
+  requires requires { std::ranges::begin(static_cast<R&&>(r)); } {
+  return std::ranges::begin(static_cast<R&&>(r));
+};
+
+/// obtains the end sentinel of the range
+inline constexpr auto end = []<range R>(R&& r)
+  noexcept(noexcept(std::ranges::end(static_cast<R&&>(r))))
+  requires requires { std::ranges::end(static_cast<R&&>(r)); } {
+  return std::ranges::end(static_cast<R&&>(r));
+};
+
+/// obtains the size of the range
+inline constexpr auto size = []<range R>(R&& r)
+  noexcept(noexcept(std::ranges::size(static_cast<R&&>(r))))
+  requires requires { std::ranges::size(static_cast<R&&>(r)); } {
+  return std::ranges::size(static_cast<R&&>(r));
+};
+
+/// obtains the data pointer of the range
+inline constexpr auto data = []<range R>(R&& r)
+  noexcept(noexcept(std::ranges::data(static_cast<R&&>(r))))
+  requires requires { std::ranges::data(static_cast<R&&>(r)); } {
+  return std::ranges::data(static_cast<R&&>(r));
+};
 
 /// iterator type of the range
 template<range R> using iterator_t = std::ranges::iterator_t<R>;
@@ -434,33 +250,305 @@ template<range R> struct _iter_types<R> : _iter_types<iterator_t<R>> {};
 }
 
 /// value type of the iterator or range
-template<typename T> requires iterator<T> || range<T> using iter_value = typename _::_iter_types<remove_ref<T>>::value;
+template<typename T> requires iterator<remove_ref<T>> || range<T>
+using iter_value = typename _::_iter_types<remove_ref<T>>::value;
 
 /// reference type of the iterator or range
-template<typename T> requires iterator<T> || range<T> using iter_ref = typename _::_iter_types<remove_ref<T>>::ref;
+template<typename T> requires iterator<remove_ref<T>> || range<T>
+using iter_ref = typename _::_iter_types<remove_ref<T>>::ref;
 
 /// rvalue reference type of the iterator or range
-template<typename T> requires iterator<T> || range<T> using iter_rvref = typename _::_iter_types<remove_ref<T>>::rvref;
+template<typename T> requires iterator<remove_ref<T>> || range<T>
+using iter_rvref = typename _::_iter_types<remove_ref<T>>::rvref;
 
 /// difference type of the iterator or range
-template<typename T> requires iterator<T> || range<T> using iter_difference = typename _::_iter_types<remove_ref<T>>::difference;
+template<typename T> requires iterator<remove_ref<T>> || range<T>
+using iter_difference = typename _::_iter_types<remove_ref<T>>::difference;
 
-/// obtains the begin iterator of the range
-inline constexpr auto begin = []<range R>(R&& r)
-  noexcept(noexcept(std::ranges::begin(static_cast<R&&>(r))))
-  requires requires { std::ranges::begin(static_cast<R&&>(r)); } {
-  return std::ranges::begin(static_cast<R&&>(r));
-};
+/// checks if the type is output iterator
+template<typename I, typename T> concept output_iterator =
+  iterator<I> && std::output_iterator<I, T>;
 
-/// obtains the end sentinel of the range
-inline constexpr auto end = []<range R>(R&& r)
-  noexcept(noexcept(std::ranges::end(static_cast<R&&>(r))))
-  requires requires { std::ranges::end(static_cast<R&&>(r)); } {
-  return std::ranges::end(static_cast<R&&>(r));
-};
+/// checks if the type is input iterator
+template<typename I> concept input_iterator =
+  iterator<I> && std::input_iterator<I>;
 
+/// checks if the type is forward iterator
+template<typename I> concept forward_iterator =
+  iterator<I> && std::forward_iterator<I>;
+
+/// checks if the type is bidirectional iterator
+template<typename I> concept bidirectional_iterator =
+  iterator<I> && std::bidirectional_iterator<I>;
+
+/// checks if the type is random access iterator
+template<typename I> concept random_access_iterator =
+  iterator<I> && std::random_access_iterator<I>;
+
+/// checks if the type is contiguous iterator
+template<typename I> concept contiguous_iterator =
+  iterator<I> && std::contiguous_iterator<I>;
+
+/// checks if the type is sentinel for the iterator
+template<typename S, typename I> concept sentinel_for = std::sentinel_for<S, I>;
+
+/// checks if the type is sized sentinel for the iterator
+template<typename S, typename I> concept sized_sentinel_for = std::sized_sentinel_for<S, I>;
+
+/// checks if the type is output range
+template<typename R, typename T> concept output_range =
+  range<R> && output_iterator<iterator_t<R>, T>;
+
+/// checks if the type is input range
+template<typename R> concept input_range =
+  range<R> && input_iterator<iterator_t<R>>;
+
+/// checks if the type is forward range
+template<typename R> concept forward_range =
+  input_range<R> && forward_iterator<iterator_t<R>>;
+
+/// checks if the type is bidirectional range
+template<typename R> concept bidirectional_range =
+  forward_range<R> && bidirectional_iterator<iterator_t<R>>;
+
+/// checks if the type is random access range
+template<typename R> concept random_access_range =
+  bidirectional_range<R> && random_access_iterator<iterator_t<R>>;
+
+/// checks if the type is contiguous range
+template<typename R> concept contiguous_range =
+  random_access_range<R> && contiguous_iterator<iterator_t<R>> &&
+  requires { { data(declval<R&>()) } -> same_as<std::add_pointer_t<iter_ref<R>>>; };
+
+/// checks if the type is sized range
+template<typename R> concept sized_range = range<R> && std::ranges::sized_range<R>;
+
+/// checks if the type is sized contiguous range
+template<typename R> concept sized_contiguous_range = sized_range<R> && contiguous_range<R>;
 }
 #pragma endregion // -------------------------------------------------------------------------------- [iterator, ranges]
+
+#pragma region [yw::array] -----------------------------------------------------
+namespace yw {
+
+/// static array
+template<typename T, uint N = npos> class array {
+public:
+  T _[N]{};
+  static constexpr uint count = N;
+  using value_type = T;
+
+  /// assignment from an array
+  template<typename U> requires assignable<T&, const U&> constexpr array& operator=(
+    const U (&Other)[N]) { return std::ranges::copy(Other, _), *this; }
+
+  constexpr operator add_lvref<T[N]>() noexcept { return _; }
+  constexpr operator add_lvref<const T[N]>() const noexcept { return _; }
+  constexpr T& operator[](uint I) { return _[I]; }
+  constexpr const T& operator[](uint I) const { return _[I]; }
+  constexpr uint size() const noexcept { return N; }
+  constexpr bool empty() const noexcept { return false; }
+  constexpr T* data() noexcept { return _; }
+  constexpr const T* data() const noexcept { return _; }
+  constexpr T* begin() noexcept { return _; }
+  constexpr const T* begin() const noexcept { return _; }
+  constexpr T* end() noexcept { return _ + N; }
+  constexpr const T* end() const noexcept { return _ + N; }
+  constexpr T& front() noexcept { return *_; }
+  constexpr const T& front() const noexcept { return *_; }
+  constexpr T& back() noexcept { return _[N - 1]; }
+  constexpr const T& back() const noexcept { return _[N - 1]; }
+  template<uint I> requires (I < N) constexpr T& get() & noexcept { return _[I]; }
+  template<uint I> requires (I < N) constexpr T&& get() && noexcept { return mv(_[I]); }
+  template<uint I> requires (I < N) constexpr const T& get() const& noexcept { return _[I]; }
+  template<uint I> requires (I < N) constexpr const T&& get() const&& noexcept { return mv(_[I]); }
+
+  /// fills the array with the value
+  constexpr void fill(const T& v) { std::ranges::fill(_, v); }
+};
+
+/// dynamic array
+template<typename T> class array<T, npos> : public std::vector<T> {
+public:
+  constexpr array() noexcept = default;
+  constexpr array(std::vector<T>&& v) : std::vector<T>(mv(v)) {}
+  constexpr explicit array(uint n) : std::vector<T>(n) {}
+  constexpr array(uint n, const T& v) : std::vector<T>(n, v) {}
+
+  /// constructs a dynamic array from a range
+  template<input_iterator I>
+  requires convertible_to<iter_value<I>, T> &&
+           (!convertible_to<I, uint> || !convertible_to<I, const T&>)
+  constexpr array(I i, I s) : std::vector<T>(mv(i), mv(s)) {}
+
+  /// constructs a dynamic array from a range
+  template<input_iterator I, sentinel_for<I> S>
+  requires convertible_to<iter_value<I>, T> && (!same_as<I, S>) &&
+           (!convertible_to<I, uint> || !convertible_to<S, const T&>)
+  constexpr array(I i, S s) : std::vector<T>(std::common_iterator<I, S>(mv(i)), std::common_iterator<I, S>(mv(s))) {}
+
+  /// constructs a dynamic array from a range
+  template<input_range R>
+  requires convertible_to<iter_value<R>, T> && (!convertible_to<R, uint>) &&
+           (!requires { declval<R&>().operator array<T>(); })
+  constexpr array(R&& r) : std::vector<T>(yw::begin(r), yw::end(r)) {}
+};
+static_assert(sizeof(array<int>) == sizeof(std::vector<int>));
+
+/// empty array
+template<typename T> class array<T, 0> {
+public:
+  static constexpr uint count = 0;
+  using value_type = T;
+  constexpr uint size() const noexcept { return 0; }
+  constexpr bool empty() const noexcept { return true; }
+  constexpr T* data() noexcept { return nullptr; }
+  constexpr const T* data() const noexcept { return nullptr; }
+  constexpr T* begin() noexcept { return nullptr; }
+  constexpr const T* begin() const noexcept { return nullptr; }
+  constexpr T* end() noexcept { return nullptr; }
+  constexpr const T* end() const noexcept { return nullptr; }
+  template<uint I> constexpr void get() const = delete;
+};
+
+template<typename T, convertible_to<T>... Ts> array(T, Ts...) -> array<T, 1 + sizeof...(Ts)>;
+template<typename T> array(uint, const T&) -> array<T, npos>;
+template<iterator I, sentinel_for<I> S> array(I, S) -> array<iter_value<I>, npos>;
+template<range R> array(R&&) -> array<iter_value<R>, npos>;
+}
+namespace std {
+template<typename T, uint N> struct tuple_size<yw::array<T, N>> : integral_constant<uint, N> {};
+template<uint I, typename T, uint N> struct tuple_element<I, yw::array<T, N>> : type_identity<T> {};
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [yw::string_view] -----------------------------------------------
+namespace yw {
+
+/// aggregate string view
+template<char_type C> struct string_view {
+  static_assert(same_as<C, remove_cv<C>>);
+  using value_type = C;
+  using pointer = C*;
+  using const_pointer = const C*;
+  using reference = C&;
+  using const_reference = const C&;
+  using iterator = const C*;
+  using const_iterator = const C*;
+  using size_type = uint;
+  using difference_type = int8;
+
+  const C* _data;
+  uint _size;
+  string_view(nullptr_t) = delete;
+  constexpr operator std::basic_string_view<C>() const noexcept { return {_data, _size}; }
+
+  /// default constructor
+  constexpr string_view() noexcept : _data(nullptr), _size(0) {}
+
+  /// copy constructor
+  constexpr string_view(const string_view&) noexcept = default;
+
+  /// copy assignment
+  constexpr string_view& operator=(const string_view&) noexcept = default;
+
+  /// constructor with a null-terminated string
+  constexpr string_view(const C* Data) noexcept :
+    _data(Data), _size(std::char_traits<C>::length(Data)) {}
+
+  /// constructor with a string
+  constexpr string_view(const C* Data, uint Size) noexcept : _data(Data), _size(Size) {}
+
+  /// constructor with a iterator
+  template<contiguous_iterator I, sized_sentinel_for<I> S>
+  requires same_as<iter_value<I>, C> && (!convertible_to<S, uint>)
+  constexpr string_view(I i, S s) : _data(std::to_address(i)), _size(s - i) {}
+
+  /// constructor with a range
+  template<sized_contiguous_range R>
+  requires same_as<iter_value<R>, C> && (!convertible_to<R, const C*>) &&
+    (!requires { declval<R&>().operator string_view<C>(); })
+  constexpr string_view(R&& r) : _data(yw::data(r)), _size(yw::size(r)) {}
+
+  /// returns the iterator to the beginning
+  constexpr const C* begin() const noexcept { return _data; }
+
+  /// returns the iterator to the end
+  constexpr const C* end() const noexcept { return _data + _size; }
+
+  /// checks if the string is empty
+  constexpr bool empty() const noexcept { return _size == 0; }
+
+  /// returns the size of the string
+  constexpr uint size() const noexcept { return _size; }
+
+  /// returns the data pointer
+  constexpr const C* data() const noexcept { return _data; }
+
+  /// returns the character at the index
+  constexpr const C& operator[](uint Index) const { return _data[Index]; }
+
+  /// access the first character
+  constexpr const C& front() const { return _data[0]; }
+
+  /// access the last character
+  constexpr const C& back() const { return _data[_size - 1]; }
+
+  /// returns the substring
+  constexpr string_view substr(uint Pos, uint Count = npos) const {
+    if (Pos >= _size) return {};
+    if (Count == npos) return {_data + Pos, _size - Pos};
+    return {_data + Pos, std::min(Count, _size - Pos)};
+  }
+
+  /// shrinks the string
+  constexpr void remove_prefix(uint N) {
+    if (N < _size) _data += N, _size -= N;
+    else _data = nullptr, _size = 0;
+  }
+
+  /// shrinks the string
+  constexpr void remove_suffix(uint N) {
+    if (N < _size) _size -= N;
+    else _data = nullptr, _size = 0;
+  }
+
+  /// `swap` function
+  friend constexpr void swap(string_view& a, string_view& b) noexcept {
+    std::ranges::swap(a._data, b._data);
+    std::ranges::swap(a._size, b._size);
+  }
+
+  /// compares two strings
+  friend constexpr bool operator==(const string_view& a, const string_view& b) noexcept {
+    return a._size == b._size && std::char_traits<C>::compare(a._data, b._data, a._size) == 0;
+  }
+
+  /// compares two strings
+  friend constexpr auto operator<=>(const string_view& a, const string_view& b) noexcept {
+    const auto bb = a._size <=> b._size;
+    const uint nn = bb < 0 ? a._size : b._size;
+    for (uint i{}; i < nn; ++i)
+      if (const auto c = uintcast(a[i]) <=> uintcast(b[i]); c != 0) return c;
+    return bb;
+  }
+
+  /// output stream
+  template<typename Tr> friend auto& operator<<(std::basic_ostream<C, Tr>& os, const string_view& sv) {
+    return os.write(sv._data, sv._size);
+  }
+};
+
+template<is_pointer P> string_view(P) -> string_view<iter_value<P>>;
+template<is_pointer P> string_view(P, uint) -> string_view<iter_value<P>>;
+template<contiguous_iterator I, sized_sentinel_for<I> S> string_view(I, S) -> string_view<iter_value<I>>;
+template<sized_contiguous_range R> string_view(R&&) -> string_view<iter_value<R>>;
+}
+namespace std::ranges {
+template<typename C> constexpr bool enable_borrowed_range<yw::string_view<C>> = true;
+template<typename C> constexpr bool enable_view<yw::string_view<C>> = true;
+}
+#pragma endregion --------------------------------------------------------------
 
 #pragma region [string] ------------------------------------------------------------------------------------------------
 namespace yw {
@@ -468,25 +556,32 @@ namespace yw {
 /// string type; `std::basic_string`
 template<typename T> using string = std::basic_string<T>;
 
-/// string view type; `std::basic_string_view`
-template<typename T> using string_view = std::basic_string_view<T>;
-
-/// format string type; `std::format_string`
-template<char_type C, typename... Ts> using format_string = std::basic_format_string<C, Ts...>;
-
 /// checks if the type can be converted to a string view
-template<typename T, typename C = iter_value<T>> concept stringable = nt_convertible_to<T&, string_view<C>>;
+template<typename T, typename C = iter_value<T>>
+concept stringable = convertible_to<T&, string_view<C>>;
 
 using str = string<char>;
 using wstr = string<wchar>;
 using str_view = string_view<char>;
 using wstr_view = string_view<wchar>;
-template<typename... Ts> using str_format = format_string<char, Ts...>;
-template<typename... Ts> using wstr_format = format_string<wchar, Ts...>;
+
+using From = std::wstring;
+using To = wstr_view;
+
+static_assert(stringable<From>);
+
+static_assert(std::is_convertible_v<string<wchar>&, string_view<wchar>>);
+static_assert(__is_convertible_to(string<wchar>&, string_view<wchar>));
+static_assert(requires { static_cast<string_view<wchar>>(std::declval<string<wchar>&>()); });
+static_assert(constructible<string_view<wchar>, string<wchar>&>);
+static_assert(std::constructible_from<string_view<wchar>, string<wchar>&>);
+static_assert(std::convertible_to<std::basic_string<wchar>&, string_view<wchar>>);
+static_assert(convertible_to<string<wchar>&, string_view<wchar>>);
+static_assert(stringable<string<wchar>&>);
 
 /// returns the length of a stringable object
 inline constexpr auto strlen = []<stringable S>(S&& s) -> uint {
-  if constexpr (is_array<remove_ref<S>>) return std::extent_v<S> - 1;
+  if constexpr (is_array<remove_ref<S>>) return std::extent_v<remove_ref<S>> - 1;
   else if constexpr (is_pointer<remove_ref<S>>) return std::char_traits<iter_value<S>>::length(s);
   else if constexpr (specialization_of<remove_cvref<S>, std::basic_string>) return s.size();
   else if constexpr (specialization_of<remove_cvref<S>, std::basic_string_view>) return s.size();
@@ -690,7 +785,6 @@ template<float_type FloatType> constexpr auto from_string<FloatType> = []<string
           }
           v2 ^= uint('0');
           if (v2 >= 10) { --p; break; }
-          std::cout << source{} << std::endl;
           while (++p != q) {
             c = uintcast(*p) ^ 0x30u;
             if (c < 10) { v2 = v2 * 10 + c; continue; }
@@ -713,12 +807,6 @@ template<float_type FloatType> constexpr auto from_string<FloatType> = []<string
   return neg ? -static_cast<FloatType>(v) : static_cast<FloatType>(v);
 };
 
-/// converts `none` to string
-template<char_type C> constexpr auto to_string(const is_none auto) noexcept {
-  constexpr C s[] = {C('n'), C('o'), C('n'), C('e'), C('\0')};
-  return string<C>(s);
-}
-
 /// converts `bool` to string
 template<char_type C> constexpr auto to_string(const is_bool auto b) noexcept {
   constexpr C t[] = {C('t'), C('r'), C('u'), C('e'), C('\0')};
@@ -727,6 +815,264 @@ template<char_type C> constexpr auto to_string(const is_bool auto b) noexcept {
 }
 }
 #pragma endregion // ------------------------------------------------------------------------------------------ [string]
+
+#pragma region [none] --------------------------------------------------------------------------------------------------
+namespace yw {
+
+/// structure to represent a null value
+struct none {
+  constexpr none() noexcept = default;
+  constexpr none(auto&&...) noexcept {}
+  constexpr none& operator=(auto&&) noexcept { return *this; }
+  constexpr operator bool() const noexcept { return false; }
+  friend constexpr bool operator==(none, none) noexcept { return false; }
+  friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
+  friend constexpr none operator+(none) noexcept { return {}; }
+  friend constexpr none operator-(none) noexcept { return {}; }
+  friend constexpr none operator+(none, none) noexcept { return {}; }
+  friend constexpr none operator-(none, none) noexcept { return {}; }
+  friend constexpr none operator*(none, none) noexcept { return {}; }
+  friend constexpr none operator/(none, none) noexcept { return {}; }
+  constexpr none& operator+=(none) noexcept { return *this; }
+  constexpr none& operator-=(none) noexcept { return *this; }
+  constexpr none& operator*=(none) noexcept { return *this; }
+  constexpr none& operator/=(none) noexcept { return *this; }
+
+  /// converts to string
+  template<char_type C> constexpr string_view<C> to_string() const {
+    if constexpr (same_as<C, char>) return "none";
+    else if constexpr (same_as<C, wchar>) return L"none";
+    else if constexpr (same_as<C, char8_t>) return u8"none";
+    else if constexpr (same_as<C, char16_t>) return u"none";
+    else return U"none";
+  }
+
+  /// output stream operator
+  template<char_type C, typename Tr> friend auto& operator<<(
+    std::basic_ostream<C, Tr>& os, none) { return os << to_string<C>(); }
+};
+
+/// checks if the type is `none`
+template<typename T> concept is_none = same_as<remove_cv<T>, none>;
+
+/// converts `none` to string
+template<char_type C> constexpr auto to_string(
+  const is_none auto n) noexcept { return n.to_string<C>(); }
+}
+namespace std {
+template<typename T> struct common_type<T, yw::none> : type_identity<yw::none> {};
+template<typename T> struct common_type<yw::none, T> : type_identity<yw::none> {};
+template<typename C> struct formatter<yw::none, C> : formatter<basic_string_view<C>, C> {
+  auto format(const yw::none n, auto& ctx) {
+    return formatter<basic_string_view<C>, C>::format(n.to_string<C>(), ctx); } };
+}
+#pragma endregion // -------------------------------------------------------------------------------------------- [none]
+
+#pragma region [source] ------------------------------------------------------------------------------------------------
+namespace yw {
+
+/// structure to represent the source location
+struct source {
+  const str_view file, func;
+  const uint line, column;
+  source(const char*) = delete;
+  constexpr source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
+                   uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
+    : file(File), func(Func), line(Line), column(Column) {}
+
+  /// converts to string
+  template<char_type C> constexpr string<C> to_string() const {
+    uint n_file = file.size(), n_func = func.size();
+    C temp[32];
+    C* p = yw::end(temp);
+    *--p = C(':'), *--p = C(')');
+    for (uint i = column; i; i /= 10) *--p = C(i % 10 ^ 0x30);
+    *--p = C(',');
+    for (uint i = line; i; i /= 10) *--p = C(i % 10 ^ 0x30);
+    *--p = C('(');
+    auto n = static_cast<uint>(32 - (p - temp));
+    string<C> s(n_file + n_func + n, C{});
+    std::memcpy(std::memcpy(std::memcpy(s.data(), file.data(), n_file), p, n), func.data(), n_func);
+    return s;
+  }
+
+  /// converts to string
+  constexpr str to_string() const { return to_string<char>(); }
+
+  /// output stream operator
+  template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
+    return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
+  }
+};
+}
+namespace std {
+template<typename C> struct formatter<yw::source, C> : formatter<basic_string<C>, C> {
+  auto format(const yw::source s, auto& ctx) const {
+    return formatter<basic_string<C>, C>::format(s.to_string<C>(), ctx); } };
+}
+#pragma endregion // ------------------------------------------------------------------------------------------ [source]
+
+#pragma region [select, select_type, select_value] ---------------------------------------------------------------------
+namespace yw {
+
+/// checks if `I` is valid for selecting one from `N`
+template<convertible_to<uint> auto I, uint N> constexpr bool selectable =
+  (is_bool<decltype(I)> && N == 2) || (!is_bool<decltype(I)> && uint(I) < N);
+
+/// selects a parameter
+template<auto I> inline constexpr auto select =
+[]<typename A, typename... As>(A&& a, As&&... as) noexcept
+  -> decltype(auto) requires selectable<I, 1 + sizeof...(As)> {
+  if constexpr (is_bool<decltype(I)>) {
+    return select<uint(!I)>(static_cast<A&&>(a), static_cast<As&&>(as)...);
+  } else if constexpr (same_as<decltype(I), uint>) {
+    if constexpr (I == 0) return static_cast<A&&>(a);
+    else return select<I - 1>(static_cast<As&&>(as)...);
+  } else return select<uint(I)>(static_cast<A&&>(a), static_cast<As&&>(as)...);
+};
+
+namespace _ {
+template<typename T, T I, typename... Ts> struct _select_type : _select_type<uint, I, Ts...> {};
+template<bool B, typename Tt, typename Tf> struct _select_type<bool, B, Tt, Tf> : std::conditional<B, Tt, Tf> {};
+template<uint I, typename T, typename... Ts> struct _select_type<uint, I, T, Ts...> : _select_type<uint, I - 1, Ts...> {};
+template<typename T, typename... Ts> struct _select_type<uint, 0, T, Ts...> { using type = T; };
+}
+
+/// selects a type
+template<auto I, typename... Ts> requires selectable<I, sizeof...(Ts)>
+using select_type = typename _::_select_type<decltype(I), I, Ts...>::type;
+
+/// selects a value
+template<auto I, auto... Vs> requires selectable<I, sizeof...(Vs)>
+inline constexpr auto select_value = select_type<I, constant<Vs>...>::value;
+
+
+}
+#pragma endregion // --------------------------------------------------------------- [select, select_type, select_value]
+
+#pragma region [caster, is_cev] ----------------------------------------------------------------------------------------
+namespace yw {
+/// creates an object that calls functions in coversion
+template<typename... Fs> struct caster : public Fs... {
+private:
+  template<typename T> static constexpr uint i = inspects<same_as<T, result<Fs>>...>;
+  template<typename T> static constexpr uint j = i<T> < sizeof...(Fs) ? i<T> : inspects<convertible_to<T, result<Fs>>...>;
+  template<typename... As> static constexpr uint k = inspects<invocable<Fs, As...>...>;
+public:
+  using Fs::operator()...;
+  template<typename T> requires (j<T> < sizeof...(Fs)) constexpr operator T() const
+    noexcept(noexcept(select_type<j<T>, Fs...>::operator()())) { return select_type<j<T>, Fs...>::operator()(); }
+  template<typename... As> requires (k<As...> < sizeof...(Fs)) constexpr decltype(auto) operator()(As&&... as) const
+    noexcept(noexcept(select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...))) {
+    return select_type<k<As...>, Fs...>::operator()(static_cast<As&&>(as)...);
+  }
+  /// output stream operator
+  template<typename C, typename Tr> friend auto& operator<<(
+    std::basic_ostream<C, Tr>& os, const caster& c) requires requires { os << c(); } { return os << c(); }
+};
+}
+#pragma endregion // ---------------------------------------------------------------------------------- [caster, is_cev]
+
+#pragma region [vector2, vector3] --------------------------------------------------------------------------------------
+namespace yw {
+
+/// structure with two elements; `x` and `y`
+template<typename T> struct vector2 {
+
+  /// number of elements
+  static constexpr uint count = 2;
+
+  /// first element
+  T x{};
+
+  /// second element
+  T y{};
+
+  /// default constructor
+  constexpr vector2() noexcept = default;
+
+  /// fills the elements with the same value
+  explicit constexpr vector2(const T& v) noexcept : x(v), y(v) {}
+
+  /// sets the elements
+  template<convertible_to<T> U, convertible_to<T> V>
+  constexpr vector2(U&& X, V&& Y) noexcept
+    : x(static_cast<U&&>(X)), y(static_cast<V&&>(Y)) {}
+
+  /// gets the element
+  template<uint I> requires (I < 2) constexpr T& get() &
+    noexcept { return select<I>(x, y); }
+
+  /// gets the element
+  template<uint I> requires (I < 2) constexpr const T& get() const&
+    noexcept { return select<I>(x, y); }
+
+  /// gets the element
+  template<uint I> requires (I < 2) constexpr T&& get() &&
+    noexcept { return static_cast<T&&>(select<I>(x, y)); }
+
+  /// gets the element
+  template<uint I> requires (I < 2) constexpr const T&& get() const&&
+    noexcept { return static_cast<const T&&>(select<I>(x, y)); }
+};
+
+template<typename T1, typename T2> vector2(T1&&, T2&&) -> vector2<float>;
+
+/// structure with three elements; `x`, `y`, and `z`
+template<typename T> struct vector3 {
+
+  /// number of elements
+  static constexpr uint count = 3;
+
+  /// first element
+  T x{};
+
+  /// second element
+  T y{};
+
+  /// third element
+  T z{};
+
+  /// default constructor
+  constexpr vector3() noexcept = default;
+
+  /// fills the elements with the same value
+  explicit constexpr vector3(const T& v) noexcept : x(v), y(v), z(v) {}
+
+  /// sets the elements
+  template<convertible_to<T> U, convertible_to<T> V, convertible_to<T> W>
+  constexpr vector3(U&& X, V&& Y, W&& Z) noexcept
+    : x(static_cast<U&&>(X)), y(static_cast<V&&>(Y)), z(static_cast<W&&>(Z)) {}
+
+  /// gets the element
+  template<uint I> requires (I < 3) constexpr T& get() &
+    noexcept { return select<I>(x, y, z); }
+
+  /// gets the element
+  template<uint I> requires (I < 3) constexpr const T& get() const&
+    noexcept { return select<I>(x, y, z); }
+
+  /// gets the element
+  template<uint I> requires (I < 3) constexpr T&& get() &&
+    noexcept { return static_cast<T&&>(select<I>(x, y, z)); }
+
+  /// gets the element
+  template<uint I> requires (I < 3) constexpr const T&& get() const&&
+    noexcept { return static_cast<const T&&>(select<I>(x, y, z)); }
+};
+
+template<typename T1, typename T2, typename T3> vector3(T1&&, T2&&, T3&&) -> vector3<float>;
+}
+
+namespace std {
+
+template<typename T> struct tuple_size<yw::vector2<T>> : integral_constant<uint, 2> {};
+template<typename T> struct tuple_size<yw::vector3<T>> : integral_constant<uint, 3> {};
+
+template<uint I, typename T> struct tuple_element<I, yw::vector2<T>> : type_identity<T> {};
+template<uint I, typename T> struct tuple_element<I, yw::vector3<T>> : type_identity<T> {};
+}
+#pragma endregion // -------------------------------------------------------------------------------- [vector2, vector3]
 
 #pragma region [date, clock, time] -------------------------------------------------------------------------------------
 namespace yw {
@@ -1783,14 +2129,26 @@ class window;
 
 namespace system {
 
-/// instance handle
-win::HINSTANCE hinstance = win::GetModuleHandleW(nullptr);
-
 /// default window procedure
 int8 __stdcall wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp);
 
+/// instance handle
+inline win::HINSTANCE hinstance = win::GetModuleHandleW(nullptr);
+
+/// argument list
+inline array<str> args = [](int i) {
+  auto a = win::CommandLineToArgvW(win::GetCommandLineW(), &i);
+  array<str> r(i);
+  for (uint j = 0; j < i; ++j) r[j] = cvt<char>(a[j]);
+  win::LocalFree(a);
+  return r;
+}({});
+
+/// logger for system messages
+inline logger log(path(args[0]).replace_extension(".log"));
+
 /// default window class
-unsigned short wclass = [] {
+inline const wchar* const wclass = [] {
   win::WNDCLASSEXW wc{sizeof(win::WNDCLASSEXW)};
   wc.style = 0x0001 | 0x0002 | 0x0020; // CS_VREDRAW | CS_HREDRAW | CS_OWNDC
   wc.lpfnWndProc = wproc;
@@ -1803,12 +2161,30 @@ unsigned short wclass = [] {
   wc.lpszMenuName = nullptr;
   wc.lpszClassName = L"__ywlib";
   wc.hIconSm = nullptr;
-  return win::RegisterClassExW(&wc);
+  return reinterpret_cast<const wchar*>(win::RegisterClassExW(&wc));
 }();
+
+/// creates a window
+win::HWND create_window(
+  const wchar* Class, const wstr& Title, wstyle Style,
+  numeric auto&& x, numeric auto&& y, numeric auto&& w, numeric auto&& h,
+  win::HWND Parent, win::HMENU Menu, void* Param, const source& _ = {}) noexcept {
+  auto hw = win::CreateWindowExW(
+    int(uint(Style) >> 32), Class, Title.data(), int(uint4(Style)),
+    int(x), int(y), int(w), int(h), Parent, Menu, hinstance, Param);
+  if (hw) return hw;
+  log << format("{} failed to create window", _);
+}
+
 }
 
 /// class to create and manage a window
 class window {
+  constexpr static int t = 500;
+  void init(win::RECT r = {}) {
+    win::GetClientRect(_hwnd, &r);
+    _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x;
+  }
 protected:
   win::HWND _hwnd{};
   win::MSG _msg{};
@@ -1831,13 +2207,10 @@ public:
   /// creates a window
   window(stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
          numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    const auto title = cvt<wchar>(Title);
     const bool visible = bool(Style & ws_visible);
-    const int t = 500;
-    _hwnd = win::CreateWindowExW(int(uint(Style) >> 32), L"__ywlib", title.data(),
-                                 int(uint4(Style)), 0, 0, t, t, 0, 0, system::hinstance, 0);
+    _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style, 0, 0, t, t, 0, 0, 0, _);
     if (!_hwnd) return;
-    [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
+    [&](RECT r) {  }({});
     win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
     win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
     if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
@@ -2059,8 +2432,8 @@ public:
 inline const com_init com_initialized{win::COINIT::COINIT_APARTMENTTHREADED};
 
 comptr<win::ID3D11Device>        d3d_device{};
-// comptr<win::ID3D11Device5>       d3d_device5{};
 comptr<win::ID3D11DeviceContext> d3d_context{};
+// comptr<win::ID3D11Device5>       d3d_device5{};
 // comptr<win::IDXGIFactory2>       dxgi_factory{};
 // comptr<win::IDXGIDevice2>        dxgi_device{};
 // comptr<win::ID2D1Factory1>       d2d_factory{};
@@ -2070,7 +2443,15 @@ comptr<win::ID3D11DeviceContext> d3d_context{};
 // comptr<win::IWICImagingFactory>  wic_factory{};
 
 inline const bool d3d_initialized = [] {
-
+  win::D3D_FEATURE_LEVEL fl[] = {
+    win::D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_0,
+    win::D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_1, };
+  auto hr = win::D3D11CreateDevice(
+    nullptr, win::D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr,
+    win::D3D11_CREATE_DEVICE_FLAG::D3D11_CREATE_DEVICE_BGRA_SUPPORT, fl, 2, 7,
+    d3d_device.init(), nullptr, d3d_context.init());
+  if (hr) std::format("D3D11CreateDevice: {:x}", hr);
+  return !hr;
 }();
 } // clang-format on
 #pragma endregion // ----------------------------------------------------------------------------------------- [directx]

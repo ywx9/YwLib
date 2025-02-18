@@ -14,7 +14,9 @@ using INT      = int;
 using LONG     = long;
 using LONGLONG = long long;
 using LPCSTR   = const char*;
+using LPCWSTR  = const wchar_t*;
 using LPSTR    = char*;
+using LPWSTR   = wchar_t*;
 using LRESULT  = long long;
 using SIZE_T   = unsigned long long;
 using UINT     = unsigned;
@@ -28,9 +30,6 @@ struct HINSTANCE__ { int unused; }; using HINSTANCE = HINSTANCE__*;
 struct HMENU__     { int unused; }; using HMENU     = HMENU__*;
 struct HMONITOR__  { int unused; }; using HMONITOR  = HMONITOR__*;
 struct HWND__      { int unused; }; using HWND      = HWND__*;
-
-struct POINT { long x, y; };
-struct RECT  { long left, top, right, bottom; };
 
 union LARGE_INTEGER {
   struct {
@@ -48,6 +47,9 @@ struct LUID {
   DWORD LowPart;
   LONG HighPart;
 };
+
+struct POINT { long x, y; };
+struct RECT  { long left, top, right, bottom; };
 
 struct MSG {
   HWND               hwnd;
@@ -75,13 +77,15 @@ struct WNDCLASSEXW {
   HICON          hIconSm;
 };
 
-__declspec(dllimport) HWND __stdcall CreateWindowExW(unsigned long, const wchar_t*, const wchar_t*, unsigned long, int, int, int, int, HWND, HMENU, HINSTANCE, void*);
+__declspec(dllimport) LPWSTR* __stdcall CommandLineToArgvW(LPCWSTR, int*);
+__declspec(dllimport) HWND    __stdcall CreateWindowExW(unsigned long, const wchar_t*, const wchar_t*, unsigned long, int, int, int, int, HWND, HMENU, HINSTANCE, void*);
 
 __declspec(dllimport) long long __stdcall DefWindowProcW(HWND, unsigned, unsigned long long, long long);
 __declspec(dllimport) int       __stdcall DestroyWindow(HWND);
 __declspec(dllimport) long long __stdcall DispatchMessageW(const MSG*);
 
 __declspec(dllimport) int       __stdcall GetClientRect(HWND, RECT*);
+__declspec(dllimport) LPWSTR    __stdcall GetCommandLineW();
 __declspec(dllimport) int       __stdcall GetMessageW(MSG*, HWND, unsigned, unsigned);
 __declspec(dllimport) HINSTANCE __stdcall GetModuleHandleW(const wchar_t*);
 __declspec(dllimport) long long __stdcall GetWindowLongPtrW(HWND, int);
@@ -91,6 +95,7 @@ __declspec(dllimport) int       __stdcall GetWindowTextLengthA(HWND);
 __declspec(dllimport) int       __stdcall GetWindowTextLengthW(HWND);
 
 __declspec(dllimport) HCURSOR __stdcall LoadCursorW(HINSTANCE, const wchar_t*);
+__declspec(dllimport) HANDLE  __stdcall LocalFree(HANDLE);
 
 __declspec(dllimport) int __stdcall MessageBoxW(HWND, const wchar_t*, const wchar_t*, unsigned);
 
@@ -121,13 +126,16 @@ using __ywstd_cfunc HBRUSH;
 using __ywstd_cfunc HCURSOR;
 using __ywstd_cfunc HICON;
 using __ywstd_cfunc HINSTANCE;
+using __ywstd_cfunc HMENU;
 using __ywstd_cfunc HWND;
 
 using __ywstd_cfunc POINT;
 using __ywstd_cfunc MSG;
+using __ywstd_cfunc RECT;
 using __ywstd_cfunc WNDPROC;
 using __ywstd_cfunc WNDCLASSEXW;
 
+using __ywstd_cfunc CommandLineToArgvW;
 using __ywstd_cfunc CreateWindowExW;
 
 using __ywstd_cfunc DefWindowProcW;
@@ -135,6 +143,7 @@ using __ywstd_cfunc DestroyWindow;
 using __ywstd_cfunc DispatchMessageW;
 
 using __ywstd_cfunc GetClientRect;
+using __ywstd_cfunc GetCommandLineW;
 using __ywstd_cfunc GetMessageW;
 using __ywstd_cfunc GetModuleHandleW;
 using __ywstd_cfunc GetWindowLongPtrW;
@@ -144,6 +153,7 @@ using __ywstd_cfunc GetWindowTextLengthA;
 using __ywstd_cfunc GetWindowTextLengthW;
 
 using __ywstd_cfunc LoadCursorW;
+using __ywstd_cfunc LocalFree;
 
 using __ywstd_cfunc MessageBoxW;
 

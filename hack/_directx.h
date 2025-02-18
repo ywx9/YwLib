@@ -1,30 +1,23 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
 #include "_windows.h"
 
-#pragma region [CoInitialize, CoUninitialize] ----------------------------------
-// clang-format off
-__ywstd_cfunc_begin
-enum COINIT {
-  COINIT_MULTITHREADED      = 0x0,
-  COINIT_APARTMENTTHREADED  = 0x2,
-  COINIT_DISABLE_OLE1DDE    = 0x4,
-  COINIT_SPEED_OVER_MEMORY  = 0x8,
-};
-__declspec(dllimport) void __stdcall CoUninitialize();
-__declspec(dllimport) long __stdcall CoInitializeEx(void*, unsigned long);
-__ywstd_cfunc_end
-__ywstd_export namespace win {
-using __ywstd_cfunc COINIT;
-using __ywstd_cfunc CoUninitialize;
-using __ywstd_cfunc CoInitializeEx;
-}
-// clang-format on
+#pragma region [Macros] --------------------------------------------------------
+
+#define MIDL_INTERFACE(x) struct __declspec(uuid(x)) __declspec(novtable)
+
 #pragma endregion --------------------------------------------------------------
 
-#pragma region [DXGI_FORMAT] ---------------------------------------------------
-// clang-format off
+#pragma region [Enumations] ----------------------------------------------------
 __ywstd_cfunc_begin
+
+enum COINIT {
+  COINIT_MULTITHREADED     = 0x0,
+  COINIT_APARTMENTTHREADED = 0x2,
+  COINIT_DISABLE_OLE1DDE   = 0x4,
+  COINIT_SPEED_OVER_MEMORY = 0x8,
+};
+
 enum DXGI_FORMAT : UINT {
   DXGI_FORMAT_UNKNOWN                                 = 0,
   DXGI_FORMAT_R32G32B32A32_TYPELESS                   = 1,
@@ -148,16 +141,41 @@ enum DXGI_FORMAT : UINT {
   DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE         = 189,
   DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE = 190,
 };
+
+enum DXGI_MODE_ROTATION {
+  DXGI_MODE_ROTATION_UNSPECIFIED  = 0,
+  DXGI_MODE_ROTATION_IDENTITY     = 1,
+  DXGI_MODE_ROTATION_ROTATE90     = 2,
+  DXGI_MODE_ROTATION_ROTATE180    = 3,
+  DXGI_MODE_ROTATION_ROTATE270    = 4
+};
+
+enum DXGI_MODE_SCALING {
+  DXGI_MODE_SCALING_UNSPECIFIED  = 0,
+  DXGI_MODE_SCALING_CENTERED     = 1,
+  DXGI_MODE_SCALING_STRETCHED    = 2
+};
+
+enum DXGI_MODE_SCANLINE_ORDER {
+  DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED       = 0,
+  DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE       = 1,
+  DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST = 2,
+  DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST = 3
+};
+
 __ywstd_cfunc_end
 __ywstd_export namespace win {
+
+using __ywstd_cfunc COINIT;
 using __ywstd_cfunc DXGI_FORMAT;
+using __ywstd_cfunc DXGI_MODE_ROTATION;
+
 }
-// clang-format on
 #pragma endregion --------------------------------------------------------------
 
-#pragma region [ID] ------------------------------------------------------------
-// clang-format off
+#pragma region [Types] ---------------------------------------------------------
 __ywstd_cfunc_begin
+
 struct GUID {
   unsigned long  Data1;
   unsigned short Data2;
@@ -166,74 +184,28 @@ struct GUID {
 };
 using REFGUID = const GUID&;
 using REFIID = const GUID&;
-#define MIDL_INTERFACE(x) struct __declspec(uuid(x)) __declspec(novtable)
-__ywstd_cfunc_end
-__ywstd_export namespace win {
-using __ywstd_cfunc GUID;
-using __ywstd_cfunc REFGUID;
-using __ywstd_cfunc REFIID;
-}
-// clang-format on
-#pragma endregion --------------------------------------------------------------
 
-#pragma region [IUnknown] ------------------------------------------------------
-// clang-format off
-__ywstd_cfunc_begin
-extern "C++" MIDL_INTERFACE("00000000-0000-0000-C000-000000000046") IUnknown {
-  virtual HRESULT __stdcall QueryInterface(REFIID, void**) = 0;
-  virtual unsigned long __stdcall AddRef() = 0;
-  virtual unsigned long __stdcall Release() = 0;
-  template<typename Q> HRESULT __stdcall QueryInterface(Q** pp) {
-    return QueryInterface(__uuidof(Q), (void **)pp);
-  }
-};
-__ywstd_cfunc_end
-__ywstd_export namespace win {
-using __ywstd_cfunc IUnknown;
-}
-// clang-format on
-#pragma endregion --------------------------------------------------------------
-
-#pragma region [IDXGIObject, IDXGIDeviceSubObject] -----------------------------
-__ywstd_cfunc_begin
-MIDL_INTERFACE("aec22fb8-76f3-4639-9be0-28eb43a67a2e")
-IDXGIObject : public IUnknown {
-  virtual HRESULT __stdcall SetPrivateData(REFGUID, unsigned, const void*) = 0;
-  virtual HRESULT __stdcall SetPrivateDataInterface(REFGUID, const IUnknown*) = 0;
-  virtual HRESULT __stdcall GetPrivateData(REFGUID, UINT*, void*) = 0;
-  virtual HRESULT __stdcall GetParent(REFIID, void**) = 0;
-};
-MIDL_INTERFACE("3d3e0379-f9de-4d58-bb6c-18d62992f1a6")
-IDXGIDeviceSubObject : public IDXGIObject {
-  virtual HRESULT __stdcall GetDevice(REFIID, void**) = 0;
-};
-__ywstd_cfunc_end
-__ywstd_export namespace win {
-using __ywstd_cfunc IDXGIObject;
-using __ywstd_cfunc IDXGIDeviceSubObject;
-}
-#pragma endregion --------------------------------------------------------------
-
-
-__ywstd_cfunc_begin
-
-
-
-
-
-
-
-
-struct DXGI_SAMPLE_DESC {
-  UINT Count;
-  UINT Quality;
+struct DXGI_ADAPTER_DESC {
+  WCHAR Description[ 128 ];
+  UINT VendorId, DeviceId, SubSysId, Revision;
+  SIZE_T DedicatedVideoMemory, DedicatedSystemMemory, SharedSystemMemory;
+  LUID AdapterLuid;
 };
 
-struct DXGI_SURFACE_DESC {
-  UINT Width;
-  UINT Height;
-  DXGI_FORMAT Format;
-  DXGI_SAMPLE_DESC SampleDesc;
+struct DXGI_FRAME_STATISTICS {
+  UINT PresentCount, PresentRefreshCount, SyncRefreshCount;
+  LARGE_INTEGER SyncQPCTime, SyncGPUTime;
+};
+
+struct DXGI_RGB { float Red, Green, Blue; };
+struct DXGI_GAMMA_CONTROL { DXGI_RGB Scale, Offset, GammaCurve[ 1025 ]; };
+
+struct DXGI_GAMMA_CONTROL_CAPABILITIES {
+  BOOL ScaleAndOffsetSupported;
+  float MaxConvertedValue;
+  float MinConvertedValue;
+  UINT NumGammaControlPoints;
+  float ControlPointPositions[1025];
 };
 
 struct DXGI_MAPPED_RECT {
@@ -241,19 +213,14 @@ struct DXGI_MAPPED_RECT {
   BYTE *pBits;
 };
 
-MIDL_INTERFACE("cafcb56c-6ac3-4889-bf47-9e23bbd260ec")
-IDXGISurface : public IDXGIDeviceSubObject {
-  virtual HRESULT __stdcall GetDesc(DXGI_SURFACE_DESC*) = 0;
-  virtual HRESULT __stdcall Map(DXGI_MAPPED_RECT*, UINT) = 0;
-  virtual HRESULT __stdcall Unmap() = 0;
-};
+struct DXGI_RATIONAL { UINT Numerator, Denominator; };
 
-enum DXGI_MODE_ROTATION {
-  DXGI_MODE_ROTATION_UNSPECIFIED  = 0,
-  DXGI_MODE_ROTATION_IDENTITY     = 1,
-  DXGI_MODE_ROTATION_ROTATE90     = 2,
-  DXGI_MODE_ROTATION_ROTATE180    = 3,
-  DXGI_MODE_ROTATION_ROTATE270    = 4
+struct DXGI_MODE_DESC {
+  UINT Width, Height;
+  DXGI_RATIONAL RefreshRate;
+  DXGI_FORMAT Format;
+  DXGI_MODE_SCANLINE_ORDER ScanlineOrdering;
+  DXGI_MODE_SCALING Scaling;
 };
 
 struct DXGI_OUTPUT_DESC {
@@ -264,59 +231,71 @@ struct DXGI_OUTPUT_DESC {
   HMONITOR Monitor;
 };
 
-struct DXGI_RATIONAL {
-  UINT Numerator;
-  UINT Denominator;
+struct DXGI_SAMPLE_DESC {
+  UINT Count, Quality;
 };
 
-enum DXGI_MODE_SCANLINE_ORDER {
-  DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED       = 0,
-  DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE       = 1,
-  DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST = 2,
-  DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST = 3
-};
-
-enum DXGI_MODE_SCALING {
-  DXGI_MODE_SCALING_UNSPECIFIED  = 0,
-  DXGI_MODE_SCALING_CENTERED     = 1,
-  DXGI_MODE_SCALING_STRETCHED    = 2
-};
-
-struct DXGI_MODE_DESC {
-  UINT Width;
-  UINT Height;
-  DXGI_RATIONAL RefreshRate;
+struct DXGI_SURFACE_DESC {
+  UINT Width, Height;
   DXGI_FORMAT Format;
-  DXGI_MODE_SCANLINE_ORDER ScanlineOrdering;
-  DXGI_MODE_SCALING Scaling;
+  DXGI_SAMPLE_DESC SampleDesc;
 };
 
-struct DXGI_GAMMA_CONTROL_CAPABILITIES {
-  BOOL ScaleAndOffsetSupported;
-  float MaxConvertedValue;
-  float MinConvertedValue;
-  UINT NumGammaControlPoints;
-  float ControlPointPositions[1025];
+struct D3D11_CLASS_INSTANCE_DESC {
+  UINT InstanceId, InstanceIndex, TypeId, ConstantBuffer;
+  UINT BaseConstantBufferOffset, BaseTexture, BaseSampler;
+  BOOL Created;
 };
 
-struct DXGI_RGB {
-  float Red;
-  float Green;
-  float Blue;
+struct D3D11_SUBRESOURCE_DATA {
+  const void *pSysMem;
+  UINT SysMemPitch, SysMemSlicePitch;
 };
 
-struct DXGI_GAMMA_CONTROL {
-  DXGI_RGB Scale;
-  DXGI_RGB Offset;
-  DXGI_RGB GammaCurve[ 1025 ];
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+
+using __ywstd_cfunc GUID;
+using __ywstd_cfunc REFGUID;
+using __ywstd_cfunc REFIID;
+
+using __ywstd_cfunc DXGI_MAPPED_RECT;
+using __ywstd_cfunc DXGI_SAMPLE_DESC;
+using __ywstd_cfunc DXGI_SURFACE_DESC;
+
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [Interfaces] ----------------------------------------------------
+__ywstd_cfunc_begin
+
+extern "C++" MIDL_INTERFACE("00000000-0000-0000-C000-000000000046") IUnknown {
+  virtual HRESULT __stdcall QueryInterface(REFIID, void**) = 0;
+  virtual unsigned long __stdcall AddRef() = 0;
+  virtual unsigned long __stdcall Release() = 0;
+  template<typename Q> HRESULT __stdcall QueryInterface(Q** pp) {
+    return QueryInterface(__uuidof(Q), (void **)pp);
+  }
 };
 
-struct DXGI_FRAME_STATISTICS {
-  UINT PresentCount;
-  UINT PresentRefreshCount;
-  UINT SyncRefreshCount;
-  LARGE_INTEGER SyncQPCTime;
-  LARGE_INTEGER SyncGPUTime;
+MIDL_INTERFACE("aec22fb8-76f3-4639-9be0-28eb43a67a2e")
+IDXGIObject : public IUnknown {
+  virtual HRESULT __stdcall SetPrivateData(REFGUID, unsigned, const void*) = 0;
+  virtual HRESULT __stdcall SetPrivateDataInterface(REFGUID, const IUnknown*) = 0;
+  virtual HRESULT __stdcall GetPrivateData(REFGUID, UINT*, void*) = 0;
+  virtual HRESULT __stdcall GetParent(REFIID, void**) = 0;
+};
+
+MIDL_INTERFACE("3d3e0379-f9de-4d58-bb6c-18d62992f1a6")
+IDXGIDeviceSubObject : public IDXGIObject {
+  virtual HRESULT __stdcall GetDevice(REFIID, void**) = 0;
+};
+
+MIDL_INTERFACE("cafcb56c-6ac3-4889-bf47-9e23bbd260ec")
+IDXGISurface : public IDXGIDeviceSubObject {
+  virtual HRESULT __stdcall GetDesc(DXGI_SURFACE_DESC*) = 0;
+  virtual HRESULT __stdcall Map(DXGI_MAPPED_RECT*, UINT) = 0;
+  virtual HRESULT __stdcall Unmap() = 0;
 };
 
 MIDL_INTERFACE("ae02eedb-c735-4690-8d52-5a8dc20213aa")
@@ -336,24 +315,14 @@ public:
   virtual HRESULT __stdcall GetFrameStatistics(DXGI_FRAME_STATISTICS*) = 0;
 };
 
-typedef struct DXGI_ADAPTER_DESC {
-  WCHAR Description[ 128 ];
-  UINT VendorId;
-  UINT DeviceId;
-  UINT SubSysId;
-  UINT Revision;
-  SIZE_T DedicatedVideoMemory;
-  SIZE_T DedicatedSystemMemory;
-  SIZE_T SharedSystemMemory;
-  LUID AdapterLuid;
-}   DXGI_ADAPTER_DESC;
-
 MIDL_INTERFACE("2411e7e1-12ac-4ccf-bd14-9798e8534dc0")
 IDXGIAdapter : public IDXGIObject {
   virtual HRESULT __stdcall EnumOutputs(unsigned, IDXGIOutput**) = 0;
   virtual HRESULT __stdcall GetDesc(DXGI_ADAPTER_DESC*) = 0;
   virtual HRESULT __stdcall CheckInterfaceSupport(REFGUID, LARGE_INTEGER*) = 0;
 };
+
+struct ID3D11Device;
 
 MIDL_INTERFACE("1841e5c8-16b0-489b-bcc8-44cfb0d5deae")
 ID3D11DeviceChild : public IUnknown {
@@ -363,6 +332,51 @@ public:
   virtual HRESULT __stdcall SetPrivateData(REFGUID, UINT, const void*) = 0;
   virtual HRESULT __stdcall SetPrivateDataInterface(REFGUID, const IUnknown*) = 0;
 };
+
+struct ID3D11ClassLinkage;
+
+MIDL_INTERFACE("a6cd7faa-b0b7-4a2f-9436-8662a65797cb")
+ID3D11ClassInstance : public ID3D11DeviceChild {
+  virtual void __stdcall GetClassLinkage(ID3D11ClassLinkage**) = 0;
+  virtual void __stdcall GetDesc(D3D11_CLASS_INSTANCE_DESC*) = 0;
+  virtual void __stdcall GetInstanceName(LPSTR, SIZE_T*) = 0;
+  virtual void __stdcall GetTypeName(LPSTR, SIZE_T*) = 0;
+};
+
+MIDL_INTERFACE("ddf57cba-9543-46e4-a12b-f207a0fe7fed")
+ID3D11ClassLinkage : public ID3D11DeviceChild {
+  virtual HRESULT __stdcall GetClassInstance(LPCSTR, UINT, ID3D11ClassInstance**) = 0;
+  virtual HRESULT __stdcall CreateClassInstance(
+    LPCSTR, UINT, UINT, UINT, UINT, ID3D11ClassInstance**) = 0;
+};
+
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+
+using __ywstd_cfunc IUnknown;
+using __ywstd_cfunc IDXGISurface;
+
+
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [Functions] -----------------------------------------------------
+__ywstd_cfunc_begin
+
+__declspec(dllimport) void __stdcall CoUninitialize();
+__declspec(dllimport) long __stdcall CoInitializeEx(void*, unsigned long);
+
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+
+using __ywstd_cfunc CoUninitialize;
+using __ywstd_cfunc CoInitializeEx;
+
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [RESOURCE] ------------------------------------------------------
+__ywstd_cfunc_begin
 
 enum D3D11_RESOURCE_DIMENSION {
   D3D11_RESOURCE_DIMENSION_UNKNOWN   = 0,
@@ -400,44 +414,11 @@ ID3D11Buffer : public ID3D11Resource {
   virtual void __stdcall GetDesc(D3D11_BUFFER_DESC*) = 0;
 };
 
-enum D3D_DRIVER_TYPE {
-  D3D_DRIVER_TYPE_UNKNOWN   = 0,
-  D3D_DRIVER_TYPE_HARDWARE  = 1,
-  D3D_DRIVER_TYPE_REFERENCE = 2,
-  D3D_DRIVER_TYPE_NULL      = 3,
-  D3D_DRIVER_TYPE_SOFTWARE  = 4,
-  D3D_DRIVER_TYPE_WARP      = 5
-};
-
-enum D3D_FEATURE_LEVEL {
-  D3D_FEATURE_LEVEL_1_0_CORE = 0x1000,
-  D3D_FEATURE_LEVEL_9_1      = 0x9100,
-  D3D_FEATURE_LEVEL_9_2      = 0x9200,
-  D3D_FEATURE_LEVEL_9_3      = 0x9300,
-  D3D_FEATURE_LEVEL_10_0     = 0xa000,
-  D3D_FEATURE_LEVEL_10_1     = 0xa100,
-  D3D_FEATURE_LEVEL_11_0     = 0xb000,
-  D3D_FEATURE_LEVEL_11_1     = 0xb100,
-  D3D_FEATURE_LEVEL_12_0     = 0xc000,
-  D3D_FEATURE_LEVEL_12_1     = 0xc100,
-  D3D_FEATURE_LEVEL_12_2     = 0xc200
-};
-
-struct D3D11_SUBRESOURCE_DATA {
-  const void *pSysMem;
-  UINT SysMemPitch;
-  UINT SysMemSlicePitch;
-};
-
 struct D3D11_TEXTURE1D_DESC {
-  UINT Width;
-  UINT MipLevels;
-  UINT ArraySize;
+  UINT Width, MipLevels, ArraySize;
   DXGI_FORMAT Format;
   D3D11_USAGE Usage;
-  UINT BindFlags;
-  UINT CPUAccessFlags;
-  UINT MiscFlags;
+  UINT BindFlags, CPUAccessFlags, MiscFlags;
 };
 
 MIDL_INTERFACE("f8fb5c27-c6b3-4f75-a4c8-439af2ef564c")
@@ -446,16 +427,11 @@ ID3D11Texture1D : public ID3D11Resource {
 };
 
 struct D3D11_TEXTURE2D_DESC {
-  UINT Width;
-  UINT Height;
-  UINT MipLevels;
-  UINT ArraySize;
+  UINT Width, Height, MipLevels, ArraySize;
   DXGI_FORMAT Format;
   DXGI_SAMPLE_DESC SampleDesc;
   D3D11_USAGE Usage;
-  UINT BindFlags;
-  UINT CPUAccessFlags;
-  UINT MiscFlags;
+  UINT BindFlags, CPUAccessFlags, MiscFlags;
 };
 
 MIDL_INTERFACE("6f15aaf2-d208-4e89-9ab4-489535d34f9c")
@@ -464,15 +440,10 @@ ID3D11Texture2D : public ID3D11Resource {
 };
 
 struct D3D11_TEXTURE3D_DESC {
-  UINT Width;
-  UINT Height;
-  UINT Depth;
-  UINT MipLevels;
+  UINT Width, Height, Depth, MipLevels;
   DXGI_FORMAT Format;
   D3D11_USAGE Usage;
-  UINT BindFlags;
-  UINT CPUAccessFlags;
-  UINT MiscFlags;
+  UINT BindFlags, CPUAccessFlags, MiscFlags;
 };
 
 MIDL_INTERFACE("037e866e-f56d-4357-a8af-9dabbe6e250e")
@@ -480,89 +451,97 @@ ID3D11Texture3D : public ID3D11Resource {
   virtual void __stdcall GetDesc(D3D11_TEXTURE3D_DESC*) = 0;
 };
 
-enum D3D_SRV_DIMENSION {
-  D3D_SRV_DIMENSION_UNKNOWN  = 0,
-  D3D_SRV_DIMENSION_BUFFER  = 1,
-  D3D_SRV_DIMENSION_TEXTURE1D  = 2,
-  D3D_SRV_DIMENSION_TEXTURE1DARRAY  = 3,
-  D3D_SRV_DIMENSION_TEXTURE2D  = 4,
-  D3D_SRV_DIMENSION_TEXTURE2DARRAY  = 5,
-  D3D_SRV_DIMENSION_TEXTURE2DMS  = 6,
-  D3D_SRV_DIMENSION_TEXTURE2DMSARRAY  = 7,
-  D3D_SRV_DIMENSION_TEXTURE3D  = 8,
-  D3D_SRV_DIMENSION_TEXTURECUBE  = 9,
-  D3D_SRV_DIMENSION_TEXTURECUBEARRAY  = 10,
-  D3D_SRV_DIMENSION_BUFFEREX  = 11,
-  D3D10_SRV_DIMENSION_UNKNOWN  = D3D_SRV_DIMENSION_UNKNOWN,
-  D3D10_SRV_DIMENSION_BUFFER  = D3D_SRV_DIMENSION_BUFFER,
-  D3D10_SRV_DIMENSION_TEXTURE1D  = D3D_SRV_DIMENSION_TEXTURE1D,
-  D3D10_SRV_DIMENSION_TEXTURE1DARRAY  = D3D_SRV_DIMENSION_TEXTURE1DARRAY,
-  D3D10_SRV_DIMENSION_TEXTURE2D  = D3D_SRV_DIMENSION_TEXTURE2D,
-  D3D10_SRV_DIMENSION_TEXTURE2DARRAY  = D3D_SRV_DIMENSION_TEXTURE2DARRAY,
-  D3D10_SRV_DIMENSION_TEXTURE2DMS  = D3D_SRV_DIMENSION_TEXTURE2DMS,
-  D3D10_SRV_DIMENSION_TEXTURE2DMSARRAY  = D3D_SRV_DIMENSION_TEXTURE2DMSARRAY,
-  D3D10_SRV_DIMENSION_TEXTURE3D  = D3D_SRV_DIMENSION_TEXTURE3D,
-  D3D10_SRV_DIMENSION_TEXTURECUBE  = D3D_SRV_DIMENSION_TEXTURECUBE,
-  D3D10_1_SRV_DIMENSION_UNKNOWN  = D3D_SRV_DIMENSION_UNKNOWN,
-  D3D10_1_SRV_DIMENSION_BUFFER  = D3D_SRV_DIMENSION_BUFFER,
-  D3D10_1_SRV_DIMENSION_TEXTURE1D  = D3D_SRV_DIMENSION_TEXTURE1D,
-  D3D10_1_SRV_DIMENSION_TEXTURE1DARRAY  = D3D_SRV_DIMENSION_TEXTURE1DARRAY,
-  D3D10_1_SRV_DIMENSION_TEXTURE2D  = D3D_SRV_DIMENSION_TEXTURE2D,
-  D3D10_1_SRV_DIMENSION_TEXTURE2DARRAY  = D3D_SRV_DIMENSION_TEXTURE2DARRAY,
-  D3D10_1_SRV_DIMENSION_TEXTURE2DMS  = D3D_SRV_DIMENSION_TEXTURE2DMS,
-  D3D10_1_SRV_DIMENSION_TEXTURE2DMSARRAY  = D3D_SRV_DIMENSION_TEXTURE2DMSARRAY,
-  D3D10_1_SRV_DIMENSION_TEXTURE3D  = D3D_SRV_DIMENSION_TEXTURE3D,
-  D3D10_1_SRV_DIMENSION_TEXTURECUBE  = D3D_SRV_DIMENSION_TEXTURECUBE,
-  D3D10_1_SRV_DIMENSION_TEXTURECUBEARRAY  = D3D_SRV_DIMENSION_TEXTURECUBEARRAY,
-  D3D11_SRV_DIMENSION_UNKNOWN  = D3D_SRV_DIMENSION_UNKNOWN,
-  D3D11_SRV_DIMENSION_BUFFER  = D3D_SRV_DIMENSION_BUFFER,
-  D3D11_SRV_DIMENSION_TEXTURE1D  = D3D_SRV_DIMENSION_TEXTURE1D,
-  D3D11_SRV_DIMENSION_TEXTURE1DARRAY  = D3D_SRV_DIMENSION_TEXTURE1DARRAY,
-  D3D11_SRV_DIMENSION_TEXTURE2D  = D3D_SRV_DIMENSION_TEXTURE2D,
-  D3D11_SRV_DIMENSION_TEXTURE2DARRAY  = D3D_SRV_DIMENSION_TEXTURE2DARRAY,
-  D3D11_SRV_DIMENSION_TEXTURE2DMS  = D3D_SRV_DIMENSION_TEXTURE2DMS,
-  D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY  = D3D_SRV_DIMENSION_TEXTURE2DMSARRAY,
-  D3D11_SRV_DIMENSION_TEXTURE3D  = D3D_SRV_DIMENSION_TEXTURE3D,
-  D3D11_SRV_DIMENSION_TEXTURECUBE  = D3D_SRV_DIMENSION_TEXTURECUBE,
-  D3D11_SRV_DIMENSION_TEXTURECUBEARRAY  = D3D_SRV_DIMENSION_TEXTURECUBEARRAY,
-  D3D11_SRV_DIMENSION_BUFFEREX  = D3D_SRV_DIMENSION_BUFFEREX
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc D3D11_RESOURCE_DIMENSION;
+using __ywstd_cfunc ID3D11Resource;
+using __ywstd_cfunc D3D11_BUFFER_DESC;
+using __ywstd_cfunc ID3D11Buffer;
+using __ywstd_cfunc D3D11_TEXTURE1D_DESC;
+using __ywstd_cfunc ID3D11Texture1D;
+using __ywstd_cfunc D3D11_TEXTURE2D_DESC;
+using __ywstd_cfunc ID3D11Texture2D;
+using __ywstd_cfunc D3D11_TEXTURE3D_DESC;
+using __ywstd_cfunc ID3D11Texture3D;
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [VIEW] ----------------------------------------------------------
+__ywstd_cfunc_begin
+
+MIDL_INTERFACE("839d1216-bb2e-412b-b7f4-a9dbebe08ed1")
+ID3D11View : public ID3D11DeviceChild {
+  virtual void __stdcall GetResource(ID3D11Resource**) = 0;
 };
 
-using D3D11_SRV_DIMENSION = D3D_SRV_DIMENSION ;
+enum D3D_SRV_DIMENSION {
+  D3D_SRV_DIMENSION_UNKNOWN              = 0,
+  D3D_SRV_DIMENSION_BUFFER               = 1,
+  D3D_SRV_DIMENSION_TEXTURE1D            = 2,
+  D3D_SRV_DIMENSION_TEXTURE1DARRAY       = 3,
+  D3D_SRV_DIMENSION_TEXTURE2D            = 4,
+  D3D_SRV_DIMENSION_TEXTURE2DARRAY       = 5,
+  D3D_SRV_DIMENSION_TEXTURE2DMS          = 6,
+  D3D_SRV_DIMENSION_TEXTURE2DMSARRAY     = 7,
+  D3D_SRV_DIMENSION_TEXTURE3D            = 8,
+  D3D_SRV_DIMENSION_TEXTURECUBE          = 9,
+  D3D_SRV_DIMENSION_TEXTURECUBEARRAY     = 10,
+  D3D_SRV_DIMENSION_BUFFEREX             = 11,
+  D3D10_SRV_DIMENSION_UNKNOWN            = D3D_SRV_DIMENSION_UNKNOWN,
+  D3D10_SRV_DIMENSION_BUFFER             = D3D_SRV_DIMENSION_BUFFER,
+  D3D10_SRV_DIMENSION_TEXTURE1D          = D3D_SRV_DIMENSION_TEXTURE1D,
+  D3D10_SRV_DIMENSION_TEXTURE1DARRAY     = D3D_SRV_DIMENSION_TEXTURE1DARRAY,
+  D3D10_SRV_DIMENSION_TEXTURE2D          = D3D_SRV_DIMENSION_TEXTURE2D,
+  D3D10_SRV_DIMENSION_TEXTURE2DARRAY     = D3D_SRV_DIMENSION_TEXTURE2DARRAY,
+  D3D10_SRV_DIMENSION_TEXTURE2DMS        = D3D_SRV_DIMENSION_TEXTURE2DMS,
+  D3D10_SRV_DIMENSION_TEXTURE2DMSARRAY   = D3D_SRV_DIMENSION_TEXTURE2DMSARRAY,
+  D3D10_SRV_DIMENSION_TEXTURE3D          = D3D_SRV_DIMENSION_TEXTURE3D,
+  D3D10_SRV_DIMENSION_TEXTURECUBE        = D3D_SRV_DIMENSION_TEXTURECUBE,
+  D3D10_1_SRV_DIMENSION_UNKNOWN          = D3D_SRV_DIMENSION_UNKNOWN,
+  D3D10_1_SRV_DIMENSION_BUFFER           = D3D_SRV_DIMENSION_BUFFER,
+  D3D10_1_SRV_DIMENSION_TEXTURE1D        = D3D_SRV_DIMENSION_TEXTURE1D,
+  D3D10_1_SRV_DIMENSION_TEXTURE1DARRAY   = D3D_SRV_DIMENSION_TEXTURE1DARRAY,
+  D3D10_1_SRV_DIMENSION_TEXTURE2D        = D3D_SRV_DIMENSION_TEXTURE2D,
+  D3D10_1_SRV_DIMENSION_TEXTURE2DARRAY   = D3D_SRV_DIMENSION_TEXTURE2DARRAY,
+  D3D10_1_SRV_DIMENSION_TEXTURE2DMS      = D3D_SRV_DIMENSION_TEXTURE2DMS,
+  D3D10_1_SRV_DIMENSION_TEXTURE2DMSARRAY = D3D_SRV_DIMENSION_TEXTURE2DMSARRAY,
+  D3D10_1_SRV_DIMENSION_TEXTURE3D        = D3D_SRV_DIMENSION_TEXTURE3D,
+  D3D10_1_SRV_DIMENSION_TEXTURECUBE      = D3D_SRV_DIMENSION_TEXTURECUBE,
+  D3D10_1_SRV_DIMENSION_TEXTURECUBEARRAY = D3D_SRV_DIMENSION_TEXTURECUBEARRAY,
+  D3D11_SRV_DIMENSION_UNKNOWN            = D3D_SRV_DIMENSION_UNKNOWN,
+  D3D11_SRV_DIMENSION_BUFFER             = D3D_SRV_DIMENSION_BUFFER,
+  D3D11_SRV_DIMENSION_TEXTURE1D          = D3D_SRV_DIMENSION_TEXTURE1D,
+  D3D11_SRV_DIMENSION_TEXTURE1DARRAY     = D3D_SRV_DIMENSION_TEXTURE1DARRAY,
+  D3D11_SRV_DIMENSION_TEXTURE2D          = D3D_SRV_DIMENSION_TEXTURE2D,
+  D3D11_SRV_DIMENSION_TEXTURE2DARRAY     = D3D_SRV_DIMENSION_TEXTURE2DARRAY,
+  D3D11_SRV_DIMENSION_TEXTURE2DMS        = D3D_SRV_DIMENSION_TEXTURE2DMS,
+  D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY   = D3D_SRV_DIMENSION_TEXTURE2DMSARRAY,
+  D3D11_SRV_DIMENSION_TEXTURE3D          = D3D_SRV_DIMENSION_TEXTURE3D,
+  D3D11_SRV_DIMENSION_TEXTURECUBE        = D3D_SRV_DIMENSION_TEXTURECUBE,
+  D3D11_SRV_DIMENSION_TEXTURECUBEARRAY   = D3D_SRV_DIMENSION_TEXTURECUBEARRAY,
+  D3D11_SRV_DIMENSION_BUFFEREX           = D3D_SRV_DIMENSION_BUFFEREX
+};
+using D3D11_SRV_DIMENSION = D3D_SRV_DIMENSION;
 
 struct D3D11_BUFFER_SRV {
-  union {
-    UINT FirstElement;
-    UINT ElementOffset;
-  };
-  union {
-    UINT NumElements;
-    UINT ElementWidth;
-  };
+  union { UINT FirstElement, ElementOffset; };
+  union { UINT NumElements, ElementWidth; };
 };
 
 struct D3D11_TEX1D_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
+  UINT MostDetailedMip, MipLevels;
 };
 
 struct D3D11_TEX1D_ARRAY_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MostDetailedMip, MipLevels, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2D_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
+  UINT MostDetailedMip, MipLevels;
 };
 
 struct D3D11_TEX2D_ARRAY_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MostDetailedMip, MipLevels, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2DMS_SRV {
@@ -570,31 +549,23 @@ struct D3D11_TEX2DMS_SRV {
 };
 
 struct D3D11_TEX2DMS_ARRAY_SRV {
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX3D_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
+  UINT MostDetailedMip, MipLevels;
 };
 
 struct D3D11_TEXCUBE_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
+  UINT MostDetailedMip, MipLevels;
 };
 
 struct D3D11_TEXCUBE_ARRAY_SRV {
-  UINT MostDetailedMip;
-  UINT MipLevels;
-  UINT First2DArrayFace;
-  UINT NumCubes;
+  UINT MostDetailedMip, MipLevels, First2DArrayFace, NumCubes;
 };
 
 struct D3D11_BUFFEREX_SRV {
-  UINT FirstElement;
-  UINT NumElements;
-  UINT Flags;
+  UINT FirstElement, NumElements, Flags;
 };
 
 struct D3D11_SHADER_RESOURCE_VIEW_DESC {
@@ -615,11 +586,6 @@ struct D3D11_SHADER_RESOURCE_VIEW_DESC {
   };
 };
 
-MIDL_INTERFACE("839d1216-bb2e-412b-b7f4-a9dbebe08ed1")
-ID3D11View : public ID3D11DeviceChild {
-  virtual void __stdcall GetResource(ID3D11Resource**) = 0;
-};
-
 MIDL_INTERFACE("b0e06fe0-8192-4e1a-b1ca-36d7414710b2")
 ID3D11ShaderResourceView : public ID3D11View {
   virtual void __stdcall GetDesc(D3D11_SHADER_RESOURCE_VIEW_DESC*) = 0;
@@ -636,9 +602,7 @@ enum D3D11_UAV_DIMENSION {
 };
 
 struct D3D11_BUFFER_UAV {
-  UINT FirstElement;
-  UINT NumElements;
-  UINT Flags;
+  UINT FirstElement, NumElements, Flags;
 };
 
 struct D3D11_TEX1D_UAV {
@@ -646,9 +610,7 @@ struct D3D11_TEX1D_UAV {
 };
 
 struct D3D11_TEX1D_ARRAY_UAV {
-  UINT MipSlice;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MipSlice, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2D_UAV {
@@ -656,15 +618,11 @@ struct D3D11_TEX2D_UAV {
 };
 
 struct D3D11_TEX2D_ARRAY_UAV {
-  UINT MipSlice;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MipSlice, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX3D_UAV {
-  UINT MipSlice;
-  UINT FirstWSlice;
-  UINT WSize;
+  UINT MipSlice, FirstWSlice, WSize;
 };
 
 struct D3D11_UNORDERED_ACCESS_VIEW_DESC {
@@ -698,14 +656,8 @@ enum D3D11_RTV_DIMENSION {
 };
 
 struct D3D11_BUFFER_RTV {
-  union {
-    UINT FirstElement;
-    UINT ElementOffset;
-  };
-  union {
-    UINT NumElements;
-    UINT ElementWidth;
-  };
+  union { UINT FirstElement, ElementOffset; };
+  union { UINT NumElements, ElementWidth; };
 };
 
 struct D3D11_TEX1D_RTV {
@@ -713,9 +665,7 @@ struct D3D11_TEX1D_RTV {
 };
 
 struct D3D11_TEX1D_ARRAY_RTV {
-  UINT MipSlice;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MipSlice, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2D_RTV {
@@ -723,9 +673,7 @@ struct D3D11_TEX2D_RTV {
 };
 
 struct D3D11_TEX2D_ARRAY_RTV {
-  UINT MipSlice;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MipSlice, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2DMS_RTV {
@@ -733,14 +681,11 @@ struct D3D11_TEX2DMS_RTV {
 };
 
 struct D3D11_TEX2DMS_ARRAY_RTV {
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX3D_RTV {
-  UINT MipSlice;
-  UINT FirstWSlice;
-  UINT WSize;
+  UINT MipSlice, FirstWSlice, WSize;
 };
 
 struct D3D11_RENDER_TARGET_VIEW_DESC {
@@ -778,9 +723,7 @@ struct D3D11_TEX1D_DSV {
 };
 
 struct D3D11_TEX1D_ARRAY_DSV {
-  UINT MipSlice;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MipSlice, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2D_DSV {
@@ -788,9 +731,7 @@ struct D3D11_TEX2D_DSV {
 };
 
 struct D3D11_TEX2D_ARRAY_DSV {
-  UINT MipSlice;
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT MipSlice, FirstArraySlice, ArraySize;
 };
 
 struct D3D11_TEX2DMS_DSV {
@@ -798,8 +739,7 @@ struct D3D11_TEX2DMS_DSV {
 };
 
 struct D3D11_TEX2DMS_ARRAY_DSV {
-  UINT FirstArraySlice;
-  UINT ArraySize;
+  UINT FirstArraySlice, ArraySize;
 };
 
 struct D3D11_DEPTH_STENCIL_VIEW_DESC {
@@ -821,6 +761,156 @@ ID3D11DepthStencilView : public ID3D11View {
   virtual void __stdcall GetDesc(D3D11_DEPTH_STENCIL_VIEW_DESC*) = 0;
 };
 
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc ID3D11View;
+using __ywstd_cfunc D3D11_SRV_DIMENSION;
+using __ywstd_cfunc D3D11_BUFFER_SRV;
+using __ywstd_cfunc D3D11_TEX1D_SRV;
+using __ywstd_cfunc D3D11_TEX1D_ARRAY_SRV;
+using __ywstd_cfunc D3D11_TEX2D_SRV;
+using __ywstd_cfunc D3D11_TEX2D_ARRAY_SRV;
+using __ywstd_cfunc D3D11_TEX2DMS_SRV;
+using __ywstd_cfunc D3D11_TEX2DMS_ARRAY_SRV;
+using __ywstd_cfunc D3D11_TEX3D_SRV;
+using __ywstd_cfunc D3D11_TEXCUBE_SRV;
+using __ywstd_cfunc D3D11_TEXCUBE_ARRAY_SRV;
+using __ywstd_cfunc D3D11_BUFFEREX_SRV;
+using __ywstd_cfunc D3D11_SHADER_RESOURCE_VIEW_DESC;
+using __ywstd_cfunc ID3D11ShaderResourceView;
+using __ywstd_cfunc D3D11_UAV_DIMENSION;
+using __ywstd_cfunc D3D11_BUFFER_UAV;
+using __ywstd_cfunc D3D11_TEX1D_UAV;
+using __ywstd_cfunc D3D11_TEX1D_ARRAY_UAV;
+using __ywstd_cfunc D3D11_TEX2D_UAV;
+using __ywstd_cfunc D3D11_TEX2D_ARRAY_UAV;
+using __ywstd_cfunc D3D11_TEX3D_UAV;
+using __ywstd_cfunc D3D11_UNORDERED_ACCESS_VIEW_DESC;
+using __ywstd_cfunc ID3D11UnorderedAccessView;
+using __ywstd_cfunc D3D11_RTV_DIMENSION;
+using __ywstd_cfunc D3D11_BUFFER_RTV;
+using __ywstd_cfunc D3D11_TEX1D_RTV;
+using __ywstd_cfunc D3D11_TEX1D_ARRAY_RTV;
+using __ywstd_cfunc D3D11_TEX2D_RTV;
+using __ywstd_cfunc D3D11_TEX2D_ARRAY_RTV;
+using __ywstd_cfunc D3D11_TEX2DMS_RTV;
+using __ywstd_cfunc D3D11_TEX2DMS_ARRAY_RTV;
+using __ywstd_cfunc D3D11_TEX3D_RTV;
+using __ywstd_cfunc D3D11_RENDER_TARGET_VIEW_DESC;
+using __ywstd_cfunc ID3D11RenderTargetView;
+using __ywstd_cfunc D3D11_DSV_DIMENSION;
+using __ywstd_cfunc D3D11_TEX1D_DSV;
+using __ywstd_cfunc D3D11_TEX1D_ARRAY_DSV;
+using __ywstd_cfunc D3D11_TEX2D_DSV;
+using __ywstd_cfunc D3D11_TEX2D_ARRAY_DSV;
+using __ywstd_cfunc D3D11_TEX2DMS_DSV;
+using __ywstd_cfunc D3D11_TEX2DMS_ARRAY_DSV;
+using __ywstd_cfunc D3D11_DEPTH_STENCIL_VIEW_DESC;
+using __ywstd_cfunc ID3D11DepthStencilView;
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [PIPELINE] ------------------------------------------------------
+__ywstd_cfunc_begin
+
+enum D3D_PRIMITIVE_TOPOLOGY {
+  D3D_PRIMITIVE_TOPOLOGY_UNDEFINED                    = 0,
+  D3D_PRIMITIVE_TOPOLOGY_POINTLIST                    = 1,
+  D3D_PRIMITIVE_TOPOLOGY_LINELIST                     = 2,
+  D3D_PRIMITIVE_TOPOLOGY_LINESTRIP                    = 3,
+  D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST                 = 4,
+  D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP                = 5,
+  D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ                 = 10,
+  D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ                = 11,
+  D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ             = 12,
+  D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ            = 13,
+  D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST    = 33,
+  D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST    = 34,
+  D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST    = 35,
+  D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST    = 36,
+  D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST    = 37,
+  D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST    = 38,
+  D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST    = 39,
+  D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST    = 40,
+  D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST    = 41,
+  D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST   = 42,
+  D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST   = 43,
+  D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST   = 44,
+  D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST   = 45,
+  D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST   = 46,
+  D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST   = 47,
+  D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST   = 48,
+  D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST   = 49,
+  D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST   = 50,
+  D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST   = 51,
+  D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST   = 52,
+  D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST   = 53,
+  D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST   = 54,
+  D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST   = 55,
+  D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST   = 56,
+  D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST   = 57,
+  D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST   = 58,
+  D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST   = 59,
+  D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST   = 60,
+  D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST   = 61,
+  D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST   = 62,
+  D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST   = 63,
+  D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST   = 64,
+  D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED                  = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
+  D3D10_PRIMITIVE_TOPOLOGY_POINTLIST                  = D3D_PRIMITIVE_TOPOLOGY_POINTLIST,
+  D3D10_PRIMITIVE_TOPOLOGY_LINELIST                   = D3D_PRIMITIVE_TOPOLOGY_LINELIST,
+  D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP                  = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP,
+  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST               = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP              = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+  D3D10_PRIMITIVE_TOPOLOGY_LINELIST_ADJ               = D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
+  D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ              = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
+  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ           = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
+  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ          = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+  D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED                  = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
+  D3D11_PRIMITIVE_TOPOLOGY_POINTLIST                  = D3D_PRIMITIVE_TOPOLOGY_POINTLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_LINELIST                   = D3D_PRIMITIVE_TOPOLOGY_LINELIST,
+  D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP                  = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP,
+  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST               = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP              = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+  D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ               = D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
+  D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ              = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
+  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ           = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
+  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ          = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+  D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST,
+  D3D11_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST
+};
+using D3D11_PRIMITIVE_TOPOLOGY = D3D_PRIMITIVE_TOPOLOGY ;
+
 enum D3D11_INPUT_CLASSIFICATION {
   D3D11_INPUT_PER_VERTEX_DATA  = 0,
   D3D11_INPUT_PER_INSTANCE_DATA  = 1
@@ -830,40 +920,20 @@ struct D3D11_INPUT_ELEMENT_DESC {
   LPCSTR SemanticName;
   UINT SemanticIndex;
   DXGI_FORMAT Format;
-  UINT InputSlot;
-  UINT AlignedByteOffset;
+  UINT InputSlot, AlignedByteOffset;
   D3D11_INPUT_CLASSIFICATION InputSlotClass;
   UINT InstanceDataStepRate;
 };
 
+struct D3D11_SO_DECLARATION_ENTRY {
+  UINT Stream;
+  LPCSTR SemanticName;
+  UINT SemanticIndex;
+  BYTE StartComponent, ComponentCount, OutputSlot;
+};
+
 MIDL_INTERFACE("e4819ddc-4cf0-4025-bd26-5de82a3e07b7")
 ID3D11InputLayout : public ID3D11DeviceChild {};
-
-struct D3D11_CLASS_INSTANCE_DESC {
-  UINT InstanceId;
-  UINT InstanceIndex;
-  UINT TypeId;
-  UINT ConstantBuffer;
-  UINT BaseConstantBufferOffset;
-  UINT BaseTexture;
-  UINT BaseSampler;
-  BOOL Created;
-};
-
-MIDL_INTERFACE("a6cd7faa-b0b7-4a2f-9436-8662a65797cb")
-ID3D11ClassInstance : public ID3D11DeviceChild {
-  virtual void __stdcall GetClassLinkage(ID3D11ClassLinkage**) = 0;
-  virtual void __stdcall GetDesc(D3D11_CLASS_INSTANCE_DESC*) = 0;
-  virtual void __stdcall GetInstanceName(LPSTR, SIZE_T*) = 0;
-  virtual void __stdcall GetTypeName(LPSTR, SIZE_T*) = 0;
-};
-
-MIDL_INTERFACE("ddf57cba-9543-46e4-a12b-f207a0fe7fed")
-ID3D11ClassLinkage : public ID3D11DeviceChild {
-  virtual HRESULT __stdcall GetClassInstance(LPCSTR, UINT, ID3D11ClassInstance**) = 0;
-  virtual HRESULT __stdcall CreateClassInstance(
-    LPCSTR, UINT, UINT, UINT, UINT, ID3D11ClassInstance**) = 0;
-};
 
 MIDL_INTERFACE("3b301d64-d678-4289-8897-22f8928b72f3")
 ID3D11VertexShader : public ID3D11DeviceChild {};
@@ -883,15 +953,24 @@ ID3D11DomainShader : public ID3D11DeviceChild {};
 MIDL_INTERFACE("4f5b196e-c2bd-495e-bd01-1fded38e4969")
 ID3D11ComputeShader : public ID3D11DeviceChild {};
 
-struct D3D11_SO_DECLARATION_ENTRY {
-  UINT Stream;
-  LPCSTR SemanticName;
-  UINT SemanticIndex;
-  BYTE StartComponent;
-  BYTE ComponentCount;
-  BYTE OutputSlot;
-};
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc D3D11_PRIMITIVE_TOPOLOGY;
+using __ywstd_cfunc D3D11_INPUT_CLASSIFICATION;
+using __ywstd_cfunc D3D11_INPUT_ELEMENT_DESC;
+using __ywstd_cfunc D3D11_SO_DECLARATION_ENTRY;
+using __ywstd_cfunc ID3D11InputLayout;
+using __ywstd_cfunc ID3D11VertexShader;
+using __ywstd_cfunc ID3D11GeometryShader;
+using __ywstd_cfunc ID3D11PixelShader;
+using __ywstd_cfunc ID3D11HullShader;
+using __ywstd_cfunc ID3D11DomainShader;
+using __ywstd_cfunc ID3D11ComputeShader;
+}
+#pragma endregion --------------------------------------------------------------
 
+#pragma region [BLEND] ---------------------------------------------------------
+__ywstd_cfunc_begin
 
 enum D3D11_BLEND {
   D3D11_BLEND_ZERO             = 1,
@@ -923,18 +1002,15 @@ enum D3D11_BLEND_OP {
 
 struct D3D11_RENDER_TARGET_BLEND_DESC {
   BOOL BlendEnable;
-  D3D11_BLEND SrcBlend;
-  D3D11_BLEND DestBlend;
+  D3D11_BLEND SrcBlend, DestBlend;
   D3D11_BLEND_OP BlendOp;
-  D3D11_BLEND SrcBlendAlpha;
-  D3D11_BLEND DestBlendAlpha;
+  D3D11_BLEND SrcBlendAlpha, DestBlendAlpha;
   D3D11_BLEND_OP BlendOpAlpha;
   UINT8 RenderTargetWriteMask;
 };
 
 struct D3D11_BLEND_DESC {
-  BOOL AlphaToCoverageEnable;
-  BOOL IndependentBlendEnable;
+  BOOL AlphaToCoverageEnable, IndependentBlendEnable;
   D3D11_RENDER_TARGET_BLEND_DESC RenderTarget[8];
 };
 
@@ -943,10 +1019,18 @@ ID3D11BlendState : public ID3D11DeviceChild {
   virtual void __stdcall GetDesc(D3D11_BLEND_DESC*) = 0;
 };
 
-enum D3D11_DEPTH_WRITE_MASK {
-  D3D11_DEPTH_WRITE_MASK_ZERO = 0,
-  D3D11_DEPTH_WRITE_MASK_ALL  = 1
-};
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc D3D11_BLEND;
+using __ywstd_cfunc D3D11_BLEND_OP;
+using __ywstd_cfunc D3D11_RENDER_TARGET_BLEND_DESC;
+using __ywstd_cfunc D3D11_BLEND_DESC;
+using __ywstd_cfunc ID3D11BlendState;
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [DEPTH-STENCIL] -------------------------------------------------
+__ywstd_cfunc_begin
 
 enum D3D11_COMPARISON_FUNC {
   D3D11_COMPARISON_NEVER         = 1,
@@ -957,6 +1041,11 @@ enum D3D11_COMPARISON_FUNC {
   D3D11_COMPARISON_NOT_EQUAL     = 6,
   D3D11_COMPARISON_GREATER_EQUAL = 7,
   D3D11_COMPARISON_ALWAYS        = 8
+};
+
+enum D3D11_DEPTH_WRITE_MASK {
+  D3D11_DEPTH_WRITE_MASK_ZERO = 0,
+  D3D11_DEPTH_WRITE_MASK_ALL  = 1
 };
 
 enum D3D11_STENCIL_OP {
@@ -993,15 +1082,29 @@ ID3D11DepthStencilState : public ID3D11DeviceChild {
   virtual void __stdcall GetDesc(D3D11_DEPTH_STENCIL_DESC*) = 0;
 };
 
-enum D3D11_FILL_MODE {
-  D3D11_FILL_WIREFRAME = 2,
-  D3D11_FILL_SOLID     = 3
-};
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc D3D11_COMPARISON_FUNC;
+using __ywstd_cfunc D3D11_DEPTH_WRITE_MASK;
+using __ywstd_cfunc D3D11_STENCIL_OP;
+using __ywstd_cfunc D3D11_DEPTH_STENCILOP_DESC;
+using __ywstd_cfunc D3D11_DEPTH_STENCIL_DESC;
+using __ywstd_cfunc ID3D11DepthStencilState;
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [RASTERIZER] ----------------------------------------------------
+__ywstd_cfunc_begin
 
 enum D3D11_CULL_MODE {
   D3D11_CULL_NONE  = 1,
   D3D11_CULL_FRONT = 2,
   D3D11_CULL_BACK  = 3
+};
+
+enum D3D11_FILL_MODE {
+  D3D11_FILL_WIREFRAME = 2,
+  D3D11_FILL_SOLID     = 3
 };
 
 struct D3D11_RASTERIZER_DESC {
@@ -1021,6 +1124,18 @@ MIDL_INTERFACE("9bb4ab81-ab1a-4d8f-b506-fc04200b6ee7")
 ID3D11RasterizerState : public ID3D11DeviceChild {
   virtual void __stdcall GetDesc(D3D11_RASTERIZER_DESC*) = 0;
 };
+
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc D3D11_CULL_MODE;
+using __ywstd_cfunc D3D11_FILL_MODE;
+using __ywstd_cfunc D3D11_RASTERIZER_DESC;
+using __ywstd_cfunc ID3D11RasterizerState;
+}
+#pragma endregion --------------------------------------------------------------
+
+#pragma region [SAMPLER] -------------------------------------------------------
+__ywstd_cfunc_begin
 
 enum D3D11_FILTER {
   D3D11_FILTER_MIN_MAG_MIP_POINT                          = 0,
@@ -1077,7 +1192,7 @@ struct D3D11_SAMPLER_DESC {
   FLOAT MipLODBias;
   UINT MaxAnisotropy;
   D3D11_COMPARISON_FUNC ComparisonFunc;
-  FLOAT BorderColor[ 4 ];
+  FLOAT BorderColor[4];
   FLOAT MinLOD;
   FLOAT MaxLOD;
 };
@@ -1086,6 +1201,17 @@ MIDL_INTERFACE("da6fea51-564c-4487-9810-f0d0f9b4e3a5")
 ID3D11SamplerState : public ID3D11DeviceChild {
   virtual void __stdcall GetDesc(D3D11_SAMPLER_DESC*) = 0;
 };
+
+__ywstd_cfunc_end
+__ywstd_export namespace win {
+using __ywstd_cfunc D3D11_FILTER;
+using __ywstd_cfunc D3D11_TEXTURE_ADDRESS_MODE;
+using __ywstd_cfunc D3D11_SAMPLER_DESC;
+using __ywstd_cfunc ID3D11SamplerState;
+}
+#pragma endregion --------------------------------------------------------------
+
+__ywstd_cfunc_begin
 
 enum D3D11_QUERY {
   D3D11_QUERY_EVENT                         = 0,
@@ -1188,104 +1314,6 @@ struct D3D11_MAPPED_SUBRESOURCE {
   UINT RowPitch;
   UINT DepthPitch;
 };
-
-enum D3D_PRIMITIVE_TOPOLOGY {
-  D3D_PRIMITIVE_TOPOLOGY_UNDEFINED                    = 0,
-  D3D_PRIMITIVE_TOPOLOGY_POINTLIST                    = 1,
-  D3D_PRIMITIVE_TOPOLOGY_LINELIST                     = 2,
-  D3D_PRIMITIVE_TOPOLOGY_LINESTRIP                    = 3,
-  D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST                 = 4,
-  D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP                = 5,
-  D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ                 = 10,
-  D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ                = 11,
-  D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ             = 12,
-  D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ            = 13,
-  D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST    = 33,
-  D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST    = 34,
-  D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST    = 35,
-  D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST    = 36,
-  D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST    = 37,
-  D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST    = 38,
-  D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST    = 39,
-  D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST    = 40,
-  D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST    = 41,
-  D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST   = 42,
-  D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST   = 43,
-  D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST   = 44,
-  D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST   = 45,
-  D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST   = 46,
-  D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST   = 47,
-  D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST   = 48,
-  D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST   = 49,
-  D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST   = 50,
-  D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST   = 51,
-  D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST   = 52,
-  D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST   = 53,
-  D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST   = 54,
-  D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST   = 55,
-  D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST   = 56,
-  D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST   = 57,
-  D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST   = 58,
-  D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST   = 59,
-  D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST   = 60,
-  D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST   = 61,
-  D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST   = 62,
-  D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST   = 63,
-  D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST   = 64,
-  D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED                  = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
-  D3D10_PRIMITIVE_TOPOLOGY_POINTLIST                  = D3D_PRIMITIVE_TOPOLOGY_POINTLIST,
-  D3D10_PRIMITIVE_TOPOLOGY_LINELIST                   = D3D_PRIMITIVE_TOPOLOGY_LINELIST,
-  D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP                  = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP,
-  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST               = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP              = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-  D3D10_PRIMITIVE_TOPOLOGY_LINELIST_ADJ               = D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
-  D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ              = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
-  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ           = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
-  D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ          = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
-  D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED                  = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
-  D3D11_PRIMITIVE_TOPOLOGY_POINTLIST                  = D3D_PRIMITIVE_TOPOLOGY_POINTLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_LINELIST                   = D3D_PRIMITIVE_TOPOLOGY_LINELIST,
-  D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP                  = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP,
-  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST               = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP              = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-  D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ               = D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
-  D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ              = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
-  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ           = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
-  D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ          = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
-  D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST  = D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST,
-  D3D11_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST = D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST
-};
-using D3D11_PRIMITIVE_TOPOLOGY = D3D_PRIMITIVE_TOPOLOGY ;
 
 struct D3D11_VIEWPORT {
   FLOAT TopLeftX;
@@ -1429,33 +1457,46 @@ ID3D11DeviceContext : public ID3D11DeviceChild {
   virtual HRESULT __stdcall FinishCommandList(BOOL, ID3D11CommandList**) = 0;
 };
 
+
+__ywstd_cfunc_end
+
+__ywstd_export namespace win {
+
+using __ywstd_cfunc ID3D11DeviceContext;
+
+}
+
+#pragma region [DEVICE] --------------------------------------------------------
+__ywstd_cfunc_begin
+
+enum D3D_FEATURE_LEVEL {
+  D3D_FEATURE_LEVEL_1_0_CORE = 0x1000,
+  D3D_FEATURE_LEVEL_9_1      = 0x9100,
+  D3D_FEATURE_LEVEL_9_2      = 0x9200,
+  D3D_FEATURE_LEVEL_9_3      = 0x9300,
+  D3D_FEATURE_LEVEL_10_0     = 0xa000,
+  D3D_FEATURE_LEVEL_10_1     = 0xa100,
+  D3D_FEATURE_LEVEL_11_0     = 0xb000,
+  D3D_FEATURE_LEVEL_11_1     = 0xb100,
+  D3D_FEATURE_LEVEL_12_0     = 0xc000,
+  D3D_FEATURE_LEVEL_12_1     = 0xc100,
+  D3D_FEATURE_LEVEL_12_2     = 0xc200
+};
+
 MIDL_INTERFACE("db6f6ddb-ac77-4e88-8253-819df9bbf140")
 ID3D11Device : public IUnknown {
-  virtual HRESULT __stdcall CreateBuffer(
-    const D3D11_BUFFER_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Buffer**) = 0;
-  virtual HRESULT __stdcall CreateTexture1D(
-    const D3D11_TEXTURE1D_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Texture1D**) = 0;
-  virtual HRESULT __stdcall CreateTexture2D(
-    const D3D11_TEXTURE2D_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Texture2D**) = 0;
-  virtual HRESULT __stdcall CreateTexture3D(
-    const D3D11_TEXTURE3D_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Texture3D**) = 0;
-  virtual HRESULT __stdcall CreateShaderResourceView(
-    ID3D11Resource*, const D3D11_SHADER_RESOURCE_VIEW_DESC*, ID3D11ShaderResourceView**) = 0;
-  virtual HRESULT __stdcall CreateUnorderedAccessView(
-    ID3D11Resource*, const D3D11_UNORDERED_ACCESS_VIEW_DESC*, ID3D11UnorderedAccessView**) = 0;
-  virtual HRESULT __stdcall CreateRenderTargetView(
-    ID3D11Resource*, const D3D11_RENDER_TARGET_VIEW_DESC*, ID3D11RenderTargetView**) = 0;
-  virtual HRESULT __stdcall CreateDepthStencilView(
-    ID3D11Resource*, const D3D11_DEPTH_STENCIL_VIEW_DESC*, ID3D11DepthStencilView**) = 0;
-  virtual HRESULT __stdcall CreateInputLayout(
-    const D3D11_INPUT_ELEMENT_DESC*, UINT, const void*, SIZE_T, ID3D11InputLayout**) = 0;
-  virtual HRESULT __stdcall CreateVertexShader(
-    const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11VertexShader**) = 0;
-  virtual HRESULT __stdcall CreateGeometryShader(
-    const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11GeometryShader**) = 0;
-  virtual HRESULT __stdcall CreateGeometryShaderWithStreamOutput(
-    const void*, SIZE_T, const D3D11_SO_DECLARATION_ENTRY*, UINT,
-    const UINT*, UINT, UINT, ID3D11ClassLinkage*, ID3D11GeometryShader**) = 0;
+  virtual HRESULT __stdcall CreateBuffer(const D3D11_BUFFER_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Buffer**) = 0;
+  virtual HRESULT __stdcall CreateTexture1D(const D3D11_TEXTURE1D_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Texture1D**) = 0;
+  virtual HRESULT __stdcall CreateTexture2D(const D3D11_TEXTURE2D_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Texture2D**) = 0;
+  virtual HRESULT __stdcall CreateTexture3D(const D3D11_TEXTURE3D_DESC*, const D3D11_SUBRESOURCE_DATA*, ID3D11Texture3D**) = 0;
+  virtual HRESULT __stdcall CreateShaderResourceView(ID3D11Resource*, const D3D11_SHADER_RESOURCE_VIEW_DESC*, ID3D11ShaderResourceView**) = 0;
+  virtual HRESULT __stdcall CreateUnorderedAccessView(ID3D11Resource*, const D3D11_UNORDERED_ACCESS_VIEW_DESC*, ID3D11UnorderedAccessView**) = 0;
+  virtual HRESULT __stdcall CreateRenderTargetView(ID3D11Resource*, const D3D11_RENDER_TARGET_VIEW_DESC*, ID3D11RenderTargetView**) = 0;
+  virtual HRESULT __stdcall CreateDepthStencilView(ID3D11Resource*, const D3D11_DEPTH_STENCIL_VIEW_DESC*, ID3D11DepthStencilView**) = 0;
+  virtual HRESULT __stdcall CreateInputLayout(const D3D11_INPUT_ELEMENT_DESC*, UINT, const void*, SIZE_T, ID3D11InputLayout**) = 0;
+  virtual HRESULT __stdcall CreateVertexShader(const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11VertexShader**) = 0;
+  virtual HRESULT __stdcall CreateGeometryShader(const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11GeometryShader**) = 0;
+  virtual HRESULT __stdcall CreateGeometryShaderWithStreamOutput(const void*, SIZE_T, const D3D11_SO_DECLARATION_ENTRY*, UINT, const UINT*, UINT, UINT, ID3D11ClassLinkage*, ID3D11GeometryShader**) = 0;
   virtual HRESULT __stdcall CreatePixelShader(const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11PixelShader**) = 0;
   virtual HRESULT __stdcall CreateHullShader(const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11HullShader**) = 0;
   virtual HRESULT __stdcall CreateDomainShader(const void*, SIZE_T, ID3D11ClassLinkage*, ID3D11DomainShader**) = 0;
@@ -1486,14 +1527,45 @@ ID3D11Device : public IUnknown {
   virtual UINT __stdcall GetExceptionMode() = 0;
 };
 
+enum D3D11_CREATE_DEVICE_FLAG {
+  D3D11_CREATE_DEVICE_SINGLETHREADED                                = 0x1,
+  D3D11_CREATE_DEVICE_DEBUG                                         = 0x2,
+  D3D11_CREATE_DEVICE_SWITCH_TO_REF                                 = 0x4,
+  D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS      = 0x8,
+  D3D11_CREATE_DEVICE_BGRA_SUPPORT                                  = 0x20,
+  D3D11_CREATE_DEVICE_DEBUGGABLE                                    = 0x40,
+  D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY = 0x80,
+  D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT                           = 0x100,
+  D3D11_CREATE_DEVICE_VIDEO_SUPPORT                                 = 0x800,
+};
+
+enum D3D_DRIVER_TYPE {
+  D3D_DRIVER_TYPE_UNKNOWN   = 0,
+  D3D_DRIVER_TYPE_HARDWARE  = 1,
+  D3D_DRIVER_TYPE_REFERENCE = 2,
+  D3D_DRIVER_TYPE_NULL      = 3,
+  D3D_DRIVER_TYPE_SOFTWARE  = 4,
+  D3D_DRIVER_TYPE_WARP      = 5
+};
+
 HRESULT __stdcall D3D11CreateDevice(
-  IDXGIAdapter*, D3D_DRIVER_TYPE, HINSTANCE, unsigned,
-  const D3D_FEATURE_LEVEL*, unsigned, unsigned,
-  ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext**);
+  IDXGIAdapter*            pAdapter,
+  D3D_DRIVER_TYPE          DriverType,
+  HINSTANCE                Software,
+  unsigned                 Flags,
+  const D3D_FEATURE_LEVEL* pFeatureLevels,
+  unsigned                 FeatureLevels,
+  unsigned                 SDKVersion,
+  ID3D11Device**           ppDevice,
+  D3D_FEATURE_LEVEL*       pFeatureLevel,
+  ID3D11DeviceContext**    ppDeviceContext);
 
 __ywstd_cfunc_end
-
 __ywstd_export namespace win {
-
-
+using __ywstd_cfunc D3D_FEATURE_LEVEL;
+using __ywstd_cfunc D3D11_CREATE_DEVICE_FLAG;
+using __ywstd_cfunc ID3D11Device;
+using __ywstd_cfunc D3D_DRIVER_TYPE;
+using __ywstd_cfunc D3D11CreateDevice;
 }
+#pragma endregion --------------------------------------------------------------

@@ -32,8 +32,8 @@ void __cdecl operator delete[](void*, ::std::align_val_t, const ::std::nothrow_t
 void __cdecl operator delete(void*, size_t, ::std::align_val_t) noexcept;
 void __cdecl operator delete[](void*, size_t, ::std::align_val_t) noexcept;
 
-_NODISCARD _MSVC_CONSTEXPR inline void* __cdecl operator new(size_t size, void* where) noexcept { (void)size; return where; }
+_NODISCARD _MSVC_CONSTEXPR inline void* __cdecl operator new(size_t n, void* where) noexcept { (void)n; return where; }
 inline void __cdecl operator delete(void*, void*) noexcept { return; }
-_NODISCARD inline void* __cdecl operator new[](size_t size, void* where) noexcept { (void)size; return where; }
+_NODISCARD inline void* __cdecl operator new[](size_t n, void* where) noexcept { (void)n; return where; }
 inline void __cdecl operator delete[](void*, void*) noexcept {}
 }
