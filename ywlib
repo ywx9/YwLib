@@ -17,20 +17,7 @@ using uint8 = unsigned long long;
 
 using nullptr_t = decltype(nullptr);
 
-inline constexpr uint npos = static_cast<uint>(-1);
 inline constexpr auto unordered = std::partial_ordering::unordered;
-
-template<typename T> constexpr bool always_false = false;
-
-/// counts the number of `true` in the parameter pack
-template<bool... Bs> constexpr uint counts = (uint(Bs) + ...);
-
-/// returns the index of the first `true` in the parameter pack
-template<bool... Bs> constexpr bool inspects = 0;
-template<bool B, bool... Bs> constexpr bool inspects<B, Bs...> = B ? 0 : 1 + inspects<Bs...>;
-
-/// checks if the type is valid
-template<typename T> concept valid = requires { typename std::type_identity_t<T>; };
 
 template<typename T> concept is_const = std::is_const_v<T>;
 template<typename T> concept is_volatile = std::is_volatile_v<T>;
@@ -335,29 +322,51 @@ namespace yw {
 template<typename T, uint N = npos> class array {
 public:
   T _[N]{};
-  static constexpr uint count = N;
   using value_type = T;
+  static constexpr uint count = N;
 
   /// assignment from an array
-  template<typename U> requires assignable<T&, const U&> constexpr array& operator=(
-    const U (&Other)[N]) { return std::ranges::copy(Other, _), *this; }
+  template<typename U> requires assignable<T&, const U&>
+  constexpr array& operator=(const U (&Other)[N])
+    noexcept(nt_assignable<T&, const U&>) {
+    return std::ranges::copy(Other, _), *this;
+  }
 
+  /// conversion to reference to the array
   constexpr operator add_lvref<T[N]>() noexcept { return _; }
   constexpr operator add_lvref<const T[N]>() const noexcept { return _; }
-  constexpr T& operator[](uint I) { return _[I]; }
-  constexpr const T& operator[](uint I) const { return _[I]; }
-  constexpr uint size() const noexcept { return N; }
+
+  /// checks if the array is empty
   constexpr bool empty() const noexcept { return false; }
+
+  /// returns the size of the array
+  constexpr uint size() const noexcept { return N; }
+
+  /// returns the data pointer
   constexpr T* data() noexcept { return _; }
   constexpr const T* data() const noexcept { return _; }
+
+  /// returns the iterator to the beginning
   constexpr T* begin() noexcept { return _; }
   constexpr const T* begin() const noexcept { return _; }
+
+  /// returns the iterator to the end
   constexpr T* end() noexcept { return _ + N; }
   constexpr const T* end() const noexcept { return _ + N; }
+
+  /// accesses the first element
   constexpr T& front() noexcept { return *_; }
   constexpr const T& front() const noexcept { return *_; }
+
+  /// accesses the last element
   constexpr T& back() noexcept { return _[N - 1]; }
   constexpr const T& back() const noexcept { return _[N - 1]; }
+
+  /// accesses the element at the index
+  constexpr T& operator[](uint I) { return _[I]; }
+  constexpr const T& operator[](uint I) const { return _[I]; }
+
+  /// accesses the element at the index
   template<uint I> requires (I < N) constexpr T& get() & noexcept { return _[I]; }
   template<uint I> requires (I < N) constexpr T&& get() && noexcept { return mv(_[I]); }
   template<uint I> requires (I < N) constexpr const T& get() const& noexcept { return _[I]; }
@@ -370,22 +379,21 @@ public:
 /// dynamic array
 template<typename T> class array<T, npos> : public std::vector<T> {
 public:
+
+  /// constructor
   constexpr array() noexcept = default;
-  constexpr array(std::vector<T>&& v) : std::vector<T>(mv(v)) {}
   constexpr explicit array(uint n) : std::vector<T>(n) {}
   constexpr array(uint n, const T& v) : std::vector<T>(n, v) {}
 
-  /// constructs a dynamic array from a range
   template<input_iterator I>
   requires convertible_to<iter_value<I>, T> &&
            (!convertible_to<I, uint> || !convertible_to<I, const T&>)
   constexpr array(I i, I s) : std::vector<T>(mv(i), mv(s)) {}
 
-  /// constructs a dynamic array from a range
-  template<input_iterator I, sentinel_for<I> S>
+  template<input_iterator I, sentinel_for<I> S, typename C = std::common_iterator<I, S>>
   requires convertible_to<iter_value<I>, T> && (!same_as<I, S>) &&
            (!convertible_to<I, uint> || !convertible_to<S, const T&>)
-  constexpr array(I i, S s) : std::vector<T>(std::common_iterator<I, S>(mv(i)), std::common_iterator<I, S>(mv(s))) {}
+  constexpr array(I i, S s) : std::vector<T>(C(mv(i)), C(mv(s))) {}
 
   /// constructs a dynamic array from a range
   template<input_range R>
@@ -437,11 +445,11 @@ template<char_type C> struct string_view {
   using const_iterator = const C*;
   using size_type = uint;
   using difference_type = int8;
-
+  string_view(nullptr_t) = delete;
   const C* _data;
   uint _size;
-  string_view(nullptr_t) = delete;
   constexpr operator std::basic_string_view<C>() const noexcept { return {_data, _size}; }
+
 
   /// default constructor
   constexpr string_view() noexcept : _data(nullptr), _size(0) {}
@@ -2180,11 +2188,6 @@ win::HWND create_window(
 
 /// class to create and manage a window
 class window {
-  constexpr static int t = 500;
-  void init(win::RECT r = {}) {
-    win::GetClientRect(_hwnd, &r);
-    _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x;
-  }
 protected:
   win::HWND _hwnd{};
   win::MSG _msg{};
@@ -2207,10 +2210,11 @@ public:
   /// creates a window
   window(stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
          numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    const bool visible = bool(Style & ws_visible);
+    constexpr int t = 500;
+    const bool visible = bool(ws_visible & exchange(Style, Style & ~ws_visible));
     _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style, 0, 0, t, t, 0, 0, 0, _);
     if (!_hwnd) return;
-    [&](RECT r) {  }({});
+    [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
     win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
     win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
     if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
@@ -2219,40 +2223,13 @@ public:
   /// creates a child window
   window(const window& Parent, stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
          numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    const auto title = cvt<wchar>(Title);
-    const bool visible = bool(Style & ws_visible);
-    const int t = 500;
-    Style |= ws_child;
-    _hwnd = win::CreateWindowExW(int(uint(Style) >> 32), L"__ywlib", title.data(),
-                                 int(uint4(Style)), 0, 0, t, t, Parent._hwnd, 0, system::hinstance, 0);
+    constexpr int t = 500;
+    const bool visible = bool(ws_visible & exchange(Style, Style & ~ws_visible));
+    _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style | ws_child, X, Y, Width, Height, Parent._hwnd, 0, 0, _);
     if (!_hwnd) return;
-    [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
     win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
-    win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
     if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
   }
-
-  // /// \brief window message structure
-  // struct message_t {
-  //   HWND hwnd;
-  //   wmessage message;
-  //   uint wparam;
-  //   int8 lparam;
-  //   nat4 time;
-  //   vector2<int> pt;
-  //   /// \brief conversion to `wmessage`
-  //   operator wmessage() const noexcept { return message; }
-  //   /// \brief translates message
-  //   void translate() noexcept { ::TranslateMessage(reinterpret_cast<MSG*>(this)); }
-  //   /// \brief dispatches message to window procedure
-  //   void dispatch() noexcept { ::DispatchMessageW(reinterpret_cast<MSG*>(this)); }
-  // };
-  // /// \brief recent window message
-  // message_t& message = reinterpret_cast<message_t&>(_msg);
-
-  // /// \brief conversion to `HWND`
-  // operator HWND() const noexcept { return _hwnd; }
-
 
   /// move assignment
   window& operator=(window&& w) noexcept {
@@ -2433,7 +2410,7 @@ inline const com_init com_initialized{win::COINIT::COINIT_APARTMENTTHREADED};
 
 comptr<win::ID3D11Device>        d3d_device{};
 comptr<win::ID3D11DeviceContext> d3d_context{};
-// comptr<win::ID3D11Device5>       d3d_device5{};
+comptr<win::ID3D11Device5>       d3d_device5{};
 // comptr<win::IDXGIFactory2>       dxgi_factory{};
 // comptr<win::IDXGIDevice2>        dxgi_device{};
 // comptr<win::ID2D1Factory1>       d2d_factory{};
@@ -2450,7 +2427,9 @@ inline const bool d3d_initialized = [] {
     nullptr, win::D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr,
     win::D3D11_CREATE_DEVICE_FLAG::D3D11_CREATE_DEVICE_BGRA_SUPPORT, fl, 2, 7,
     d3d_device.init(), nullptr, d3d_context.init());
-  if (hr) std::format("D3D11CreateDevice: {:x}", hr);
+  if (hr) return log.format(), false;
+  hr = d3d_device->QueryInterface(IID_PPV_ARGS(d3d_device5.init()));
+  if (hr) return println("QueryInterface: {:x}", hr), false;
   return !hr;
 }();
 } // clang-format on

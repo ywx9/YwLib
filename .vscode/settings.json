@@ -6,7 +6,6 @@
   "files.trimTrailingWhitespace": true,
   "editor.formatOnSave": false,
   "editor.formatOnPaste": false,
-  "files.exclude": {"msvc/inc/**": true,},
   "files.associations": {
     "*.embeddedhtml": "html",
     ".clang-format": "yaml",

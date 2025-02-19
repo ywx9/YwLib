@@ -583,21 +583,7 @@ using mbstate_t = _Mbstatet;
 #pragma region [cwctype] -------------------------------------------------------
 // WEOF is already defined.
 #pragma endregion // ------------------------------------------------- [cwctype]
-#pragma region[xlocale] --------------------------------------------------------
-#define _UPPER   0x01
-#define _LOWER   0x02
-#define _DIGIT   0x04
-#define _SPACE   0x08
-#define _PUNCT   0x10
-#define _CONTROL 0x20
-#define _BLANK   0x40
-#define _HEX     0x80
-#define _SH_DENYRW 0x10
-#define _SH_DENYWR 0x20
-#define _SH_DENYRD 0x30
-#define _SH_DENYNO 0x40
-#define _SH_SECURE 0x80
-#pragma endregion //-------------------------------------------------- [xlocale]
+
 #pragma region [emmintrin] -----------------------------------------------------
 #define _MM_SHUFFLE2(x,y) (((x)<<1) | (y))
 #define _mm_set_pd1(a)      ::_mm_set1_pd(a)
@@ -606,3 +592,115 @@ using mbstate_t = _Mbstatet;
 #define _mm_bslli_si128     ::_mm_slli_si128
 #define _mm_bsrli_si128     ::_mm_srli_si128
 #pragma endregion //------------------------------------------------ [emmintrin]
+
+#define __ywstd_dead(Type_Name_Equal_Value) \
+[[deprecated("Do not use the constant as it is only used in `msvc/inc` headers.")]] \
+inline constexpr Type_Name_Equal_Value
+
+#pragma region YWLIB-CORE ------------------------------------------------------
+
+#define uint size_t
+#define wchar wchar_t;
+
+namespace yw {
+
+using int1 = signed char;
+using int2 = short;
+using int4 = int;
+using int8 = long long;
+using uint1 = unsigned char;
+using uint2 = unsigned short;
+using uint4 = unsigned int;
+using uint8 = unsigned long long;
+using uchar1 = char8_t;
+using uchar2 = char16_t;
+using uchar4 = char32_t;
+using nullptr_t = decltype(nullptr);
+
+/// constant value for invalid size, index, or position
+inline constexpr auto npos = static_cast<uint>(-1);
+
+/// always represents `false`
+template<typename...> constexpr bool always_false = false;
+
+/// always represents `void` unless any of the types are invalid
+template<typename...> using void_t = void;
+
+/// checks if the all types are valid
+template<typename... Ts> concept valid = requires { typename void_t<Ts...>; };
+
+/// represents the number of `true`
+template<bool... Bs> constexpr uint counts = (Bs + ...);
+
+/// represents the index of the first `true`; if none, then the size of the list
+template<bool... Bs> constexpr uint first_true = 0;
+template<bool B, bool... Bs> constexpr uint first_true<B, Bs...> = B ? 0 : 1 + first_true<Bs...>;
+
+/// struct to represent a constant value
+template<auto V, typename T = decltype(V)>
+requires requires(void (&f)(T)) { f(V); }
+struct constant {
+  using type = T;
+  static constexpr type value = V;
+  consteval operator type() const noexcept { return value; }
+  consteval type operator()() const noexcept { return value; }
+};
+
+/// struct has a member type `type` that is the same as the template parameter
+template<typename T> struct t_type { using type = T; };
+
+namespace _ {
+template<typename T> struct _is_const : constant<false> {};
+template<typename T> struct _is_const<const T> : constant<true> {};
+template<typename T> struct _is_volatile : constant<false> {};
+template<typename T> struct _is_volatile<volatile T> : constant<true> {};
+template<typename T> struct _is_lvref : constant<false> {};
+template<typename T> struct _is_lvref<T&> : constant<true> {};
+template<typename T> struct _is_rvref : constant<false> {};
+template<typename T> struct _is_rvref<T&&> : constant<true> {};
+template<typename T> struct _is_pointer : constant<false> {};
+template<typename T> struct _is_pointer<T*> : constant<true> {};
+template<typename T> struct _is_pointer<T* const> : constant<true> {};
+template<typename T> struct _is_pointer<T* volatile> : constant<true> {};
+template<typename T> struct _is_pointer<T* const volatile> : constant<true> {};
+template<typename T> struct _is_bounded_array : constant<false> {};
+template<typename T, uint N> struct _is_bounded_array<T[N]> : constant<true> {};
+template<typename T> struct _is_unbounded_array : constant<false> {};
+template<typename T> struct _is_unbounded_array<T[]> : constant<true> {};
+}
+
+/// checks if the type is `const`
+template<typename T> concept is_const = _::_is_const<T>::value;
+
+/// checks if the type is `volatile`
+template<typename T> concept is_volatile = _::_is_volatile<T>::value;
+
+/// checks if the type is `const volatile`
+template<typename T> concept is_cv = is_const<T> and is_volatile<T>;
+
+/// checks if the type is an lvalue reference
+template<typename T> concept is_lvref = _::_is_lvref<T>::value;
+
+/// checks if the type is an rvalue reference
+template<typename T> concept is_rvref = _::_is_rvref<T>::value;
+
+/// checks if the type is a reference
+template<typename T> concept is_reference = is_lvref<T> or is_rvref<T>;
+
+/// checks if the type is a pointer
+template<typename T> concept is_pointer = _::_is_pointer<T>::value;
+
+/// checks if the type is a bounded array
+template<typename T> concept is_bounded_array = _::_is_bounded_array<T>::value;
+
+/// checks if the type is an unbounded array
+template<typename T> concept is_unbounded_array = _::_is_unbounded_array<T>::value;
+
+/// checks if the type is an array
+template<typename T> concept is_array = is_bounded_array<T> or is_unbounded_array<T>;
+
+/// checks if the type is a function
+template<typename T> concept is_function = !is_const<const T> and !is_reference<T>;
+}
+
+#pragma regionend YWLIB-CORE ---------------------------------------------------

@@ -1,6 +1,8 @@
 #pragma once
 #include "abc.h"
 
+#define _STL_EXTRA_DISABLED_WARNINGS 4996
+
 #define __CLR_OR_THIS_CALL
 #define __CLRCALL_OR_CDECL __cdecl
 #define __CLRCALL_PURE_OR_CDECL __cdecl
