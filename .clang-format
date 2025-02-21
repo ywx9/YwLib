@@ -3,6 +3,7 @@ DisableFormat: false
 BasedOnStyle: LLVM
 ColumnLimit: 120
 IndentWidth: 2
+MaxEmptyLinesToKeep: 2
 FixNamespaceComments: false
 NamespaceIndentation: None
 
@@ -23,11 +24,12 @@ BreakInheritanceList: AfterColon
 
 BreakBeforeConceptDeclarations: Never
 BreakTemplateDeclarations: No
-ContinuationIndentWidth: 2
 RequiresClausePosition: SingleLine
 SpaceAfterTemplateKeyword: false
 
 ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 0
+IndentExternBlock: NoIndent
 
 SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
