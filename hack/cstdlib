@@ -1,35 +1,59 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
+
+#ifndef NULL
+#define NULL 0
+#endif
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+
+#define RAND_MAX 0x7FFF
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+
 __ywstd_export int __cdecl ___mb_cur_max_func();
+#define MB_CUR_MAX (__ywstd_cfunc __mb_cur_max_func())
+
 struct div_t { int quot, rem; };
 struct ldiv_t { long quot, rem; };
 struct lldiv_t { long long quot, rem; };
+div_t __cdecl div(int, int);
+ldiv_t __cdecl ldiv(long, long);
+lldiv_t __cdecl lldiv(long long, long long);
+
 using atexit_handler = void (__cdecl*)();
 int __cdecl atexit(atexit_handler);
 int __cdecl at_quick_exit(atexit_handler);
+
 [[noreturn]] void __cdecl abort();
 [[noreturn]] void __cdecl exit(int);
 [[noreturn]] void __cdecl _Exit(int);
 [[noreturn]] void __cdecl quick_exit(int);
+
 char* __cdecl getenv(const char*);
 int __cdecl system(const char*);
+
 void __cdecl free(void*);
 __declspec(allocator) void* __cdecl malloc(size_t);
 __declspec(allocator) void* __cdecl calloc(size_t, size_t);
 __declspec(allocator) void* __cdecl realloc(void*, size_t);
+
 using compare_pred = int (__cdecl*)(const void*, const void*);
 void __cdecl qsort(void*, size_t, size_t, compare_pred);
 void* __cdecl bsearch(const void*, const void*, size_t, size_t, compare_pred);
+
 int __cdecl mblen(const char*, size_t);
 int __cdecl mbtowc(wchar_t*, const char*, size_t);
 int __cdecl wctomb(char*, wchar_t);
 size_t __cdecl mbstowcs(wchar_t*, const char*, size_t);
 size_t __cdecl wcstombs(char*, const wchar_t*, size_t);
+
 int __cdecl atoi(const char*);
 long __cdecl atol(const char*);
 long long __cdecl atoll(const char*);
 double __cdecl atof(const char*);
+
 long __cdecl strtol(const char*, char**, int);
 long long __cdecl strtoll(const char*, char**, int);
 unsigned long __cdecl strtoul(const char*, char**, int);
@@ -37,16 +61,23 @@ unsigned long long __cdecl strtoull(const char*, char**, int);
 float __cdecl strtof(const char*, char**);
 double __cdecl strtod(const char*, char**);
 long double __cdecl strtold(const char*, char**);
+
 int __cdecl rand();
 void __cdecl srand(unsigned);
+
 int __cdecl abs(int);
 long __cdecl labs(long);
 long long __cdecl llabs(long long);
-div_t __cdecl div(int, int);
-ldiv_t __cdecl ldiv(long, long);
-lldiv_t __cdecl lldiv(long long, long long);
-__ywstd_cfunc_end
+
+float __cdecl fabsf(float);
+double __cdecl fabs(double);
+long double __cdecl fabsl(long double);
+
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
+#if not __ywstd_is_imported
 __ywstd_export namespace std {
+
 using __ywstd_cfunc div_t;
 using __ywstd_cfunc ldiv_t;
 using __ywstd_cfunc lldiv_t;
@@ -97,6 +128,14 @@ constexpr long long abs(long long x) noexcept {
   if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc llabs(x);
   else return x < 0 ? -x : x;
 }
+template<yw::float_type T> constexpr T abs(const T x) noexcept {
+  if (!yw::is_cev) {
+    if constexpr (yw::same_as<T, float>) return __ywstd_cfunc fabsf(x);
+    else if constexpr (yw::same_as<T, double>) return __ywstd_cfunc fabs(x);
+    else return __ywstd_cfunc fabsl(x);
+  } else return x < 0 ? -x : x;
+}
+
 constexpr long labs(long x) noexcept { return abs(x); }
 constexpr long long llabs(long long x) noexcept { return abs(x); }
 
@@ -115,3 +154,4 @@ constexpr lldiv_t div(long long num, long long den) noexcept {
 constexpr ldiv_t ldiv(long num, long den) noexcept { return div(num, den); }
 constexpr lldiv_t lldiv(long long num, long long den) noexcept { return div(num, den); }
 }
+#endif

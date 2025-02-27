@@ -1,6 +1,12 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
+
+#ifndef NULL
+#define NULL 0
+#endif
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+
 void* __cdecl memcpy(void*, const void*, size_t);
 void* __cdecl memmove(void*, const void*, size_t);
 char* __cdecl strcpy(char*, const char*);
@@ -23,8 +29,12 @@ char* __cdecl strtok(char*, const char*);
 void* __cdecl memset(void*, int, size_t);
 char* __cdecl strerror(int);
 size_t __cdecl strlen(const char*);
-__ywstd_cfunc_end
+
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
+#if not __ywstd_is_imported
 __ywstd_export namespace std {
+
 using __ywstd_cfunc memcpy;
 using __ywstd_cfunc memmove;
 using __ywstd_cfunc strcpy;
@@ -64,3 +74,4 @@ inline char* strstr(char* s, const char* substr) noexcept {
   return const_cast<char*>(strstr(const_cast<const char*>(s), substr));
 }
 }
+#endif

@@ -1,89 +1,26 @@
-#pragma once // clang-format off
-
-#ifndef __ywstd_is_exported
-#ifndef __ywstd_export
-#define __ywstd_export
-#define __ywstd_is_exported (false)
-#else
-#define __ywstd_is_exported (true)
-#define _BUILD_STD_MODULE
-#endif
-#endif
-
-#ifndef __ywstd_is_imported
-#ifndef __ywstd_import
-#define __ywstd_is_imported (false)
-#else
-#define __ywstd_is_imported (true)
-#endif
-#endif
-
-#if __ywstd_is_imported
-import ywstd;
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "libcpmt.lib")
-#pragma comment(lib, "ole32.lib")
-#pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "user32.lib")
-#endif
-
-#if __ywstd_is_exported or __ywstd_is_imported
-#define __ywstd_cfunc ::
-#define __ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq extern "C" {
-#define __ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod }
-#else
-#define __ywstd_cfunc ::ywstd::
-#define __ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq extern "C" { namespace ywstd {
-#define __ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod } }
-#endif
+#pragma once
+// clang-format off
 
 
-#define __ywstd_dead(Type_Name_Equal_Value) \
-[[deprecated("Do not use the constant as it is only used in `msvc/inc` headers.")]] \
-inline constexpr Type_Name_Equal_Value
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
-
-#define stdin  (__ywstd_cfunc __acrt_iob_func(0))
-#define stdout (__ywstd_cfunc __acrt_iob_func(1))
-#define stderr (__ywstd_cfunc __acrt_iob_func(2))
-
-typedef struct _iobuf { void* _Placeholder; } FILE;
-__ywstd_export FILE* __cdecl __acrt_iob_func(unsigned);
-
-typedef struct __crt_locale_pointers {
-  struct __crt_locale_data*    locinfo;
-  struct __crt_multibyte_data* mbcinfo;
-} __crt_locale_pointers, *_locale_t;
-
-__declspec(noinline) inline unsigned long long* __cdecl __local_stdio_printf_options()
-{ static unsigned long long _OptionsStorage; return &_OptionsStorage; }
-__declspec(noinline) inline unsigned long long* __cdecl __local_stdio_scanf_options()
-{ static unsigned long long _OptionsStorage; return &_OptionsStorage; }
-
-#define _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS (*__ywstd_cfunc __local_stdio_printf_options())
-#define _CRT_INTERNAL_LOCAL_SCANF_OPTIONS  (*__ywstd_cfunc __local_stdio_scanf_options ())
-#define _CRT_INTERNAL_PRINTF_LEGACY_VSPRINTF_NULL_TERMINATION (1ULL << 0)
-#define _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR       (1ULL << 1)
-#define _CRT_INTERNAL_SCANF_SECURECRT                         (1ULL << 0)
-
-struct tm {
-  int tm_sec, tm_min, tm_hour;
-  int tm_mday, tm_mon, tm_year;
-  int tm_wday, tm_yday, tm_isdst;
-};
-
-typedef struct _Mbstatet {
-  unsigned long _Wchar;
-  unsigned short _Byte, _State;
-} _Mbstatet, mbstate_t;
-
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-namespace yw {
+#pragma region YWLIB-CORE ------------------------------------------------------
 
 #define uint size_t
 #define wchar wchar_t
+
+extern "C" {
+#if not (__ywstd_is_exported or __ywstd_is_imported)
+namespace ywstd {
+#endif
+void* __cdecl memcpy(void*, const void*, size_t);
+void* __cdecl memset(void*, int, size_t);
+}
+#if not (__ywstd_is_exported or __ywstd_is_imported)
+
+}
+#endif
+
+namespace yw {
 
 using int1 = signed char;
 using int2 = short;
@@ -262,18 +199,14 @@ template<typename T> using add_pointer = _::_add_pointer<T>::type;
 /// adds array extent to the type
 template<typename T, uint N> using add_extent = _::_add_extent<T, N>::type;
 
-#if not __ywstd_is_imported
-
 /// `move` function
-__ywstd_export inline constexpr auto mv = []<typename T>(T&& a) noexcept -> add_rvref<T> { return static_cast<add_rvref<T>>(a); };
+inline constexpr auto mv = []<typename T>(T&& a) noexcept -> add_rvref<T> { return static_cast<add_rvref<T>>(a); };
 
 /// `forward` function
-__ywstd_export template<typename T> constexpr auto fwd = [](add_lvref<T> a) noexcept -> T&& { return static_cast<T&&>(a); };
+template<typename T> constexpr auto fwd = [](add_lvref<T> a) noexcept -> T&& { return static_cast<T&&>(a); };
 
 /// `declval` function
-__ywstd_export template<typename T> constexpr auto declval = []() noexcept -> add_fwref<T> {};
-
-#endif
+template<typename T> constexpr auto declval = []() noexcept -> add_fwref<T> {};
 
 /// checks if the type can be destroyed
 template<typename T> concept destructible = __is_destructible(T);
@@ -304,22 +237,20 @@ template<typename T, typename A> concept nt_exchangeable =
 /// checks if the type is trivially copyable
 template<typename T> concept trivially_copyable = __is_trivially_copyable(T);
 
-#if not __ywstd_is_imported
-
 /// constructs the type with the arguments
-__ywstd_export template<typename T> constexpr auto construct = []<typename... As>(As&&... as)
+template<typename T> constexpr auto construct = []<typename... As>(As&&... as)
   noexcept(nt_constructible<T, As...>) -> T requires constructible<T, As...> {
   return T{static_cast<As&&>(as)...};
 };
 
 /// assigns the argument to the reference
-__ywstd_export inline constexpr auto assign = []<typename T, typename A>(T& t, A&& a)
+inline constexpr auto assign = []<typename T, typename A>(T& t, A&& a)
   noexcept(nt_assignable<T&, A>) -> decltype(auto) requires assignable<T&, A> {
   return t = static_cast<A&&>(a);
 };
 
 /// exchanges the value of the reference with the argument
-__ywstd_export inline constexpr auto exchange = []<typename T, typename A>(T& t, A&& a)
+inline constexpr auto exchange = []<typename T, typename A>(T& t, A&& a)
   noexcept(nt_exchangeable<T, A>) -> T requires exchangeable<T, A> {
   T r(static_cast<T&&>(t));
   t = static_cast<A&&>(a);
@@ -327,20 +258,18 @@ __ywstd_export inline constexpr auto exchange = []<typename T, typename A>(T& t,
 };
 
 /// bit-casts the value to another type
-__ywstd_export template<trivially_copyable T> constexpr auto bitcast = []<trivially_copyable U>(const U& v)
+template<trivially_copyable T> constexpr auto bitcast = []<trivially_copyable U>(const U& v)
   noexcept -> T requires (sizeof(T) == sizeof(U)) { return __builtin_bit_cast(T, v); };
 
 
 /// bit-casts the value to uint-type
-__ywstd_export constexpr auto uintcast = []<trivially_copyable T>(const T& t) noexcept {
+constexpr auto uintcast = []<trivially_copyable T>(const T& t) noexcept {
   if constexpr (sizeof(T) == 1) return uint1(t);
   else if constexpr (sizeof(T) == 2) return uint2(t);
   else if constexpr (sizeof(T) == 4) return uint4(t);
   else if constexpr (sizeof(T) == 8) return uint8(t);
   else static_assert(always_false<T>, "unsupported type");
 };
-
-#endif
 
 namespace _ {
 template<typename T, typename U> constexpr bool _same_as_ = false;
@@ -388,12 +317,6 @@ template<typename T> concept uint_type = included_in<remove_cv<T>, uint1, uint2,
 
 /// checks if the type is integral
 template<typename T> concept integral = is_bool<T> || char_type<T> || int_type<T> || uint_type<T>;
-
-/// checks if the type is signed integral
-template<typename T> concept signed_integral = integral<T> && T(-1) < T(0);
-
-/// checks if the type is unsigned integral
-template<typename T> concept unsigned_integral = integral<T> && !signed_integral<T>;
 
 /// checks if the type is float-type
 template<typename T> concept float_type = included_in<remove_cv<T>, float, double, long double>;
@@ -453,7 +376,7 @@ inline constexpr auto select_value = select_type<I, constant<Vs>...>::value;
 template<typename... Fs> struct caster : public Fs... {
 private:
   static constexpr uint _n = sizeof...(Fs);
-  template<typename F> using _result = decltype(declval<F&>().operator()());
+  template<typename F> using _result = decltype(F::operator()());
   template<typename F, typename R> static constexpr bool _same = same_as<_result<F>, R>;
   template<typename F, typename R> static constexpr bool _conv = convertible_to<_result<F>, R>;
   template<typename R> static constexpr uint _first_same = inspects<_same<Fs, R>...>;
@@ -461,22 +384,12 @@ private:
   using Fs::operator()...;
 public:
 
-  /// convertion to bool
-  constexpr bool operator!() const noexcept(noexcept(select_type<_i<bool>, Fs...>::operator()())) {
-    return !select_type<_i<bool>, Fs...>::operator()();
-  }
-
   /// calls a function instead of conversion
   template<typename R, typename F = select_type<_i<R>, Fs...>>
   constexpr operator R() const noexcept(noexcept(F::operator()())) { return F::operator()(); }
 };
 
-#if not __ywstd_is_imported
-
-/// confirms if the code is being executed in the constant evaluation
-__ywstd_export inline constexpr auto is_cev = caster{[]() noexcept -> bool { return __builtin_is_constant_evaluated(); }};
-
-#endif
+inline constexpr auto is_cev = caster{[]() noexcept -> bool { return __builtin_is_constant_evaluated(); }};
 
 /// aggregate static array
 template<typename T, uint N = npos> class array {
@@ -682,3 +595,15 @@ template<typename T> struct vector4 {
     noexcept { return static_cast<const T&&>(select<I>(x, y, z, w)); }
 };
 }
+// namespace std {
+// template<typename T> struct tuple_size;
+// template<typename T, uint N> struct tuple_size<yw::array<T, N>> : integral_constant<uint, N> {};
+// template<typename T> struct tuple_size<yw::vector2<T>> : integral_constant<uint, 2> {};
+// template<typename T> struct tuple_size<yw::vector3<T>> : integral_constant<uint, 3> {};
+
+// template<uint I, typename T> struct tuple_element;
+// template<uint I, typename T, uint N> struct tuple_element<I, yw::array<T, N>> : type_identity<T> {};
+// template<uint I, typename T> struct tuple_element<I, yw::vector2<T>> : type_identity<T> {};
+// template<uint I, typename T> struct tuple_element<I, yw::vector3<T>> : type_identity<T> {};
+// }
+#pragma endregion YWLIB-CORE ---------------------------------------------------

@@ -1,14 +1,25 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
+
+using va_list = char*;
+
+#define __crt_va_end(ap) (void(ap = nullptr))
+#define __crt_va_start(ap, x) ((void)(::ywstd::cstdarg::va_check<decltype(x)>(), __ywstd_cfunc __va_start(&ap, x)))
+#define __crt_va_arg(ap, t) ((sizeof(t) > 8 || (sizeof(t) & (sizeof(t) - 1)) != 0) ? **(t**)((ap += 8) - 8) : *(t*)((ap += 8) - 8))
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
 __ywstd_export void __cdecl __va_start(char**, ...);
-__ywstd_cfunc_end
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
 namespace ywstd::cstdarg {
 template<typename T> constexpr bool is_reference = false;
 template<typename T> constexpr bool is_reference<T&> = true;
 template<typename T> constexpr bool is_reference<T&&> = true;
 __ywstd_export template<typename T> struct va_check { static_assert(!is_reference<T>); };
 }
-namespace std {
-  __ywstd_export using ::va_list;
+
+#if not __ywstd_is_imported
+__ywstd_export namespace std {
+using ::va_list;
 }
+#endif

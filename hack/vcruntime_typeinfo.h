@@ -3,14 +3,13 @@
 #include "vcruntime_exception.h"
 
 extern "C++" {
-
 struct __type_info_node;
 extern __type_info_node __type_info_root_node;
 }
 
-__ywstd_cfunc_begin
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
 
-  struct __std_type_info_data {
+struct __std_type_info_data {
   const char* _UndecoratedName;
   const char _DecoratedName[1];
   __std_type_info_data() = delete;
@@ -24,7 +23,7 @@ int __cdecl __std_type_info_compare(const __std_type_info_data*, const __std_typ
 size_t __cdecl __std_type_info_hash(const __std_type_info_data*);
 const char* __cdecl __std_type_info_name(__std_type_info_data*, __type_info_node*);
 
-__ywstd_cfunc_end
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
 
 extern "C++" {
 

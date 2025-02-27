@@ -1,11 +1,25 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
-__ywstd_export int __cdecl setjmp(jmp_buf);
+
+#define setjmp _setjmp
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+
+typedef struct alignas(16) SETJMP_FLOAT128 {
+  unsigned long long Part[2];
+} SETJMP_FLOAT128, jmp_buf[16];
+
+int __cdecl setjmp(jmp_buf);
 [[noreturn]] void __cdecl longjmp(jmp_buf, int) noexcept(false);
-__ywstd_cfunc_end
+
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
+#if not __ywstd_is_imported
 __ywstd_export namespace std {
-using ::jmp_buf;
+
+using __ywstd_cfunc jmp_buf;
 using __ywstd_cfunc longjmp;
 using __ywstd_cfunc setjmp;
+
 }
+#endif

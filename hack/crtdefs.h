@@ -1,4 +1,4 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
 
 #define _CRT_SATELLITE_1

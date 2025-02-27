@@ -1,6 +1,21 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
+
+#ifndef NULL
+#define NULL 0
+#endif
+
+#ifndef WCHAR_MIN
+#define WCHAR_MIN 0
+#define WCHAR_MAX 0xFFFF
+#endif
+
+#ifndef WEOF
+#define WEOF (std::wint_t)(0xFFFF)
+#endif
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+
 using wint_t = unsigned short;
 wchar_t* __cdecl wcscpy(wchar_t*, const wchar_t*);
 wchar_t* __cdecl wcsncpy(wchar_t*, const wchar_t*, size_t);
@@ -85,7 +100,9 @@ inline int __cdecl fwprintf(FILE* const stream, const wchar_t* format, ...) {
   __ywstd_cwchar_va(format, (vfwprintf(stream, format, args))); }
 inline int __cdecl wprintf(const wchar_t* format, ...) {
   __ywstd_cwchar_va(format, (vfwprintf(stdout, format, args))); }
-__ywstd_cfunc_end
+
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
 __ywstd_export namespace std {
 using wint_t = unsigned short;
 using __ywstd_cfunc wcscpy;
@@ -167,7 +184,7 @@ inline wchar_t* wcsstr(wchar_t* s, const wchar_t* find) noexcept {
 ////////////////////////////////////////////////////////////////////////////////
 // for <string>
 
-extern "C" {
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
 
 inline int __cdecl _vscwprintf(const wchar_t* format, va_list args) {
   const auto options = _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS | _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR;
@@ -183,4 +200,6 @@ inline int __cdecl vswprintf_s(wchar_t* buffer, size_t count, const wchar_t* for
   return result < 0 ? -1 : result; }
 inline int __cdecl swprintf_s(wchar_t* buffer, size_t count, const wchar_t* format, ...) {
   __ywstd_cstdio_va(format, (vswprintf_s(buffer, count, format, args))); }
-}
+
+
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod

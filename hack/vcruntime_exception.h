@@ -8,11 +8,11 @@ terminate_handler __cdecl set_terminate(terminate_handler) throw();
 terminate_handler __cdecl _get_terminate();
 }
 
-__ywstd_cfunc_begin
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
 struct __std_exception_data { const char* _What; bool _DoFree; };
 void __cdecl __std_exception_copy(const __std_exception_data*, __std_exception_data*);
 void __cdecl __std_exception_destroy(__std_exception_data*);
-__ywstd_cfunc_end
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
 
 __ywstd_export namespace std {
 

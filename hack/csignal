@@ -1,13 +1,34 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
+
+#define SIG_DFL (reinterpret_cast<void (__cdecl*)(int)>(0))
+#define SIG_IGN (reinterpret_cast<void (__cdecl*)(int)>(1))
+#define SIG_GET (reinterpret_cast<void (__cdecl*)(int)>(2))
+#define SIG_SGE (reinterpret_cast<void (__cdecl*)(int)>(3))
+#define SIG_ACK (reinterpret_cast<void (__cdecl*)(int)>(4))
+#define SIG_DIE (reinterpret_cast<void (__cdecl*)(int)>(5))
+#define SIG_ERR (reinterpret_cast<void (__cdecl*)(int)>(-1))
+
+#define SIGINT 2
+#define SIGILL 4
+#define SIGFPE 8
+#define SIGSEGV 11
+#define SIGTERM 15
+#define SIGBREAK 21
+#define SIGABRT 22
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+using sig_atomic_t = int;
 using signal_handler = void (__cdecl*)(int);
 signal_handler __cdecl signal(int, signal_handler);
 int __cdecl raise(int);
-__ywstd_cfunc_end
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
+#if not __ywstd_is_imported
 __ywstd_export namespace std {
-using sig_atomic_t = int;
-using signal_handler = void (__cdecl*)(int);
+using __ywstd_cfunc sig_atomic_t;
+using __ywstd_cfunc signal_handler;
 using __ywstd_cfunc signal;
 using __ywstd_cfunc raise;
 }
+#endif

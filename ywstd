@@ -1,168 +1,45 @@
 #pragma once /* clang-format off */ /* Python code start
 import os, sys, subprocess
-HERE     = os.path.dirname(os.path.abspath(__file__))
-HACK     = fR"{HERE}\hack"
-MSVC_CL  = fR"{HERE}\msvc\bin\cl.exe"
-MSVC_INC = fR"{HERE}\msvc\inc"
-MSVC_LIB = fR"{HERE}\msvc\lib"
-MY_INC   = fR"{HERE}\inc"
-IFC      = fR"{HERE}\ywstd.ifc"
-IXX      = fR"{HERE}\ywstd.ixx"
-OBJ      = fR"{HERE}\ywstd.obj"
-LIB_A = R"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.38.33130\lib\x64"
-LIB_B = R"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64"
-LIB_C = R"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64"
+HERE = os.path.dirname(os.path.abspath(__file__))
+IFC  = fR"{HERE}\ywstd.ifc"
+IXX  = fR"{HERE}\ywstd.ixx"
+OBJ  = fR"{HERE}\ywstd.obj"
+CL   = fR"{HERE}\msvc\bin\cl.exe"
 
-if len(sys.argv) > 1:
-  cpp_file = sys.argv[1]
-  if (os.path.splitext(cpp_file)[1] != ".cpp"): print("Usage: python ywstd [<cpp_file> [--run]]")
-  exe_file = cpp_file.replace(".cpp", ".exe")
-  obj_file = cpp_file.replace(".cpp", ".obj")
-  args = [MSVC_CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywstd_import", ]
-  args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
-  args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{MSVC_LIB}", ]
-  #args+= [f"/referenceywstd={IFC}", "/link", OBJ, f"/LIBPATH:{LIB_A}", f"/LIBPATH:{LIB_B}", f"/LIBPATH:{LIB_C}", ]
-  print("compiling ", end="", flush=True)
-  return_code = subprocess.run(args).returncode
-  if os.path.exists(obj_file): os.remove(obj_file)
-  if return_code == 0:
-    if "--run" in sys.argv: subprocess.run([exe_file])
-    sys.exit(0)
-  else:
-    print(f"failed to compile {cpp_file} ({return_code})")
-    sys.exit(1)
-else:
+def fail(file, return_code):
+  print(f"failed to compile {file} -> {return_code}")
+  sys.exit(return_code)
+
+if len(sys.argv) == 1 or "--all" in sys.argv:
   if os.path.exists(IFC): os.remove(IFC)
   if os.path.exists(OBJ): os.remove(OBJ)
   with open(IXX, "w") as f:
     f.write("export module ywstd;\n#include \"ywstd\"\n")
-  args = [MSVC_CL, IXX, "/c", "/D__ywstd_export=export", ]
+  args = [CL, IXX, "/c", "/D__ywstd_export=export", ]
   args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
-  args+= [f"/ifcOutput{IFC}", f"/Fo{OBJ}", f"/I{HACK}", f"/I{MSVC_INC}", ]
+  args+= [f"/ifcOutput{IFC}", f"/Fo{OBJ}", fR"/I{HERE}\hack", fR"/I{HERE}\msvc\inc", ]
   print("compiling ", end="", flush=True)
   return_code = subprocess.run(args).returncode
-  if return_code != 0:
-    print(f"failed to compile ywstd ({return_code})")
-if os.path.exists(IXX): os.remove(IXX)
+  if return_code != 0: fail("ywstd", return_code)
+  if os.path.exists(IXX): os.remove(IXX)
+  if not "--all" in sys.argv: sys.exit(return_code)
+
+cpp_file = sys.argv[1]
+if (os.path.splitext(cpp_file)[1] != ".cpp"): print("Usage: python ywstd [<cpp_file> [--run]]")
+exe_file, obj_file = cpp_file.replace(".cpp", ".exe"), cpp_file.replace(".cpp", ".obj")
+args = [CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywstd_import", ]
+args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
+args+= [f"/referenceywstd={IFC}", "/link", OBJ, fR"/LIBPATH:{HERE}\msvc\lib", ]
+print("compiling ", end="", flush=True)
+return_code = subprocess.run(args).returncode
+if os.path.exists(obj_file): os.remove(obj_file)
+if return_code != 0: fail(cpp_file, return_code)
+if "--run" in sys.argv:
+  print(f"running {exe_file}")
+  print(f"{exe_file} returns {subprocess.run([exe_file]).returncode}")
 sys.exit(0)
+
 # Python code end */
 
 #include "hack/abc.h"
-
-#if __ywstd_is_imported
-import ywstd;
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "libcpmt.lib")
-#pragma comment(lib, "ole32.lib")
-#pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "user32.lib")
-#else
-#pragma warning(push)
-#pragma warning(disable: 5244)
-
-#include "hack/cassert"
-#include "hack/cctype"
-#include "hack/cerrno"
-#include "hack/cfenv"
-#include "hack/cfloat"
-#include "hack/cinttypes"
-#include "hack/climits"
-#include "hack/clocale"
-#include "hack/cmath"
-#include "hack/csetjmp"
-#include "hack/csignal"
-#include "hack/cstdarg"
-#include "hack/cstddef"
-#include "hack/cstdint"
-#include "hack/cstdio"
-#include "hack/cstdlib"
-#include "hack/cstring"
-#include "hack/ctime"
-#include "hack/cuchar"
-#include "hack/cwchar"
-#include "hack/cwctype"
-
-#include "msvc/inc/algorithm"
-#include "msvc/inc/any"
-#include "msvc/inc/array"
-#include "msvc/inc/atomic"
-#include "msvc/inc/bitset"
-#include "msvc/inc/charconv"
-#include "msvc/inc/chrono"
-#include "msvc/inc/compare"
-#include "msvc/inc/complex"
-#include "msvc/inc/concepts"
-#include "msvc/inc/condition_variable"
-#include "msvc/inc/coroutine"
-#include "msvc/inc/deque"
-#include "msvc/inc/exception"
-#include "msvc/inc/execution"
-#include "msvc/inc/filesystem"
-#include "msvc/inc/format"
-#include "msvc/inc/forward_list"
-#include "msvc/inc/fstream"
-#include "msvc/inc/functional"
-#include "msvc/inc/future"
-#include "msvc/inc/initializer_list"
-#include "msvc/inc/iomanip"
-#include "msvc/inc/ios"
-#include "msvc/inc/iosfwd"
-#include "msvc/inc/iostream"
-#include "msvc/inc/istream"
-#include "msvc/inc/iterator"
-#include "msvc/inc/latch"
-#include "msvc/inc/limits"
-#include "msvc/inc/list"
-#include "msvc/inc/locale"
-#include "msvc/inc/map"
-#include "msvc/inc/mdspan"
-#include "msvc/inc/memory"
-#include "msvc/inc/memory_resource"
-#include "msvc/inc/mutex"
-#include "msvc/inc/new"
-#include "msvc/inc/numbers"
-#include "msvc/inc/numeric"
-#include "msvc/inc/optional"
-#include "msvc/inc/ostream"
-#include "msvc/inc/print"
-#include "msvc/inc/queue"
-#include "msvc/inc/random"
-#include "msvc/inc/ranges"
-#include "msvc/inc/ratio"
-#include "msvc/inc/regex"
-#include "msvc/inc/scoped_allocator"
-#include "msvc/inc/semaphore"
-#include "msvc/inc/set"
-#include "msvc/inc/shared_mutex"
-#include "msvc/inc/source_location"
-#include "msvc/inc/span"
-#include "msvc/inc/spanstream"
-#include "msvc/inc/sstream"
-#include "msvc/inc/stack"
-#include "msvc/inc/stacktrace"
-#include "msvc/inc/stdexcept"
-#include "msvc/inc/stdfloat"
-#include "msvc/inc/stop_token"
-#include "msvc/inc/streambuf"
-#include "msvc/inc/string"
-#include "msvc/inc/string_view"
-#include "msvc/inc/syncstream"
-#include "msvc/inc/system_error"
-#include "msvc/inc/thread"
-#include "msvc/inc/tuple"
-#include "msvc/inc/type_traits"
-#include "msvc/inc/typeindex"
-#include "msvc/inc/typeinfo"
-#include "msvc/inc/unordered_map"
-#include "msvc/inc/unordered_set"
-#include "msvc/inc/utility"
-#include "msvc/inc/valarray"
-#include "msvc/inc/variant"
-#include "msvc/inc/vector"
-#include "msvc/inc/version"
-
-#include "hack/_windows.h"
-#include "hack/_directx.h"
-
-#pragma warning(pop)
-#endif
+#include "hack/xyz.h"

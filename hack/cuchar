@@ -1,13 +1,22 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
-__ywstd_cfunc_begin
+
+#define __STDC_UTF_16__ 1
+#define __STDC_UTF_32__ 1
+
+#ifndef WEOF
+#define WEOF (std::wint_t)(0xFFFF)
+#endif
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
 size_t __cdecl mbrtoc16(char16_t*, const char*, size_t, mbstate_t*);
 size_t __cdecl c16rtomb(char*, char16_t, mbstate_t*);
 size_t __cdecl mbrtoc32(char32_t*, const char*, size_t, mbstate_t*);
 size_t __cdecl c32rtomb(char*, char32_t, mbstate_t*);
-__ywstd_cfunc_end
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
 __ywstd_export namespace std {
-using ::mbstate_t;
+using __ywstd_cfunc mbstate_t;
 using __ywstd_cfunc c16rtomb;
 using __ywstd_cfunc c32rtomb;
 using __ywstd_cfunc mbrtoc16;

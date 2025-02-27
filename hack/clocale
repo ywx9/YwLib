@@ -1,12 +1,19 @@
-#pragma once
+#pragma once // clang-format off
 #include "abc.h"
 
-extern "C" {
-#if not(__ywstd_is_exported or __ywstd_is_imported)
-namespace ywstd {
+#ifndef NULL
+#define NULL 0
 #endif
 
-/// return types for `std::localeconv`
+#define LC_ALL 0
+#define LC_COLLATE 1
+#define LC_CTYPE 2
+#define LC_MONETARY 3
+#define LC_NUMERIC 4
+#define LC_TIME 5
+
+__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+
 struct lconv {
   char* decimal_point;
   char* thousands_sep;
@@ -35,23 +42,18 @@ struct lconv {
   wchar_t* _W_positive_sign;
   wchar_t* _W_negative_sign;
 };
-
-/// gets and sets the current C locale
 char* __cdecl setlocale(int cat, const char* locale);
-
-/// queries numeric and monetary formatting details of the current locale
 lconv* __cdecl localeconv();
 
-#if not(__ywstd_is_exported or __ywstd_is_imported)
+__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+
+#if not __ywstd_is_imported
+__ywstd_export namespace std {
+using __ywstd_cfunc lconv;
+using __ywstd_cfunc setlocale;
+using __ywstd_cfunc localeconv;
 }
 #endif
-}
-
-__ywstd_export namespace std {
-  using __ywstd_cfunc lconv;
-  using __ywstd_cfunc setlocale;
-  using __ywstd_cfunc localeconv;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // for <xlocale>

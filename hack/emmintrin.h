@@ -1,5 +1,7 @@
 #pragma once
+#include "abc.h"
 #include "xmmintrin.h"
+
 __ywstd_export extern "C" {
 
 union __declspec(intrin_type) alignas(16) __m128i {

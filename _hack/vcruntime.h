@@ -1,4 +1,4 @@
-#pragma once // clang-format off
+#pragma once
 #include "abc.h"
 
 #define _STL_EXTRA_DISABLED_WARNINGS 4996

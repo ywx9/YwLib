@@ -1,6 +1,19 @@
-#pragma once
-#include "mmintrin.h"
+#pragma once // clang-format off
+#include "abc.h"
+
 __ywstd_export extern "C" {
+
+union __declspec(intrin_type) alignas(8) __m64 {
+  unsigned __int64 m64_u64;
+  float            m64_f32[2];
+  __int8           m64_i8[8];
+  __int16          m64_i16[4];
+  __int32          m64_i32[2];
+  __int64          m64_i64;
+  unsigned __int8  m64_u8[8];
+  unsigned __int16 m64_u16[4];
+  unsigned __int32 m64_u32[2];
+};
 
 union __declspec(intrin_type) alignas(16) __m128 {
   float            m128_f32[4];
