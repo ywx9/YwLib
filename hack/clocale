@@ -12,7 +12,8 @@
 #define LC_NUMERIC 4
 #define LC_TIME 5
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 struct lconv {
   char* decimal_point;
@@ -45,29 +46,29 @@ struct lconv {
 char* __cdecl setlocale(int cat, const char* locale);
 lconv* __cdecl localeconv();
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
-using __ywstd_cfunc lconv;
-using __ywstd_cfunc setlocale;
-using __ywstd_cfunc localeconv;
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
+using __ywlib_global lconv;
+using __ywlib_global setlocale;
+using __ywlib_global localeconv;
 }
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // for <xlocale>
 
-__ywstd_dead(int _UPPER = 0x01);
-__ywstd_dead(int _LOWER = 0x02);
-__ywstd_dead(int _DIGIT = 0x04);
-__ywstd_dead(int _SPACE = 0x08);
-__ywstd_dead(int _PUNCT = 0x10);
-__ywstd_dead(int _CONTROL = 0x20);
-__ywstd_dead(int _BLANK = 0x40);
-__ywstd_dead(int _HEX = 0x80);
-__ywstd_dead(int _SH_DENYRW = 0x10);
-__ywstd_dead(int _SH_DENYWR = 0x20);
-__ywstd_dead(int _SH_DENYRD = 0x30);
-__ywstd_dead(int _SH_DENYNO = 0x40);
-__ywstd_dead(int _SH_SECURE = 0x80);
+__ywlib_dead(int _UPPER = 0x01);
+__ywlib_dead(int _LOWER = 0x02);
+__ywlib_dead(int _DIGIT = 0x04);
+__ywlib_dead(int _SPACE = 0x08);
+__ywlib_dead(int _PUNCT = 0x10);
+__ywlib_dead(int _CONTROL = 0x20);
+__ywlib_dead(int _BLANK = 0x40);
+__ywlib_dead(int _HEX = 0x80);
+__ywlib_dead(int _SH_DENYRW = 0x10);
+__ywlib_dead(int _SH_DENYWR = 0x20);
+__ywlib_dead(int _SH_DENYRD = 0x30);
+__ywlib_dead(int _SH_DENYNO = 0x40);
+__ywlib_dead(int _SH_SECURE = 0x80);

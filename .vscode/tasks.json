@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build ywlib",
+      "type": "shell",
+      "command": "python3",
+      "args": ["ywlib"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+    },
+    {
+      "label": "build exe",
+      "type": "shell",
+      "command": "python3",
+      "args": ["ywlib", "test.cpp"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+    },
+    {
+      "label": "build exe & run",
+      "type": "shell",
+      "command": "python3",
+      "args": ["ywlib", "test.cpp", "--run"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 #pragma once
 #include "abc.h"
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 using wint_t = unsigned short;
 using wctype_t = unsigned short;
@@ -27,31 +28,31 @@ wint_t __cdecl towlower(wint_t);
 wint_t __cdecl towctrans(wint_t, wctrans_t);
 wctrans_t __cdecl wctrans(const char*);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-__ywstd_export namespace std {
+__ywlib_end;
+}
+__ywlib_export namespace std {
 
 using wint_t = unsigned short;
 using wctype_t = unsigned short;
 using wctrans_t = wchar_t;
 
-using __ywstd_cfunc iswalnum;
-using __ywstd_cfunc iswalpha;
-using __ywstd_cfunc iswlower;
-using __ywstd_cfunc iswupper;
-using __ywstd_cfunc iswdigit;
-using __ywstd_cfunc iswxdigit;
-using __ywstd_cfunc iswcntrl;
-using __ywstd_cfunc iswgraph;
-using __ywstd_cfunc iswspace;
-using __ywstd_cfunc iswblank;
-using __ywstd_cfunc iswprint;
-using __ywstd_cfunc iswpunct;
-using __ywstd_cfunc iswctype;
-using __ywstd_cfunc towupper;
-using __ywstd_cfunc towlower;
-using __ywstd_cfunc towctrans;
-using __ywstd_cfunc wctype;
-using __ywstd_cfunc wctrans;
+using __ywlib_global iswalnum;
+using __ywlib_global iswalpha;
+using __ywlib_global iswlower;
+using __ywlib_global iswupper;
+using __ywlib_global iswdigit;
+using __ywlib_global iswxdigit;
+using __ywlib_global iswcntrl;
+using __ywlib_global iswgraph;
+using __ywlib_global iswspace;
+using __ywlib_global iswblank;
+using __ywlib_global iswprint;
+using __ywlib_global iswpunct;
+using __ywlib_global iswctype;
+using __ywlib_global towupper;
+using __ywlib_global towlower;
+using __ywlib_global towctrans;
+using __ywlib_global wctype;
+using __ywlib_global wctrans;
 
 }

@@ -17,18 +17,19 @@
 #define SIGBREAK 21
 #define SIGABRT 22
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 using sig_atomic_t = int;
 using signal_handler = void (__cdecl*)(int);
 signal_handler __cdecl signal(int, signal_handler);
 int __cdecl raise(int);
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
-using __ywstd_cfunc sig_atomic_t;
-using __ywstd_cfunc signal_handler;
-using __ywstd_cfunc signal;
-using __ywstd_cfunc raise;
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
+using __ywlib_global sig_atomic_t;
+using __ywlib_global signal_handler;
+using __ywlib_global signal;
+using __ywlib_global raise;
 }
 #endif

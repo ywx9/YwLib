@@ -8,17 +8,18 @@
 #define WEOF (std::wint_t)(0xFFFF)
 #endif
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 size_t __cdecl mbrtoc16(char16_t*, const char*, size_t, mbstate_t*);
 size_t __cdecl c16rtomb(char*, char16_t, mbstate_t*);
 size_t __cdecl mbrtoc32(char32_t*, const char*, size_t, mbstate_t*);
 size_t __cdecl c32rtomb(char*, char32_t, mbstate_t*);
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-__ywstd_export namespace std {
-using __ywstd_cfunc mbstate_t;
-using __ywstd_cfunc c16rtomb;
-using __ywstd_cfunc c32rtomb;
-using __ywstd_cfunc mbrtoc16;
-using __ywstd_cfunc mbrtoc32;
+__ywlib_end;
+}
+__ywlib_export namespace std {
+using __ywlib_global mbstate_t;
+using __ywlib_global c16rtomb;
+using __ywlib_global c32rtomb;
+using __ywlib_global mbrtoc16;
+using __ywlib_global mbrtoc32;
 }

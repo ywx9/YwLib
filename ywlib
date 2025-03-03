@@ -1,2054 +1,1510 @@
-#pragma once
-#include "ywstd"
-
-#pragma region [core] --------------------------------------------------------------------------------------------------
-namespace yw {
-
-
-inline constexpr auto unordered = std::partial_ordering::unordered;
-
-struct none;
-
-///
-template<typename F, typename... As> concept invocable = std::invocable<F, As...>;
-
-///
-template<typename F, typename... As> concept nt_invocable =
-  invocable<F, As...> && std::is_nothrow_invocable_v<F, As...>;
-
-///
-template<typename F, typename... As> requires invocable<F, As...> using result =
-  std::conditional_t<same_as<remove_cv<std::invoke_result_t<F, As...>>, void>, none, std::invoke_result_t<F, As...>>;
-
-///
-template<typename F, typename R, typename... As> concept invocable_r =
-  invocable<F, As...> && convertible_to<result<F, As...>, R>;
-
-///
-template<typename F, typename R, typename... As> concept nt_invocable_r =
-  nt_invocable<F, As...> && nt_convertible_to<result<F, As...>, R>;
-
-///
-inline constexpr auto invoke = []<typename F, typename... As>(F&& f, As&&... as)
-  noexcept(nt_invocable<F, As...>) -> result<F, As...> {
-  if constexpr (!std::is_void_v<result<F, As...>>) return std::invoke(static_cast<F&&>(f), static_cast<As&&>(as)...);
-  else return std::invoke(static_cast<F&&>(f), static_cast<As&&>(as)...), none{};
-};
-
-
-using path = std::filesystem::path;
-
-}
-#pragma endregion // -------------------------------------------------------------------------------------------- [core]
-
-#pragma region [iterator, ranges] ------------------------------------------------------------------------------------------------
-namespace yw {
-
-/// checks if the type is an iterator
-template<typename I> concept iterator = std::input_or_output_iterator<I>;
-
-/// checks if the type is a range
-template<typename R> concept range = std::ranges::range<R>;
-
-/// obtains the begin iterator of the range
-inline constexpr auto begin = []<range R>(R&& r)
-  noexcept(noexcept(std::ranges::begin(static_cast<R&&>(r))))
-  requires requires { std::ranges::begin(static_cast<R&&>(r)); } {
-  return std::ranges::begin(static_cast<R&&>(r));
-};
-
-/// obtains the end sentinel of the range
-inline constexpr auto end = []<range R>(R&& r)
-  noexcept(noexcept(std::ranges::end(static_cast<R&&>(r))))
-  requires requires { std::ranges::end(static_cast<R&&>(r)); } {
-  return std::ranges::end(static_cast<R&&>(r));
-};
-
-/// obtains the size of the range
-inline constexpr auto size = []<range R>(R&& r)
-  noexcept(noexcept(std::ranges::size(static_cast<R&&>(r))))
-  requires requires { std::ranges::size(static_cast<R&&>(r)); } {
-  return std::ranges::size(static_cast<R&&>(r));
-};
-
-/// obtains the data pointer of the range
-inline constexpr auto data = []<range R>(R&& r)
-  noexcept(noexcept(std::ranges::data(static_cast<R&&>(r))))
-  requires requires { std::ranges::data(static_cast<R&&>(r)); } {
-  return std::ranges::data(static_cast<R&&>(r));
-};
-
-/// iterator type of the range
-template<range R> using iterator_t = std::ranges::iterator_t<R>;
-
-/// sentinel type of the range
-template<range R> using sentinel_t = std::ranges::sentinel_t<R>;
-
-namespace _ {
-template<typename T> struct _iter_types {};
-template<iterator I> struct _iter_types<I> {
-  using value = std::iter_value_t<I>;
-  using ref = std::iter_reference_t<I>;
-  using rvref = std::iter_rvalue_reference_t<I>;
-  using difference = std::iter_difference_t<I>; };
-template<range R> struct _iter_types<R> : _iter_types<iterator_t<R>> {};
-}
-
-/// value type of the iterator or range
-template<typename T> requires iterator<remove_reference<T>> || range<T>
-using iter_value = typename _::_iter_types<remove_reference<T>>::value;
-
-/// reference type of the iterator or range
-template<typename T> requires iterator<remove_reference<T>> || range<T>
-using iter_ref = typename _::_iter_types<remove_reference<T>>::ref;
-
-/// rvalue reference type of the iterator or range
-template<typename T> requires iterator<remove_reference<T>> || range<T>
-using iter_rvref = typename _::_iter_types<remove_reference<T>>::rvref;
-
-/// difference type of the iterator or range
-template<typename T> requires iterator<remove_reference<T>> || range<T>
-using iter_difference = typename _::_iter_types<remove_reference<T>>::difference;
-
-/// checks if the type is output iterator
-template<typename I, typename T> concept output_iterator =
-  iterator<I> && std::output_iterator<I, T>;
-
-/// checks if the type is input iterator
-template<typename I> concept input_iterator =
-  iterator<I> && std::input_iterator<I>;
-
-/// checks if the type is forward iterator
-template<typename I> concept forward_iterator =
-  iterator<I> && std::forward_iterator<I>;
-
-/// checks if the type is bidirectional iterator
-template<typename I> concept bidirectional_iterator =
-  iterator<I> && std::bidirectional_iterator<I>;
-
-/// checks if the type is random access iterator
-template<typename I> concept random_access_iterator =
-  iterator<I> && std::random_access_iterator<I>;
-
-/// checks if the type is contiguous iterator
-template<typename I> concept contiguous_iterator =
-  iterator<I> && std::contiguous_iterator<I>;
-
-/// checks if the type is sentinel for the iterator
-template<typename S, typename I> concept sentinel_for = std::sentinel_for<S, I>;
-
-/// checks if the type is sized sentinel for the iterator
-template<typename S, typename I> concept sized_sentinel_for = std::sized_sentinel_for<S, I>;
-
-/// checks if the type is output range
-template<typename R, typename T> concept output_range =
-  range<R> && output_iterator<iterator_t<R>, T>;
-
-/// checks if the type is input range
-template<typename R> concept input_range =
-  range<R> && input_iterator<iterator_t<R>>;
-
-/// checks if the type is forward range
-template<typename R> concept forward_range =
-  input_range<R> && forward_iterator<iterator_t<R>>;
-
-/// checks if the type is bidirectional range
-template<typename R> concept bidirectional_range =
-  forward_range<R> && bidirectional_iterator<iterator_t<R>>;
-
-/// checks if the type is random access range
-template<typename R> concept random_access_range =
-  bidirectional_range<R> && random_access_iterator<iterator_t<R>>;
-
-/// checks if the type is contiguous range
-template<typename R> concept contiguous_range =
-  random_access_range<R> && contiguous_iterator<iterator_t<R>> &&
-  requires { { data(declval<R&>()) } -> same_as<std::add_pointer_t<iter_ref<R>>>; };
-
-/// checks if the type is sized range
-template<typename R> concept sized_range = range<R> && std::ranges::sized_range<R>;
-
-/// checks if the type is sized contiguous range
-template<typename R> concept sized_contiguous_range = sized_range<R> && contiguous_range<R>;
-}
-#pragma endregion // -------------------------------------------------------------------------------- [iterator, ranges]
-
-#pragma region [yw::array] -----------------------------------------------------
-namespace yw {
-
-/// dynamic array
-template<typename T> class array<T, npos> : public std::vector<T> {
-public:
-
-  /// constructor
-  constexpr array() noexcept = default;
-  constexpr explicit array(uint n) : std::vector<T>(n) {}
-  constexpr array(uint n, const T& v) : std::vector<T>(n, v) {}
-
-  template<input_iterator I>
-  requires convertible_to<iter_value<I>, T> &&
-           (!convertible_to<I, uint> || !convertible_to<I, const T&>)
-  constexpr array(I i, I s) : std::vector<T>(mv(i), mv(s)) {}
-
-  template<input_iterator I, sentinel_for<I> S, typename C = std::common_iterator<I, S>>
-  requires convertible_to<iter_value<I>, T> && (!same_as<I, S>) &&
-           (!convertible_to<I, uint> || !convertible_to<S, const T&>)
-  constexpr array(I i, S s) : std::vector<T>(C(mv(i)), C(mv(s))) {}
-
-  /// constructs a dynamic array from a range
-  template<input_range R>
-  requires convertible_to<iter_value<R>, T> && (!convertible_to<R, uint>) &&
-           (!requires { declval<R&>().operator array<T>(); })
-  constexpr array(R&& r) : std::vector<T>(yw::begin(r), yw::end(r)) {}
-};
-static_assert(sizeof(array<int>) == sizeof(std::vector<int>));
-
-
-template<typename T> array(uint, const T&) -> array<T, npos>;
-template<iterator I, sentinel_for<I> S> array(I, S) -> array<iter_value<I>, npos>;
-template<range R> array(R&&) -> array<iter_value<R>, npos>;
-}
-#pragma endregion --------------------------------------------------------------
-
-#pragma region [yw::string_view] -----------------------------------------------
-namespace yw {
-
-/// aggregate string view
-template<char_type C> struct string_view {
-  static_assert(same_as<C, remove_cv<C>>);
-  using value_type = C;
-  using pointer = C*;
-  using const_pointer = const C*;
-  using reference = C&;
-  using const_reference = const C&;
-  using iterator = const C*;
-  using const_iterator = const C*;
-  using size_type = uint;
-  using difference_type = int8;
-  string_view(nullptr_t) = delete;
-  const C* _data;
-  uint _size;
-  constexpr operator std::basic_string_view<C>() const noexcept { return {_data, _size}; }
-
-
-  /// default constructor
-  constexpr string_view() noexcept : _data(nullptr), _size(0) {}
-
-  /// copy constructor
-  constexpr string_view(const string_view&) noexcept = default;
-
-  /// copy assignment
-  constexpr string_view& operator=(const string_view&) noexcept = default;
-
-  /// constructor with a null-terminated string
-  constexpr string_view(const C* Data) noexcept :
-    _data(Data), _size(std::char_traits<C>::length(Data)) {}
-
-  /// constructor with a string
-  constexpr string_view(const C* Data, uint Size) noexcept : _data(Data), _size(Size) {}
-
-  /// constructor with a iterator
-  template<contiguous_iterator I, sized_sentinel_for<I> S>
-  requires same_as<iter_value<I>, C> && (!convertible_to<S, uint>)
-  constexpr string_view(I i, S s) : _data(std::to_address(i)), _size(s - i) {}
-
-  /// constructor with a range
-  template<sized_contiguous_range R>
-  requires same_as<iter_value<R>, C> && (!convertible_to<R, const C*>) &&
-    (!requires { declval<R&>().operator string_view<C>(); })
-  constexpr string_view(R&& r) : _data(yw::data(r)), _size(yw::size(r)) {}
-
-  /// returns the iterator to the beginning
-  constexpr const C* begin() const noexcept { return _data; }
-
-  /// returns the iterator to the end
-  constexpr const C* end() const noexcept { return _data + _size; }
-
-  /// checks if the string is empty
-  constexpr bool empty() const noexcept { return _size == 0; }
-
-  /// returns the size of the string
-  constexpr uint size() const noexcept { return _size; }
-
-  /// returns the data pointer
-  constexpr const C* data() const noexcept { return _data; }
-
-  /// returns the character at the index
-  constexpr const C& operator[](uint Index) const { return _data[Index]; }
-
-  /// access the first character
-  constexpr const C& front() const { return _data[0]; }
-
-  /// access the last character
-  constexpr const C& back() const { return _data[_size - 1]; }
-
-  /// returns the substring
-  constexpr string_view substr(uint Pos, uint Count = npos) const {
-    if (Pos >= _size) return {};
-    if (Count == npos) return {_data + Pos, _size - Pos};
-    return {_data + Pos, std::min(Count, _size - Pos)};
-  }
-
-  /// shrinks the string
-  constexpr void remove_prefix(uint N) {
-    if (N < _size) _data += N, _size -= N;
-    else _data = nullptr, _size = 0;
-  }
-
-  /// shrinks the string
-  constexpr void remove_suffix(uint N) {
-    if (N < _size) _size -= N;
-    else _data = nullptr, _size = 0;
-  }
-
-  /// `swap` function
-  friend constexpr void swap(string_view& a, string_view& b) noexcept {
-    std::ranges::swap(a._data, b._data);
-    std::ranges::swap(a._size, b._size);
-  }
-
-  /// compares two strings
-  friend constexpr bool operator==(const string_view& a, const string_view& b) noexcept {
-    return a._size == b._size && std::char_traits<C>::compare(a._data, b._data, a._size) == 0;
-  }
-
-  /// compares two strings
-  friend constexpr auto operator<=>(const string_view& a, const string_view& b) noexcept {
-    const auto bb = a._size <=> b._size;
-    const uint nn = bb < 0 ? a._size : b._size;
-    for (uint i{}; i < nn; ++i)
-      if (const auto c = uintcast(a[i]) <=> uintcast(b[i]); c != 0) return c;
-    return bb;
-  }
-
-  /// output stream
-  template<typename Tr> friend auto& operator<<(std::basic_ostream<C, Tr>& os, const string_view& sv) {
-    return os.write(sv._data, sv._size);
-  }
-};
-
-template<is_pointer P> string_view(P) -> string_view<iter_value<P>>;
-template<is_pointer P> string_view(P, uint) -> string_view<iter_value<P>>;
-template<contiguous_iterator I, sized_sentinel_for<I> S> string_view(I, S) -> string_view<iter_value<I>>;
-template<sized_contiguous_range R> string_view(R&&) -> string_view<iter_value<R>>;
-}
-namespace std::ranges {
-template<typename C> constexpr bool enable_borrowed_range<yw::string_view<C>> = true;
-template<typename C> constexpr bool enable_view<yw::string_view<C>> = true;
-}
-#pragma endregion --------------------------------------------------------------
-
-#pragma region [string] ------------------------------------------------------------------------------------------------
-namespace yw {
-
-/// string type; `std::basic_string`
-template<typename T> using string = std::basic_string<T>;
-
-/// checks if the type can be converted to a string view
-template<typename T, typename C = iter_value<T>>
-concept stringable = convertible_to<T&, string_view<C>>;
-
-using str = string<char>;
-using wstr = string<wchar>;
-using str_view = string_view<char>;
-using wstr_view = string_view<wchar>;
-
-using From = std::wstring;
-using To = wstr_view;
-
-static_assert(stringable<From>);
-
-static_assert(std::is_convertible_v<string<wchar>&, string_view<wchar>>);
-static_assert(__is_convertible_to(string<wchar>&, string_view<wchar>));
-static_assert(requires { static_cast<string_view<wchar>>(std::declval<string<wchar>&>()); });
-static_assert(constructible<string_view<wchar>, string<wchar>&>);
-static_assert(std::constructible_from<string_view<wchar>, string<wchar>&>);
-static_assert(std::convertible_to<std::basic_string<wchar>&, string_view<wchar>>);
-static_assert(convertible_to<string<wchar>&, string_view<wchar>>);
-static_assert(stringable<string<wchar>&>);
-
-/// returns the length of a stringable object
-inline constexpr auto strlen = []<stringable S>(S&& s) -> uint {
-  if constexpr (is_array<remove_reference<S>>) return std::extent_v<remove_reference<S>> - 1;
-  else if constexpr (is_pointer<remove_reference<S>>) return std::char_traits<iter_value<S>>::length(s);
-  else if constexpr (specialization_of<remove_cvref<S>, std::basic_string>) return s.size();
-  else if constexpr (specialization_of<remove_cvref<S>, std::basic_string_view>) return s.size();
-  else return string_view<iter_value<S>>(s).size();
-};
-
-/// changes the encoding of a string
-template<char_type C> inline constexpr auto cvt = [](
-  stringable auto&& s) noexcept -> string<C> requires same_as<C, remove_cvref<C>> {
-  using In = remove_cvref<iter_value<decltype(s)>>;
-  string_view<In> v(s);
-  if constexpr (sizeof(In) == sizeof(C)) return string<C>(bitcast<string_view<C>>(v));
-  else if constexpr (included_in<In, char, char8_t>) {
-    if constexpr (same_as<C, char32_t>) {
-      string<char32_t> r(v.size(), {});
-      auto p = r.data();
-      for (auto i = v.data(), last = i + v.size(); i < last;) {
-        char8_t c = *i++;
-        if (c < 0x80) *p++ = c;
-        else if (c < 0xc0) *p++ = 0xfffe;
-        else if (c < 0xe0) *p++ = (c & 0x1f) << 6 | (*i++ & 0x3f);
-        else if (c < 0xf0) *p++ = (c & 0x0f) << 12 | (*i++ & 0x3f) << 6 | (*i++ & 0x3f);
-        else if (c < 0xf8) *p++ = (c & 0x07) << 18 | (*i++ & 0x3f) << 12 | (*i++ & 0x3f) << 6 | (*i++ & 0x3f);
-        else *p++ = 0xfffe;
-      }
-      r.resize(p - r.data());
-      return r;
-    } else if constexpr (included_in<C, wchar, char16_t>) return cvt<C>(cvt<char32_t>(s));
-  } else if constexpr (included_in<In, wchar, char16_t>) {
-    if constexpr (same_as<C, char32_t>) {
-      string<char32_t> r(v.size(), {});
-      auto p = r.data();
-      for (auto i = v.data(), last = i + v.size(); i < last;) {
-        if (*i < 0xd800 || *i >= 0xe000) *p++ = *i++;
-        else *p++ = *i++ & 0x03ff | (*i++ & 0x03ff << 10);
-      }
-      r.resize(p - r.data());
-      return r;
-    } else if constexpr (included_in<C, char, char8_t>) return cvt<C>(cvt<char32_t>(s));
-  } else if constexpr (same_as<In, char32_t>) {
-    if constexpr (included_in<C, char, char8_t>) {
-      string<C> r(v.size() * 4, {});
-      auto p = r.data();
-      for (auto i = v.data(), last = i + v.size(); i < last;) {
-        if (char32_t c = *i++; c < 0x80) *p++ = C(c);
-        else if (c < 0x800) *p++ = C(0xc0 | c >> 6), *p++ = C(0x80 | c & 0x3f);
-        else if (c < 0x10000) *p++ = C(0xe0 | c >> 12), *p++ = C(0x80 | (c >> 6 & 0x3f)), *p++ = C(0x80 | (c & 0x3f));
-        else *p++ = C(0xf0 | c >> 18), *p++ = C(0x80 | (c >> 12 & 0x3f)),
-             *p++ = C(0x80 | (c >> 6 & 0x3f)), *p++ = C(0x80 | (c & 0x3f));
-      }
-      r.resize(p - r.data());
-      return r;
-    } else if constexpr (included_in<C, wchar, char16_t>) {
-      string<C> r(v.size() * 2, {});
-      auto p = r.data();
-      for (auto i = v.data(), last = i + v.size(); i < last;) {
-        auto c = *i++;
-        if (c < 0x10000) *p++ = C(c);
-        else *p++ = C(0xd800 | (c - 0x10000) >> 10), *p++ = C(0xdc00_u2 | ((c - 0x10000) & 0x3ff));
-      }
-      r.resize(p - r.data());
-      return r;
-    }
-  }
-};
-
-/// formats the arguments
-inline constexpr auto format = []<typename... Ts>(
-  str_view fmt, Ts&&... as) { return std::vformat(fmt, std::make_format_args(as...)); };
-
-/// formats the arguments
-inline constexpr auto wformat = []<typename... Ts>(
-  wstr_view fmt, Ts&&... as) { return std::vformat(fmt, std::make_wformat_args(as...)); };
-
-/// formats the arguments and writes to the output stream
-inline constexpr auto print = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
-  if constexpr (sizeof...(Ts) == 0) {
-    if constexpr (stringable<T, char>) std::cout << str_view(a);
-    else if constexpr (requires { std::cout << a; }) std::cout << a;
-    else always_false<T>;
-  } else if constexpr (stringable<T, char>) {
-    std::cout << std::vformat(str_view(a), std::make_format_args(as...));
-  } else always_false<T>;
-};
-
-/// formats the arguments and writes to the output stream
-inline constexpr auto wprint = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
-  if constexpr (sizeof...(Ts) == 0) {
-    if constexpr (stringable<T, wchar>) std::wcout << wstr_view(a);
-    else if constexpr (requires { std::wcout << a; }) std::wcout << a;
-    else always_false<T>;
-  } else if constexpr (stringable<T, wchar>) {
-    std::wcout << std::vformat(wstr_view(a), std::make_wformat_args(as...));
-  } else always_false<T>;
-};
-
-/// writes to the output stream with a newline
-inline constexpr auto println = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
-  if constexpr (sizeof...(Ts) == 0) {
-    if constexpr (stringable<T, char>) std::cout << a << std::endl;
-    else if constexpr (requires { std::cout << a; }) std::cout << a << std::endl;
-    else always_false<T>;
-  } else if constexpr (stringable<T, char>) {
-    std::cout << std::vformat(str_view(a), std::make_format_args(as...)) << std::endl;
-  } else always_false<T>;
-};
-
-/// writes to the output stream with a newline
-inline constexpr auto wprintln = []<typename T, typename... Ts>(T&& a, Ts&&... as) {
-  if constexpr (sizeof...(Ts) == 0) {
-    if constexpr (stringable<T, wchar>) std::wcout << a << std::endl;
-    else if constexpr (requires { std::wcout << a; }) std::wcout << a << std::endl;
-    else always_false<T>;
-  } else if constexpr (stringable<T, wchar>) {
-    std::wcout << std::vformat(wstr_view(a), std::make_wformat_args(as...)) << std::endl;
-  } else always_false<T>;
-};
-
-/// confirms whether the character is a digit; `0-9`
-inline constexpr auto is_digit = []<char_type C>(
-  const C c) noexcept { return uintcast(c ^ C('0')) < 10; };
-
-/// confirms whether the character is a blank; `space` or `tab`
-inline constexpr auto is_blank = []<char_type C>(
-  const C c) noexcept { return c == C(' ') || c == C('\t'); };
-
-/// converts the string
-template<typename T> constexpr auto from_string = [](
-  auto&& s) { static_assert(always_false<T>, "unsupported type"); };
-
-/// converts the string to uint-type
-template<uint_type UintType> constexpr auto from_string<UintType> = []<stringable S>(S&& s) noexcept {
-  using C = iter_value<S>;
-  string_view<C> sv(static_cast<S&&>(s));
-  const C* p = sv.data(), *const q = p + sv.size();
-  if (p == q) return UintType{};
-  uint v = uintcast(*p) ^ 0x30u;
-  if (v >= 10) return UintType{};
-  while (++p != q) {
-    const auto c = uintcast(*p) ^ 0x30u;
-    if (c < 10) v = v * 10 + c;
-    else break;
-  }
-  if constexpr (same_as<S, string_view<C>&>) s = string_view<C>(p, q - p);
-  return static_cast<UintType>(v);
-};
-
-/// converts the string to int-type
-template<int_type IntType> constexpr auto from_string<IntType> = []<stringable S>(S&& s) noexcept {
-  using C = iter_value<S>;
-  string_view<C> sv(static_cast<S&&>(s));
-  const C* p = sv.data(), *const q = p + sv.size();
-  if (p == q) return IntType{};
-  bool neg{};
-  uint v = uintcast(*p);
-  switch (v) {
-  case uint('-'): neg = true; [[fallthrough]];
-  case uint('+'): if (++p == q) return IntType{}; v = uintcast(*p); break;
-  }
-  v ^= uint('0');
-  if (v >= 10) return IntType{};
-  while (++p != q) {
-    const auto c = uintcast(*p) ^ 0x30u;
-    if (c < 10) v = v * 10 + c;
-    else break;
-  }
-  if constexpr (same_as<S, string_view<C>&>) s = string_view<C>(p, q - p);
-  return neg ? -static_cast<IntType>(v) : static_cast<IntType>(v);
-};
-
-/// converts the string to float-type
-template<float_type FloatType> constexpr auto from_string<FloatType> = []<stringable S>(S&& s) noexcept {
-  using C = iter_value<S>;
-  string_view<C> sv(static_cast<S&&>(s));
-  const C* p = sv.data(), *const q = p + sv.size();
-  if (p == q) return FloatType{};
-  bool neg{}; int dot{}; uint v = uintcast(*p);
-  switch (v) {
-  case uint('-'): neg = true; [[fallthrough]];
-  case uint('+'): if (++p == q) return FloatType{}; v = uintcast(*p); break;
-  }
-  v ^= uint('0');
-  if (v >= 10) return FloatType{};
-  while (++p != q) {
-    auto c = uintcast(*p) ^ 0x30u;
-    if (c < 10) { v = v * 10 + c; continue; }
-    else if (c == uint('.' ^ '0')) {
-      if (++p == q) { --p; break; }
-      c = uintcast(*p) ^ 0x30u;
-      if (c >= 10) { --p; break; }
-      v = v * 10 + c, ++dot;
-      while (++p != q) {
-        c = uintcast(*p) ^ 0x30u;
-        if (c < 10) { v = v * 10 + c, ++dot; continue; }
-        else if (c == uint('e' ^ '0') || c == uint('E' ^ '0')) {
-          if (++p == q) { --p; break; }
-          bool neg2{}; uint v2 = uintcast(*p);
-          switch (v2) {
-          case uint('-'): neg2 = true; [[fallthrough]];
-          case uint('+'): if (++p == q) { --p; break; } v2 = uintcast(*p); break;
-          }
-          v2 ^= uint('0');
-          if (v2 >= 10) { --p; break; }
-          while (++p != q) {
-            c = uintcast(*p) ^ 0x30u;
-            if (c < 10) { v2 = v2 * 10 + c; continue; }
-            break;
-          }
-          neg2 ? dot += static_cast<int>(v2) : dot -= static_cast<int>(v2);
-        }
-        break;
-      }
-      if constexpr (same_as<S, string_view<C>&>) s = string_view<C>(p, q - p);
-      auto w = neg ? -static_cast<FloatType>(v) : static_cast<FloatType>(v);
-      v = 1, neg = dot < 0;
-      for (; dot > 0; --dot) v *= 10;
-      for (; dot < 0; ++dot) v *= 10;
-      return neg ? w * v : w / v;
-    }
-    break;
-  }
-  if constexpr (same_as<S, string_view<C>&>) s = string_view<C>(p, q - p);
-  return neg ? -static_cast<FloatType>(v) : static_cast<FloatType>(v);
-};
-
-/// converts `bool` to string
-template<char_type C> constexpr auto to_string(const is_bool auto b) noexcept {
-  constexpr C t[] = {C('t'), C('r'), C('u'), C('e'), C('\0')};
-  constexpr C f[] = {C('f'), C('a'), C('l'), C('s'), C('e'), C('\0')};
-  return b ? string<C>(t) : string<C>(f);
-}
-}
-#pragma endregion // ------------------------------------------------------------------------------------------ [string]
-
-#pragma region [none] --------------------------------------------------------------------------------------------------
-namespace yw {
-
-/// structure to represent a null value
-struct none {
-  constexpr none() noexcept = default;
-  constexpr none(auto&&...) noexcept {}
-  constexpr none& operator=(auto&&) noexcept { return *this; }
-  constexpr operator bool() const noexcept { return false; }
-  friend constexpr bool operator==(none, none) noexcept { return false; }
-  friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
-  friend constexpr none operator+(none) noexcept { return {}; }
-  friend constexpr none operator-(none) noexcept { return {}; }
-  friend constexpr none operator+(none, none) noexcept { return {}; }
-  friend constexpr none operator-(none, none) noexcept { return {}; }
-  friend constexpr none operator*(none, none) noexcept { return {}; }
-  friend constexpr none operator/(none, none) noexcept { return {}; }
-  constexpr none& operator+=(none) noexcept { return *this; }
-  constexpr none& operator-=(none) noexcept { return *this; }
-  constexpr none& operator*=(none) noexcept { return *this; }
-  constexpr none& operator/=(none) noexcept { return *this; }
-
-  /// converts to string
-  template<char_type C> constexpr string_view<C> to_string() const {
-    if constexpr (same_as<C, char>) return "none";
-    else if constexpr (same_as<C, wchar>) return L"none";
-    else if constexpr (same_as<C, char8_t>) return u8"none";
-    else if constexpr (same_as<C, char16_t>) return u"none";
-    else return U"none";
-  }
-
-  /// output stream operator
-  template<char_type C, typename Tr> friend auto& operator<<(
-    std::basic_ostream<C, Tr>& os, none) { return os << to_string<C>(); }
-};
-
-/// checks if the type is `none`
-template<typename T> concept is_none = same_as<remove_cv<T>, none>;
-
-/// converts `none` to string
-template<char_type C> constexpr auto to_string(
-  const is_none auto n) noexcept { return n.to_string<C>(); }
-}
-namespace std {
-template<typename T> struct common_type<T, yw::none> : type_identity<yw::none> {};
-template<typename T> struct common_type<yw::none, T> : type_identity<yw::none> {};
-template<typename C> struct formatter<yw::none, C> : formatter<basic_string_view<C>, C> {
-  auto format(const yw::none n, auto& ctx) {
-    return formatter<basic_string_view<C>, C>::format(n.to_string<C>(), ctx); } };
-}
-#pragma endregion // -------------------------------------------------------------------------------------------- [none]
-
-#pragma region [source] ------------------------------------------------------------------------------------------------
-namespace yw {
-
-/// structure to represent the source location
-struct source {
-  const str_view file, func;
-  const uint line, column;
-  source(const char*) = delete;
-  constexpr source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
-                   uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
-    : file(File), func(Func), line(Line), column(Column) {}
-
-  /// converts to string
-  template<char_type C> constexpr string<C> to_string() const {
-    uint n_file = file.size(), n_func = func.size();
-    C temp[32];
-    C* p = yw::end(temp);
-    *--p = C(':'), *--p = C(')');
-    for (uint i = column; i; i /= 10) *--p = C(i % 10 ^ 0x30);
-    *--p = C(',');
-    for (uint i = line; i; i /= 10) *--p = C(i % 10 ^ 0x30);
-    *--p = C('(');
-    auto n = static_cast<uint>(32 - (p - temp));
-    string<C> s(n_file + n_func + n, C{});
-    std::memcpy(std::memcpy(std::memcpy(s.data(), file.data(), n_file), p, n), func.data(), n_func);
-    return s;
-  }
-
-  /// converts to string
-  constexpr str to_string() const { return to_string<char>(); }
-
-  /// output stream operator
-  template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
-    return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
-  }
-};
-}
-namespace std {
-template<typename C> struct formatter<yw::source, C> : formatter<basic_string<C>, C> {
-  auto format(const yw::source s, auto& ctx) const {
-    return formatter<basic_string<C>, C>::format(s.to_string<C>(), ctx); } };
-}
-#pragma endregion // ------------------------------------------------------------------------------------------ [source]
-
-#pragma region [date, clock, time] -------------------------------------------------------------------------------------
-namespace yw {
-
-namespace _ {
-inline auto get_zoned_time() {
-  namespace ch = std::chrono;
-  return ch::zoned_time(ch::current_zone(), ch::system_clock::now()); }
-}
-
-/// structure to represent a date
-struct date {
-
-  /// year of the date
-  int year{};
-
-  /// month of the date
-  int month{};
-
-  /// day of the date
-  int day{};
-
-  /// default constructor; obtains the current date
-  date() : date(_::get_zoned_time().get_local_time()) {}
-
-  /// constructor with year, month, and day
-  date(numeric auto&& Year, numeric auto&& Month, numeric auto&& Day) noexcept
-    : year(int(Year)), month(int(Month)), day(int(Day)) {}
-
-  /// constructor from a `std::chrono::time_point`
-  template<typename Clock, typename Duration>
-  date(const std::chrono::time_point<Clock, Duration>& tp) {
-    const auto ymd = std::chrono::year_month_day(std::chrono::floor<std::chrono::days>(tp));
-    year = int(ymd.year()), month = int(uint4(ymd.month())), day = int(uint4(ymd.day()));
-  }
-
-  /// returns the formatted string; `YYYY-MM-DD`
-  template<char_type C> string<C> to_string() const {
-    string<C> s(10, {});
-    if constexpr (sizeof(C) == 4) {
-      auto t = std::format("{:04d}-{:02d}-{:02d}", year, month, day);
-      std::ranges::copy(t, s.data());
-    } else if constexpr (sizeof(C) == 1) std::format_to(s.data(), "{:04d}-{:02d}-{:02d}", year, month, day);
-    else if constexpr (sizeof(C) == 2) std::format_to(s.data(), L"{:04d}-{:02d}-{:02d}", year, month, day);
-    return s;
-  }
-
-  /// returns the formatted string; `YYYY-MM-DD`
-  string<char> to_string() const { return to_string<char>(); }
-
-  /// output stream operator
-  template<typename C, typename Tr> friend auto& operator<<(
-    std::basic_ostream<C, Tr>& os, const date& d) { return os << d.to_string<C>(); }
-};
-
-/// clock
-struct clock {
-
-  /// hour of the clock
-  int hour{};
-
-  /// minute of the clock
-  int minute{};
-
-  /// second of the clock
-  int second{};
-
-  /// default constructor; obtains the current time
-  clock() : clock(_::get_zoned_time().get_local_time()) {}
-
-  /// constructor with hour, minute, and second
-  clock(numeric auto&& Hour, numeric auto&& Minute, numeric auto&& Second) noexcept
-    : hour(int(Hour)), minute(int(Minute)), second(int(Second)) {}
-
-  /// constructor from a `std::time_point`
-  template<typename Clock, typename Duration>
-  clock(const std::chrono::time_point<Clock, Duration>& tp) {
-    namespace ch = std::chrono;
-    const ch::hh_mm_ss hms(ch::floor<ch::seconds>(tp - ch::floor<ch::days>(tp)));
-    hour = int(hms.hours().count());
-    minute = int(hms.minutes().count());
-    second = int(hms.seconds().count());
-  }
-
-  /// returns the formatted string; `HH:MM:SS`
-  template<char_type C> string<C> to_string() const {
-    string<C> s(8, {});
-    if constexpr (sizeof(C) == 4) {
-      auto t = std::format("{:02d}:{:02d}:{:02d}", hour, minute, second);
-      std::ranges::copy(t, s.data());
-    } else if constexpr (sizeof(C) == 1) std::format_to(s.data(), "{:02d}:{:02d}:{:02d}", hour, minute, second);
-    else if constexpr (sizeof(C) == 2) std::format_to(s.data(), L"{:02d}:{:02d}:{:02d}", hour, minute, second);
-    return s;
-  }
-
-  /// returns the formatted string; `HH:MM:SS`
-  string<char> to_string() const { return to_string<char>(); }
-
-  /// output stream operator
-  template<typename C, typename Tr> friend auto& operator<<(
-    std::basic_ostream<C, Tr>& os, const clock& c) { return os << c.to_string<C>(); }
-};
-
-/// date and clock
-struct time {
-
-  /// format string for `std::format`; `YYYY-MM-DD HH:MM:SS`
-  template<char_type C> static constexpr C format[] = {
-    C('{'), C(':'), C('0'), C('4'), C('d'), C('}'), C('-'),
-    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C('-'),
-    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(' '),
-    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(':'),
-    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(':'),
-    C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C('\0')};
-
-  /// date of the time
-  yw::date date;
-
-  /// clock of the time
-  yw::clock clock;
-
-  /// default constructor; obtains the current date and time
-  time() : time(_::get_zoned_time().get_local_time()) {}
-
-  /// constructor with date and clock
-  time(const yw::date& Date, const yw::clock& Clock) noexcept : date(Date), clock(Clock) {}
-
-  /// constructor from a `time_point`
-  template<typename Clock, typename Duration>
-  time(const std::chrono::time_point<Clock, Duration>& tp) : date(tp), clock(tp) {}
-
-  /// conversion operator to `yw::date`
-  operator yw::date() const { return date; }
-
-  /// conversion operator to `yw::clock`
-  operator yw::clock() const { return clock; }
-
-  /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
-  template<char_type C> string<C> to_string() const {
-    const auto& d = date;
-    const auto& c = clock;
-    string<C> s(19, {});
-    if constexpr (sizeof(C) == 4) {
-      auto t = std::format(format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
-      std::ranges::copy(t, s.data());
-    } else if constexpr (sizeof(C) == 1)
-      std::format_to(s.data(), format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
-    else if constexpr (sizeof(C) == 2)
-      std::format_to(s.data(), format<wchar>, d.year, d.month, d.day, c.hour, c.minute, c.second);
-    return s;
-  }
-
-  /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
-  string<char> to_string() const { return to_string<char>(); }
-
-  /// output stream operator
-  template<typename C, typename Tr> friend auto& operator<<(
-    std::basic_ostream<C, Tr>& os, const time& t) { return os << t.to_string<C>(); }
-};
-
-/// current time caster
-inline constexpr caster now{[] { return time{}; }};
-}
-namespace std {
-template<typename C> struct formatter<yw::date, C> : formatter<basic_string<C>, C> {
-  auto format(const yw::date& d, auto& ctx) const {
-    return formatter<basic_string<C>, C>::format(d.to_string<C>(), ctx); } };
-template<typename C> struct formatter<yw::clock, C> : formatter<basic_string<C>, C> {
-  auto format(const yw::clock& c, auto& ctx) const {
-    return formatter<basic_string<C>, C>::format(c.to_string<C>(), ctx); } };
-template<typename C> struct formatter<yw::time, C> : formatter<basic_string<C>, C> {
-  auto format(const yw::time& t, auto& ctx) const {
-    return formatter<basic_string<C>, C>::format(t.to_string<C>(), ctx); } };
-}
-#pragma endregion // ------------------------------------------------------------------------------- [date, clock, time]
-
-#pragma region [file] --------------------------------------------------------------------------------------------------
-namespace yw::file {
-
-/// `std::filesystem::path`
-using path = std::filesystem::path;
-
-/// confirms whether the path represents any file system entity
-inline bool exists(const path& Path) noexcept {
-  std::error_code ec;
-  auto s = std::filesystem::status(Path, ec);
-  if (ec) return false;
-  return std::filesystem::exists(s);
-}
-
-/// confirms whether the path represents a regular file
-inline bool is_file(const path& Path) noexcept {
-  std::error_code ec;
-  auto s = std::filesystem::status(Path, ec);
-  if (ec) return false;
-  return std::filesystem::is_regular_file(s);
-}
-
-/// confirms whether the path represents a directory
-inline bool is_dir(const path& Path) noexcept {
-  std::error_code ec;
-  auto s = std::filesystem::status(Path, ec);
-  if (ec) return false;
-  return std::filesystem::is_directory(s);
-}
-
-/// confirms whether the path represents an empty file system entity
-inline bool is_empty(const path& Path) noexcept {
-  std::error_code ec;
-  return std::filesystem::is_empty(Path, ec);
-}
-
-/// obtains the size of the file; `0` if failed
-inline uint size(const path& Path) noexcept {
-  if (uint n; std::filesystem::_File_size(Path, n) == __std_win_error::_Success) return n;
-  else return 0;
-}
-
-/// renames the file system entity
-inline bool rename(const path& Old, const path& New) noexcept {
-  std::error_code ec;
-  std::filesystem::rename(Old, New, ec);
-  return !ec;
-}
-
-/// copies the file system entity
-inline bool copy(const path& From, const path& To) noexcept {
-  std::error_code ec;
-  std::filesystem::copy(From, To, ec);
-  return !ec;
-}
-
-/// removes the file
-inline bool remove(const path& Path, const bool Recursive = false) noexcept {
-  std::error_code ec;
-  if (Recursive) std::filesystem::remove_all(Path, ec);
-  else std::filesystem::remove(Path, ec);
-  return !ec;
-}
-
-/// creates a directory
-inline bool create_dir(const path& Path, const bool Recursive = false) noexcept {
-  std::error_code ec;
-  if (Recursive) std::filesystem::create_directories(Path, ec);
-  else std::filesystem::create_directory(Path, ec);
-  return !ec;
-}
-
-/// creates an empty regular file
-inline bool write(const path& Path) noexcept {
-  try {
-    std::ofstream ofs(Path, std::ios::binary);
-    return ofs.is_open();
-  } catch (...) { return false; }
-}
-
-/// creates a regular file and writes data
-inline bool write(const path& Path, void* Data, uint Size) noexcept {
-  try {
-    std::ofstream ofs(Path, std::ios::binary);
-    if (!ofs.is_open()) return false;
-    ofs.write(static_cast<char*>(Data), Size);
-    return true;
-  } catch (...) { return false; }
-}
-
-/// creates a regular file and writes data
-inline bool write(const path& Path, std::ranges::contiguous_range auto&& Data) noexcept {
-  constexpr auto m = sizeof(iter_value<decltype(Data)>);
-  return file::write(Path, std::ranges::data(Data), m * std::ranges::size(Data));
-}
-
-/// reads the file as UTF-8 text
-inline string<char> read(const path& Path) noexcept {
-  try {
-    std::ifstream ifs(Path, std::ios::binary);
-    if (!ifs.is_open()) return {};
-    return string<char>(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-  } catch (...) { return {}; }
-}
-
-/// reads the file to the buffer
-inline bool read(const path& Path, void* Buffer, uint Size) noexcept {
-  try {
-    std::ifstream ifs(Path, std::ios::binary);
-    if (!ifs.is_open()) return false;
-    ifs.read(static_cast<char*>(Buffer), Size);
-    return true;
-  } catch (...) { return false; }
-}
-
-/// reads the file to the buffer
-inline bool read(const path& Path, std::ranges::contiguous_range auto&& Buffer) noexcept
-  requires convertible_to<decltype(std::ranges::data(Buffer)), void*> {
-  constexpr auto m = sizeof(iter_value<decltype(Buffer)>);
-  return file::read(Path, std::ranges::data(Buffer), m * std::ranges::size(Buffer));
-}
-}
-#pragma endregion // -------------------------------------------------------------------------------------------- [file]
-
-#pragma region [logger] ------------------------------------------------------------------------------------------------
-namespace yw {
-
-/// class to log messages and write them to a file when destructed
-class logger {
-  string<char> text{};
-public:
-
-  /// structure to represent a log level
-  struct level_t {
-    std::string_view name;
-    int value;
-    friend constexpr bool operator==(const level_t& l, const level_t& r) noexcept { return l.value == r.value; }
-    friend constexpr std::strong_ordering operator<=>(const level_t& l, const level_t& r) noexcept { return l.value <=> r.value; }
-  };
-
-  /// predefined log level; all(0)
-  static constexpr level_t all{"all", 0};
-
-  /// predefined log level; debug(10)
-  static constexpr level_t debug{"debug", 10};
-
-  /// predefined log level; info(20)
-  static constexpr level_t info{"info", 20};
-
-  /// predefined log level; warn(30)
-  static constexpr level_t warn{"warn", 30};
-
-  /// predefined log level; error(40)
-  static constexpr level_t error{"error", 40};
-
-  /// predefined log level; fatal(50)
-  static constexpr level_t fatal{"fatal", 50};
-
-  /// file path to write log messages when destructed
-  std::filesystem::path path{};
-
-  /// current log level
-  level_t level{info};
-
-  /// flag whether to stream log messages to the console
-  bool console{true};
-
-  /// default constructor
-  logger() noexcept = default;
-
-  /// constructor with a file path (, log level, and console flag)
-  logger(const std::filesystem::path& Path, level_t Level = info, bool Console = true) noexcept
-    : path(Path), level(Level), console(Console) {}
-
-  /// destructor; writes log messages to the file
-  ~logger() noexcept {
-    if (text.empty() || path.empty()) return;
-    try {
-      if (!file::exists(path)) throw std::runtime_error("file not found");
-      else if (!file::write(path, text)) throw std::runtime_error("failed to write file");
-    } catch (const std::exception& e) { std::cerr << "logger::~logger() failed: " << e.what() << std::endl;
-    } catch (...) { std::cerr << "logger::~logger() failed" << std::endl; }
-  }
-
-  /// appends text to the log; `{time} [{level}] {text}`
-  void operator()(level_t Level, stringable auto&& Text) noexcept {
-    if (level < Level) return;
-    try {
-      str s;
-      if constexpr (same_as<iter_value<decltype(Text)>, char>)
-        s = format("{} [{}] {}\n", now(), Level.name, str_view(Text));
-      else s = format("{} [{}] {}\n", now(), Level.name, cvt<char>(Text));
-      if (console) std::cout << s;
-      text += s;
-    } catch (const std::exception& e) { std::cerr << "logger::operator() failed: " << e.what() << std::endl;
-    } catch (...) { std::cerr << "logger::operator() failed" << std::endl; }
-  }
-
-  /// appends text to the log; `{time} [{level}] {text}`
-  void operator()(level_t Level, stringable auto&& Text, const source& _) noexcept {
-    if (level < Level) return;
-    try {
-      str s;
-      if constexpr (same_as<iter_value<decltype(Text)>, char>)
-        s = format("{} [{}] {}\n", now(), Level.name, str_view(Text));
-      else s = format("{} [{}] {}\n", now(), Level.name, cvt<char>(Text));
-      if (console) std::cout << _ << std::endl << s;
-      text += s;
-    } catch (const std::exception& e) { std::cerr << "logger::operator() failed: " << e.what() << std::endl;
-    } catch (...) { std::cerr << "logger::operator() failed" << std::endl; }
-  }
-
-};
-
-}
-#pragma endregion // ------------------------------------------------------------------------------------------ [logger]
-
-#pragma region [wmessage] ----------------------------------------------------------------------------------------------
-namespace yw {
-
-/// wimdow message enumerator
-enum class wmessage : uint4 {
-  wm_null = 0x0000,
-  wm_create = 0x0001,
-  wm_destroy = 0x0002,
-  wm_move = 0x0003,
-  wm_size = 0x0005,
-  wm_activate = 0x0006,
-  wm_setfocus = 0x0007,
-  wm_killfocus = 0x0008,
-  wm_enable = 0x000A,
-  wm_setredraw = 0x000B,
-  wm_settext = 0x000C,
-  wm_gettext = 0x000D,
-  wm_gettextlength = 0x000E,
-  wm_paint = 0x000F,
-  wm_close = 0x0010,
-  wm_queryendsession = 0x0011,
-  wm_queryopen = 0x0013,
-  wm_endsession = 0x0016,
-  wm_quit = 0x0012,
-  wm_erasebkgnd = 0x0014,
-  wm_syscolorchange = 0x0015,
-  wm_showwindow = 0x0018,
-  wm_wininichange = 0x001A,
-  wm_settingchange = wm_wininichange,
-  wm_devmodechange = 0x001B,
-  wm_activateapp = 0x001C,
-  wm_fontchange = 0x001D,
-  wm_timechange = 0x001E,
-  wm_cancelmode = 0x001F,
-  wm_setcursor = 0x0020,
-  wm_mouseactivate = 0x0021,
-  wm_childactivate = 0x0022,
-  wm_queuesync = 0x0023,
-  wm_getminmaxinfo = 0x0024,
-  wm_painticon = 0x0026,
-  wm_iconerasebkgnd = 0x0027,
-  wm_nextdlgctl = 0x0028,
-  wm_spoolerstatus = 0x002A,
-  wm_drawitem = 0x002B,
-  wm_measureitem = 0x002C,
-  wm_deleteitem = 0x002D,
-  wm_vkeytoitem = 0x002E,
-  wm_chartoitem = 0x002F,
-  wm_setfont = 0x0030,
-  wm_getfont = 0x0031,
-  wm_sethotkey = 0x0032,
-  wm_gethotkey = 0x0033,
-  wm_querydragicon = 0x0037,
-  wm_compareitem = 0x0039,
-  wm_getobject = 0x003D,
-  wm_compacting = 0x0041,
-  wm_commnotify = 0x0044,
-  wm_windowposchanging = 0x0046,
-  wm_windowposchanged = 0x0047,
-  wm_power = 0x0048,
-  wm_copydata = 0x004A,
-  wm_canceljournal = 0x004B,
-  wm_notify = 0x004E,
-  wm_inputlangchangerequest = 0x0050,
-  wm_inputlangchange = 0x0051,
-  wm_tcard = 0x0052,
-  wm_help = 0x0053,
-  wm_userchanged = 0x0054,
-  wm_notifyformat = 0x0055,
-  wm_contextmenu = 0x007B,
-  wm_stylechanging = 0x007C,
-  wm_stylechanged = 0x007D,
-  wm_displaychange = 0x007E,
-  wm_geticon = 0x007F,
-  wm_seticon = 0x0080,
-  wm_nccreate = 0x0081,
-  wm_ncdestroy = 0x0082,
-  wm_nccalcsize = 0x0083,
-  wm_nchittest = 0x0084,
-  wm_ncpaint = 0x0085,
-  wm_ncactivate = 0x0086,
-  wm_getdlgcode = 0x0087,
-  wm_syncpaint = 0x0088,
-  wm_ncmousemove = 0x00A0,
-  wm_nclbuttondown = 0x00A1,
-  wm_nclbuttonup = 0x00A2,
-  wm_nclbuttondblclk = 0x00A3,
-  wm_ncrbuttondown = 0x00A4,
-  wm_ncrbuttonup = 0x00A5,
-  wm_ncrbuttondblclk = 0x00A6,
-  wm_ncmbuttondown = 0x00A7,
-  wm_ncmbuttonup = 0x00A8,
-  wm_ncmbuttondblclk = 0x00A9,
-  wm_ncxbuttondown = 0x00AB,
-  wm_ncxbuttonup = 0x00AC,
-  wm_ncxbuttondblclk = 0x00AD,
-  wm_input_device_change = 0x00FE,
-  wm_input = 0x00FF,
-  wm_keyfirst = 0x0100,
-  wm_keydown = 0x0100,
-  wm_keyup = 0x0101,
-  wm_char = 0x0102,
-  wm_deadchar = 0x0103,
-  wm_syskeydown = 0x0104,
-  wm_syskeyup = 0x0105,
-  wm_syschar = 0x0106,
-  wm_sysdeadchar = 0x0107,
-  wm_unichar = 0x0109,
-  wm_keylast = 0x0109,
-  wm_ime_startcomposition = 0x010D,
-  wm_ime_endcomposition = 0x010E,
-  wm_ime_composition = 0x010F,
-  wm_ime_keylast = 0x010F,
-  wm_initdialog = 0x0110,
-  wm_command = 0x0111,
-  wm_syscommand = 0x0112,
-  wm_timer = 0x0113,
-  wm_hscroll = 0x0114,
-  wm_vscroll = 0x0115,
-  wm_initmenu = 0x0116,
-  wm_initmenupopup = 0x0117,
-  wm_gesture = 0x0119,
-  wm_gesturenotify = 0x011A,
-  wm_menuselect = 0x011F,
-  wm_menuchar = 0x0120,
-  wm_enteridle = 0x0121,
-  wm_menurbuttonup = 0x0122,
-  wm_menudrag = 0x0123,
-  wm_menugetobject = 0x0124,
-  wm_uninitmenupopup = 0x0125,
-  wm_menucommand = 0x0126,
-  wm_changeuistate = 0x0127,
-  wm_updateuistate = 0x0128,
-  wm_queryuistate = 0x0129,
-  wm_ctlcolormsgbox = 0x0132,
-  wm_ctlcoloredit = 0x0133,
-  wm_ctlcolorlistbox = 0x0134,
-  wm_ctlcolorbtn = 0x0135,
-  wm_ctlcolordlg = 0x0136,
-  wm_ctlcolorscrollbar = 0x0137,
-  wm_ctlcolorstatic = 0x0138,
-  mn_gethmenu = 0x01E1,
-  wm_mousefirst = 0x0200,
-  wm_mousemove = 0x0200,
-  wm_lbuttondown = 0x0201,
-  wm_lbuttonup = 0x0202,
-  wm_lbuttondblclk = 0x0203,
-  wm_rbuttondown = 0x0204,
-  wm_rbuttonup = 0x0205,
-  wm_rbuttondblclk = 0x0206,
-  wm_mbuttondown = 0x0207,
-  wm_mbuttonup = 0x0208,
-  wm_mbuttondblclk = 0x0209,
-  wm_mousewheel = 0x020A,
-  wm_xbuttondown = 0x020B,
-  wm_xbuttonup = 0x020C,
-  wm_xbuttondblclk = 0x020D,
-  wm_mousehwheel = 0x020E,
-  wm_mouselast = 0x020E,
-  wm_parentnotify = 0x0210,
-  wm_entermenuloop = 0x0211,
-  wm_exitmenuloop = 0x0212,
-  wm_nextmenu = 0x0213,
-  wm_sizing = 0x0214,
-  wm_capturechanged = 0x0215,
-  wm_moving = 0x0216,
-  wm_powerbroadcast = 0x0218,
-  wm_devicechange = 0x0219,
-  wm_mdicreate = 0x0220,
-  wm_mdidestroy = 0x0221,
-  wm_mdiactivate = 0x0222,
-  wm_mdirestore = 0x0223,
-  wm_mdinext = 0x0224,
-  wm_mdimaximize = 0x0225,
-  wm_mditile = 0x0226,
-  wm_mdicascade = 0x0227,
-  wm_mdiiconarrange = 0x0228,
-  wm_mdigetactive = 0x0229,
-  wm_mdisetmenu = 0x0230,
-  wm_entersizemove = 0x0231,
-  wm_exitsizemove = 0x0232,
-  wm_dropfiles = 0x0233,
-  wm_mdirefreshmenu = 0x0234,
-  wm_pointerdevicechange = 0x238,
-  wm_pointerdeviceinrange = 0x239,
-  wm_pointerdeviceoutofrange = 0x23A,
-  wm_touch = 0x0240,
-  wm_ncpointerupdate = 0x0241,
-  wm_ncpointerdown = 0x0242,
-  wm_ncpointerup = 0x0243,
-  wm_pointerupdate = 0x0245,
-  wm_pointerdown = 0x0246,
-  wm_pointerup = 0x0247,
-  wm_pointerenter = 0x0249,
-  wm_pointerleave = 0x024A,
-  wm_pointeractivate = 0x024B,
-  wm_pointercapturechanged = 0x024C,
-  wm_touchhittesting = 0x024D,
-  wm_pointerwheel = 0x024E,
-  wm_pointerhwheel = 0x024F,
-  dm_pointerhittest = 0x0250,
-  wm_pointerroutedto = 0x0251,
-  wm_pointerroutedaway = 0x0252,
-  wm_pointerroutedreleased = 0x0253,
-  wm_ime_setcontext = 0x0281,
-  wm_ime_notify = 0x0282,
-  wm_ime_control = 0x0283,
-  wm_ime_compositionfull = 0x0284,
-  wm_ime_select = 0x0285,
-  wm_ime_char = 0x0286,
-  wm_ime_request = 0x0288,
-  wm_ime_keydown = 0x0290,
-  wm_ime_keyup = 0x0291,
-  wm_mousehover = 0x02A1,
-  wm_mouseleave = 0x02A3,
-  wm_ncmousehover = 0x02A0,
-  wm_ncmouseleave = 0x02A2,
-  wm_wtssession_change = 0x02B1,
-  wm_tablet_first = 0x02c0,
-  wm_tablet_last = 0x02df,
-  wm_dpichanged = 0x02E0,
-  wm_dpichanged_beforeparent = 0x02E2,
-  wm_dpichanged_afterparent = 0x02E3,
-  wm_getdpiscaledsize = 0x02E4,
-  wm_cut = 0x0300,
-  wm_copy = 0x0301,
-  wm_paste = 0x0302,
-  wm_clear = 0x0303,
-  wm_undo = 0x0304,
-  wm_renderformat = 0x0305,
-  wm_renderallformats = 0x0306,
-  wm_destroyclipboard = 0x0307,
-  wm_drawclipboard = 0x0308,
-  wm_paintclipboard = 0x0309,
-  wm_vscrollclipboard = 0x030A,
-  wm_sizeclipboard = 0x030B,
-  wm_askcbformatname = 0x030C,
-  wm_changecbchain = 0x030D,
-  wm_hscrollclipboard = 0x030E,
-  wm_querynewpalette = 0x030F,
-  wm_paletteischanging = 0x0310,
-  wm_palettechanged = 0x0311,
-  wm_hotkey = 0x0312,
-  wm_print = 0x0317,
-  wm_printclient = 0x0318,
-  wm_appcommand = 0x0319,
-  wm_themechanged = 0x031A,
-  wm_clipboardupdate = 0x031D,
-  wm_dwmcompositionchanged = 0x031E,
-  wm_dwmncrenderingchanged = 0x031F,
-  wm_dwmcolorizationcolorchanged = 0x0320,
-  wm_dwmwindowmaximizedchange = 0x0321,
-  wm_dwmsendiconicthumbnail = 0x0323,
-  wm_dwmsendiconiclivepreviewbitmap = 0x0326,
-  wm_gettitlebarinfoex = 0x033F,
-  wm_handheldfirst = 0x0358,
-  wm_handheldlast = 0x035F,
-  wm_affirst = 0x0360,
-  wm_aflast = 0x037F,
-  wm_penwinfirst = 0x0380,
-  wm_penwinlast = 0x038F,
-  wm_app = 0x8000,
-  wm_user = 0x0400,
-};
-using enum wmessage;
-constexpr bool operator==(wmessage a, uint b) noexcept { return uint(a) == b; }
-constexpr bool operator==(uint a, wmessage b) noexcept { return a == uint(b); }
-constexpr auto operator<=>(wmessage a, uint b) noexcept { return uint(a) <=> b; }
-constexpr auto operator<=>(uint a, wmessage b) noexcept { return a <=> uint(b); }
-}
-#pragma endregion // ---------------------------------------------------------------------------------------- [wmessage]
-
-#pragma region [virtual_key] -------------------------------------------------------------------------------------------
-namespace yw {
-
-/// virtual key enumerator
-enum class virtual_key : uint4 {
-  vk_lbutton = 0x01,
-  vk_rbutton = 0x02,
-  vk_cancel = 0x03,
-  vk_mbutton = 0x04,
-  vk_xbutton1 = 0x05,
-  vk_xbutton2 = 0x06,
-  vk_back = 0x08,
-  vk_tab = 0x09,
-  vk_clear = 0x0C,
-  vk_return = 0x0D,
-  vk_shift = 0x10,
-  vk_control = 0x11,
-  vk_menu = 0x12,
-  vk_pause = 0x13,
-  vk_capital = 0x14,
-  vk_kana = 0x15,
-  vk_hangul = 0x15,
-  vk_junja = 0x17,
-  vk_final = 0x18,
-  vk_hanja = 0x19,
-  vk_kanji = 0x19,
-  vk_escape = 0x1B,
-  vk_convert = 0x1C,
-  vk_nonconvert = 0x1D,
-  vk_accept = 0x1E,
-  vk_modechange = 0x1F,
-  vk_space = 0x20,
-  vk_prior = 0x21,
-  vk_next = 0x22,
-  vk_end = 0x23,
-  vk_home = 0x24,
-  vk_left = 0x25,
-  vk_up = 0x26,
-  vk_right = 0x27,
-  vk_down = 0x28,
-  vk_select = 0x29,
-  vk_print = 0x2A,
-  vk_execute = 0x2B,
-  vk_snapshot = 0x2C,
-  vk_insert = 0x2D,
-  vk_delete = 0x2E,
-  vk_help = 0x2F,
-  vk_0 = 0x30,
-  vk_1 = 0x31,
-  vk_2 = 0x32,
-  vk_3 = 0x33,
-  vk_4 = 0x34,
-  vk_5 = 0x35,
-  vk_6 = 0x36,
-  vk_7 = 0x37,
-  vk_8 = 0x38,
-  vk_9 = 0x39,
-  vk_a = 0x41,
-  vk_b = 0x42,
-  vk_c = 0x43,
-  vk_d = 0x44,
-  vk_e = 0x45,
-  vk_f = 0x46,
-  vk_g = 0x47,
-  vk_h = 0x48,
-  vk_i = 0x49,
-  vk_j = 0x4A,
-  vk_k = 0x4B,
-  vk_l = 0x4C,
-  vk_m = 0x4D,
-  vk_n = 0x4E,
-  vk_o = 0x4F,
-  vk_p = 0x50,
-  vk_q = 0x51,
-  vk_r = 0x52,
-  vk_s = 0x53,
-  vk_t = 0x54,
-  vk_u = 0x55,
-  vk_v = 0x56,
-  vk_w = 0x57,
-  vk_x = 0x58,
-  vk_y = 0x59,
-  vk_z = 0x5A,
-  vk_lwin = 0x5B,
-  vk_rwin = 0x5C,
-  vk_apps = 0x5D,
-  vk_sleep = 0x5F,
-  vk_numpad0 = 0x60,
-  vk_numpad1 = 0x61,
-  vk_numpad2 = 0x62,
-  vk_numpad3 = 0x63,
-  vk_numpad4 = 0x64,
-  vk_numpad5 = 0x65,
-  vk_numpad6 = 0x66,
-  vk_numpad7 = 0x67,
-  vk_numpad8 = 0x68,
-  vk_numpad9 = 0x69,
-  vk_multiply = 0x6A,
-  vk_add = 0x6B,
-  vk_separator = 0x6C,
-  vk_subtract = 0x6D,
-  vk_decimal = 0x6E,
-  vk_divide = 0x6F,
-  vk_f1 = 0x70,
-  vk_f2 = 0x71,
-  vk_f3 = 0x72,
-  vk_f4 = 0x73,
-  vk_f5 = 0x74,
-  vk_f6 = 0x75,
-  vk_f7 = 0x76,
-  vk_f8 = 0x77,
-  vk_f9 = 0x78,
-  vk_f10 = 0x79,
-  vk_f11 = 0x7A,
-  vk_f12 = 0x7B,
-  vk_f13 = 0x7C,
-  vk_f14 = 0x7D,
-  vk_f15 = 0x7E,
-  vk_f16 = 0x7F,
-  vk_f17 = 0x80,
-  vk_f18 = 0x81,
-  vk_f19 = 0x82,
-  vk_f20 = 0x83,
-  vk_f21 = 0x84,
-  vk_f22 = 0x85,
-  vk_f23 = 0x86,
-  vk_f24 = 0x87,
-  vk_numlock = 0x90,
-  vk_scroll = 0x91,
-  vk_oem_nec_equal = 0x92,
-  vk_oem_fj_jisho = 0x92,
-  vk_oem_fj_masshou = 0x93,
-  vk_oem_fj_touroku = 0x94,
-  vk_oem_fj_loya = 0x95,
-  vk_oem_fj_roya = 0x96,
-  vk_lshift = 0xA0,
-  vk_rshift = 0xA1,
-  vk_lcontrol = 0xA2,
-  vk_rcontrol = 0xA3,
-  vk_lmenu = 0xA4,
-  vk_rmenu = 0xA5,
-  vk_browser_back = 0xA6,
-  vk_browser_forward = 0xA7,
-  vk_browser_refresh = 0xA8,
-  vk_browser_stop = 0xA9,
-  vk_browser_search = 0xAA,
-  vk_browser_favorites = 0xAB,
-  vk_browser_home = 0xAC,
-  vk_volume_mute = 0xAD,
-  vk_volume_down = 0xAE,
-  vk_volume_up = 0xAF,
-  vk_media_next_track = 0xB0,
-  vk_media_prev_track = 0xB1,
-  vk_media_stop = 0xB2,
-  vk_media_play_pause = 0xB3,
-  vk_launch_mail = 0xB4,
-  vk_launch_media_select = 0xB5,
-  vk_launch_app1 = 0xB6,
-  vk_launch_app2 = 0xB7,
-  vk_oem_1 = 0xBA,
-  vk_oem_plus = 0xBB,
-  vk_oem_comma = 0xBC,
-  vk_oem_minus = 0xBD,
-  vk_oem_period = 0xBE,
-  vk_oem_2 = 0xBF,
-  vk_oem_3 = 0xC0,
-  vk_oem_4 = 0xDB,
-  vk_oem_5 = 0xDC,
-  vk_oem_6 = 0xDD,
-  vk_oem_7 = 0xDE,
-  vk_oem_8 = 0xDF,
-  vk_oem_ax = 0xE1,
-  vk_oem_102 = 0xE2,
-  vk_icong = 0xE3,
-  vk_icoff = 0xE4,
-  vk_attn = 0xF6,
-  vk_crsel = 0xF7,
-  vk_exsel = 0xF8,
-  vk_ereof = 0xF9,
-  vk_play = 0xFA,
-  vk_zoom = 0xFB,
-  vk_noname = 0xFC,
-  vk_pa1 = 0xFD,
-  vk_oem_clear = 0xFE,
-};
-using enum virtual_key;
-constexpr bool operator==(virtual_key a, uint b) noexcept { return uint(a) == b; }
-constexpr bool operator==(uint a, virtual_key b) noexcept { return a == uint(b); }
-constexpr auto operator<=>(virtual_key a, uint b) noexcept { return uint(a) <=> b; }
-constexpr auto operator<=>(uint a, virtual_key b) noexcept { return a <=> uint(b); }
-}
-#pragma endregion // ------------------------------------------------------------------------------------- [virtual_key]
-
-#pragma region [wstyle] ------------------------------------------------------------------------------------------------
-namespace yw { // clang-format off
-
-/// window style enumerator
-enum class wstyle : uint {
-  ws_maximizebox      = 0x00010000,
-  ws_minimizebox      = 0x00020000,
-  ws_tabstop          = 0x00010000,
-  ws_group            = 0x00020000,
-  ws_thickframe       = 0x00040000,
-  ws_sizebox          = 0x00040000, // = ws_thickframe
-  ws_sysmenu          = 0x00080000,
-  ws_hscroll          = 0x00100000,
-  ws_vscroll          = 0x00200000,
-  ws_dlgframe         = 0x00400000,
-  ws_border           = 0x00800000,
-  ws_caption          = 0x00c00000, // = ws_border | ws_dlgframe,
-  ws_maximize         = 0x01000000,
-  ws_clipchildren     = 0x02000000,
-  ws_clipsiblings     = 0x04000000,
-  ws_disabled         = 0x08000000,
-  ws_visible          = 0x10000000,
-  ws_minimize         = 0x20000000,
-  ws_child            = 0x40000000,
-  ws_popup            = 0x80000000,
-  ws_overlapped       = 0x00000000,
-  ws_tiled            = 0x00000000, // = ws_overlapped
-  ws_iconic           = 0x20000000, // = ws_minimize
-  ws_childwindow      = 0x40000000, // = ws_child
-  ws_overlappedwindow = 0x00cf0000,
-  ws_popupwindow      = 0x80880000, // = ws_popup | ws_border | ws_sysmenu
-  ws_tiledwindow      = 0x00cf0000, // = ws_overlappedwindow
-
-  ws_ex_dlgsmodalframe      = 0x00000001ULL << 32,
-  ws_ex_noparentnotify      = 0x00000004ULL << 32,
-  ws_ex_topmost             = 0x00000008ULL << 32,
-  ws_ex_acceptfiles         = 0x00000010ULL << 32,
-  ws_ex_transparent         = 0x00000020ULL << 32,
-  ws_ex_mdichild            = 0x00000040ULL << 32,
-  ws_ex_toolwindow          = 0x00000080ULL << 32,
-  ws_ex_windowedge          = 0x00000100ULL << 32,
-  ws_ex_clientedge          = 0x00000200ULL << 32,
-  ws_ex_contexthelp         = 0x00000400ULL << 32,
-  ws_ex_right               = 0x00001000ULL << 32,
-  ws_ex_left                = 0x00000000ULL << 32,
-  ws_ex_rtlreading          = 0x00002000ULL << 32,
-  ws_ex_ltrreading          = 0x00000000ULL << 32,
-  ws_ex_leftscrollbar       = 0x00004000ULL << 32,
-  ws_ex_rightscrollbar      = 0x00000000ULL << 32,
-  ws_ex_controlparent       = 0x00010000ULL << 32,
-  ws_ex_staticedge          = 0x00020000ULL << 32,
-  ws_ex_appwindow           = 0x00040000ULL << 32,
-  ws_ex_overlappedwindow    = ws_ex_windowedge | ws_ex_clientedge,
-  ws_ex_palettewindow       = ws_ex_windowedge | ws_ex_toolwindow | ws_ex_topmost,
-  ws_ex_layered             = 0x00080000ULL << 32,
-  ws_ex_noinheritlayout     = 0x00100000ULL << 32,
-  ws_ex_noredirectionbitmap = 0x00200000ULL << 32,
-  ws_ex_layoutrtl           = 0x00400000ULL << 32,
-  ws_ex_composited          = 0x02000000ULL << 32,
-  ws_ex_noactivate          = 0x08000000ULL << 32,
-
-  bs_pushbutton      = 0x00000000,
-  bs_defpushbutton   = 0x00000001,
-  bs_checkbox        = 0x00000002,
-  bs_autocheckbox    = 0x00000003,
-  bs_radiobutton     = 0x00000004,
-  bs_3state          = 0x00000005,
-  bs_auto3state      = 0x00000006,
-  bs_groupbox        = 0x00000007,
-  bs_userbutton      = 0x00000008,
-  bs_autoradiobutton = 0x00000009,
-  bs_pushbox         = 0x0000000A,
-  bs_ownerdraw       = 0x0000000B,
-  bs_typemask        = 0x0000000F,
-  bs_lefttext        = 0x00000020,
-  bs_text            = 0x00000000,
-  bs_icon            = 0x00000040,
-  bs_bitmap          = 0x00000080,
-  bs_left            = 0x00000100,
-  bs_right           = 0x00000200,
-  bs_center          = 0x00000300,
-  bs_top             = 0x00000400,
-  bs_bottom          = 0x00000800,
-  bs_vcenter         = 0x00000C00,
-  bs_pushlike        = 0x00001000,
-  bs_multiline       = 0x00002000,
-  bs_notify          = 0x00004000,
-  bs_flat            = 0x00008000,
-  bs_rightbutton     = bs_lefttext,
-
-  es_left        = 0x0000,
-  es_center      = 0x0001,
-  es_right       = 0x0002,
-  es_multiline   = 0x0004,
-  es_uppercase   = 0x0008,
-  es_lowercase   = 0x0010,
-  es_password    = 0x0020,
-  es_autovscroll = 0x0040,
-  es_autohscroll = 0x0080,
-  es_nohidesel   = 0x0100,
-  es_oemconvert  = 0x0400,
-  es_readonly    = 0x0800,
-  es_wantreturn  = 0x1000,
-  es_number      = 0x2000,
-
-  ss_left            = 0x00000000,
-  ss_center          = 0x00000001,
-  ss_right           = 0x00000002,
-  ss_icon            = 0x00000003,
-  ss_blackrect       = 0x00000004,
-  ss_grayrect        = 0x00000005,
-  ss_whiterect       = 0x00000006,
-  ss_blackframe      = 0x00000007,
-  ss_grayframe       = 0x00000008,
-  ss_whiteframe      = 0x00000009,
-  ss_useritem        = 0x0000000A,
-  ss_simple          = 0x0000000B,
-  ss_leftnowrap      = 0x0000000C,
-  ss_ownerdraw       = 0x0000000D,
-  ss_bitmap          = 0x0000000E,
-  ss_enhmetafile     = 0x0000000F,
-  ss_etchedhorz      = 0x00000010,
-  ss_etchedvert      = 0x00000011,
-  ss_etchedframe     = 0x00000012,
-  ss_typemask        = 0x0000001F,
-  ss_realsizecontrol = 0x00000040,
-  ss_noprefix        = 0x00000080,
-  ss_notify          = 0x00000100,
-  ss_centerimage     = 0x00000200,
-  ss_rightjust       = 0x00000400,
-  ss_realsizeimage   = 0x00000800,
-  ss_sunken          = 0x00001000,
-  ss_editcontrol     = 0x00002000,
-  ss_endellipsis     = 0x00004000,
-  ss_patellipsis     = 0x00008000,
-  ss_wordellipsis    = 0x0000C000,
-  ss_ellipsis        = 0x0000C000,
-
-  lbs_notify            = 0x0001,
-  lbs_sort              = 0x0002,
-  lbs_noredraw          = 0x0004,
-  lbs_multiplesel       = 0x0008,
-  lbs_ownerdrawfixed    = 0x0010,
-  lbs_ownerdrawvariable = 0x0020,
-  lbs_hasstrings        = 0x0040,
-  lbs_usetabstops       = 0x0080,
-  lbs_nointegralheight  = 0x0100,
-  lbs_multicolumn       = 0x0200,
-  lbs_wantkeyboardinput = 0x0400,
-  lbs_extendedsel       = 0x0800,
-  lbs_disable           = 0x1000,
-  lbs_nodata            = 0x2000,
-  lbs_nosel             = 0x4000,
-  lbs_standard          = (lbs_notify | lbs_sort | ws_vscroll | ws_border),
-
-  cbs_simple                  = 0x0001,
-  cbs_dropdown                = 0x0002,
-  cbs_dropdownlist            = 0x0003,
-  cbs_ownerdrawfixed          = 0x0010,
-  cbs_ownerdrawvariable       = 0x0020,
-  cbs_autohscroll             = 0x0040,
-  cbs_oemconvert              = 0x0080,
-  cbs_sort                    = 0x0100,
-  cbs_hasstrings              = 0x0200,
-  cbs_nointegralheight        = 0x0400,
-  cbs_disablenoscroll         = 0x0800,
-  cbs_uppercase               = 0x2000,
-  cbs_lowercase               = 0x4000,
-  sbs_horz                    = 0x0000,
-  sbs_vert                    = 0x0001,
-  sbs_topalign                = 0x0002,
-  sbs_leftalign               = 0x0002,
-  sbs_bottomalign             = 0x0004,
-  sbs_rightalign              = 0x0004,
-  sbs_sizeboxtopleftalign     = 0x0002,
-  sbs_sizeboxbottomrightalign = 0x0004,
-  sbs_sizebox                 = 0x0008,
-  sbs_sizegrip                = 0x0010,
-};
-using enum wstyle;
-
-constexpr wstyle operator~(wstyle a) noexcept { return wstyle(~uint(a)); }
-constexpr wstyle operator|(wstyle a, wstyle b) noexcept { return wstyle(uint(a) | uint(b)); }
-constexpr wstyle operator&(wstyle a, wstyle b) noexcept { return wstyle(uint(a) & uint(b)); }
-constexpr wstyle operator^(wstyle a, wstyle b) noexcept { return wstyle(uint(a) ^ uint(b)); }
-constexpr wstyle& operator|=(wstyle& a, wstyle b) noexcept { return a = a | b; }
-constexpr wstyle& operator&=(wstyle& a, wstyle b) noexcept { return a = a & b; }
-constexpr wstyle& operator^=(wstyle& a, wstyle b) noexcept { return a = a ^ b; }
-} // clang-format on
-#pragma endregion // ------------------------------------------------------------------------------------------ [wstyle]
-
-#pragma region [window] ------------------------------------------------------------------------------------------------
-namespace yw {
-
-class window;
-
-namespace system {
-
-/// default window procedure
-int8 __stdcall wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp);
-
-/// instance handle
-inline win::HINSTANCE hinstance = win::GetModuleHandleW(nullptr);
-
-/// argument list
-inline array<str> args = [](int i) {
-  auto a = win::CommandLineToArgvW(win::GetCommandLineW(), &i);
-  array<str> r(i);
-  for (uint j = 0; j < i; ++j) r[j] = cvt<char>(a[j]);
-  win::LocalFree(a);
-  return r;
-}({});
-
-/// logger for system messages
-inline logger log(path(args[0]).replace_extension(".log"));
-
-/// default window class
-inline const wchar* const wclass = [] {
-  win::WNDCLASSEXW wc{sizeof(win::WNDCLASSEXW)};
-  wc.style = 0x0001 | 0x0002 | 0x0020; // CS_VREDRAW | CS_HREDRAW | CS_OWNDC
-  wc.lpfnWndProc = wproc;
-  wc.cbClsExtra = 0;
-  wc.cbWndExtra = sizeof(void*);
-  wc.hInstance = hinstance;
-  wc.hIcon = nullptr;
-  wc.hCursor = win::LoadCursorW(nullptr, reinterpret_cast<const wchar*>(32512)); // IDC_ARROW
-  wc.hbrBackground = reinterpret_cast<win::HBRUSH>(5); // COLOR_WINDOW
-  wc.lpszMenuName = nullptr;
-  wc.lpszClassName = L"__ywlib";
-  wc.hIconSm = nullptr;
-  return reinterpret_cast<const wchar*>(win::RegisterClassExW(&wc));
-}();
-
-/// creates a window
-win::HWND create_window(
-  const wchar* Class, const wstr& Title, wstyle Style,
-  numeric auto&& x, numeric auto&& y, numeric auto&& w, numeric auto&& h,
-  win::HWND Parent, win::HMENU Menu, void* Param, const source& _ = {}) noexcept {
-  auto hw = win::CreateWindowExW(
-    int(uint(Style) >> 32), Class, Title.data(), int(uint4(Style)),
-    int(x), int(y), int(w), int(h), Parent, Menu, hinstance, Param);
-  if (hw) return hw;
-  log << format("{} failed to create window", _);
-}
-
-}
-
-/// class to create and manage a window
-class window {
-protected:
-  win::HWND _hwnd{};
-  win::MSG _msg{};
-  vector2<int4> _pad{};
-  window(win::HWND hw) noexcept : _hwnd(hw) {}
-public:
-
-  /// user-defined window procedure; returns `true` if the message is processed
-  bool (*proc)(window&, wmessage, uint8, int8) = nullptr;
-
-  /// default constructor; uninitialized
-  window() noexcept = default;
-
-  /// move constructor
-  window(window&& w) noexcept : _hwnd(exchange(w._hwnd, nullptr)), _msg(w._msg), _pad(w._pad) {}
-
-  /// conversion to `bool`; checks if the window is initialized
-  explicit operator bool() const noexcept { return _hwnd != nullptr; }
-
-  /// creates a window
-  window(stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
-         numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    constexpr int t = 500;
-    const bool visible = bool(ws_visible & exchange(Style, Style & ~ws_visible));
-    _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style, 0, 0, t, t, 0, 0, 0, _);
-    if (!_hwnd) return;
-    [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
-    win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
-    win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
-    if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
-  }
-
-  /// creates a child window
-  window(const window& Parent, stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
-         numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
-    constexpr int t = 500;
-    const bool visible = bool(ws_visible & exchange(Style, Style & ~ws_visible));
-    _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style | ws_child, X, Y, Width, Height, Parent._hwnd, 0, 0, _);
-    if (!_hwnd) return;
-    win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
-    if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
-  }
-
-  /// move assignment
-  window& operator=(window&& w) noexcept {
-    if (_hwnd == w._hwnd) return *this;
-    if (_hwnd) win::DestroyWindow(_hwnd);
-    _hwnd = exchange(w._hwnd, nullptr);
-    _msg = w._msg, _pad = w._pad, proc = w.proc;
-    return *this;
-  }
-
-  /// destructor
-  ~window() noexcept {
-    if (_hwnd) win::DestroyWindow(exchange(_hwnd, nullptr));
-  }
-
-  /// gets window text
-  str text() const {
-    const auto len = win::GetWindowTextLengthA(_hwnd);
-    if (!len) return {};
-    str s(len, char{});
-    win::GetWindowTextA(_hwnd, s.data(), len + 1);
-    return s;
-  }
-
-  /// gets window text
-  template<char_type C> string<C> text() const {
-    if constexpr (sizeof(C) == 1) {
-      const auto len = win::GetWindowTextLengthA(_hwnd);
-      if (!len) return {};
-      string<C> s(len, C{});
-      win::GetWindowTextA(_hwnd, reinterpret_cast<char*>(s.data()), len + 1);
-      return s;
-    } else if constexpr (sizeof(C) == 2) {
-      const auto len = ::GetWindowTextLengthW(_hwnd);
-      if (!len) return {};
-      string<C> s(len, C{});
-      ::GetWindowTextW(_hwnd, reinterpret_cast<wchar*>(s.data()), len + 1);
-      return s;
-    } else return cvt<char32_t>(text<wchar>());
-  }
-
-  /// sets window text
-  void text(stringable auto&& Text) noexcept {
-    using C = remove_cvref<iter_value<decltype(Text)>>;
-    if constexpr (sizeof(C) == 1) {
-      string<C> temp(string_view<C>(fwd<decltype(Text)>(Text)));
-      win::SetWindowTextA(_hwnd, reinterpret_cast<const char*>(temp.data()));
-    } else if constexpr (sizeof(C) == 2) {
-      string<C> temp(string_view<C>(fwd<decltype(Text)>(Text)));
-      win::SetWindowTextW(_hwnd, reinterpret_cast<const wchar*>(temp.data()));
-    } else text(cvt<wchar>(fwd<decltype(Text)>(Text)));
-  }
-
-  /// gets window position; `{x = left, y = top, z = right, w = bottom}`
-  // vector<int> position() const noexcept {
-  //   return [this](vector<int> v) { return ::GetWindowRect(_hwnd, reinterpret_cast<RECT*>(&v)), mv(v); }({});
-  // }
-
-  /// \brief sets window position
-  // bool position(numeric auto&& X, numeric auto&& Y) noexcept { //
-  //   return ::SetWindowPos(_hwnd, 0, int(X), int(Y), 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-  // }
-
-  /// \brief sets window position and size
-  // bool position(numeric auto&& X, numeric auto&& Y, numeric auto&& Width, numeric auto&& Height) noexcept { //
-  //   return ::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width), int(Height), SWP_NOZORDER);
-  // }
-
-  /// \brief gets client area size; `{x = width, y = height}`
-  // vector2<int> size() const noexcept {
-  //   return [this](RECT r) { return ::GetClientRect(_hwnd, &r), vector2<int>(r.right, r.bottom); }({});
-  // }
-
-  /// displays a message box with an OK button
-  bool ok(stringable auto&& Text, stringable auto&& Caption) const noexcept {
-    constexpr uint4 type = /*MB_ICONINFORMATION*/0x40u | /*MB_OK*/0u;
-    const auto text = cvt<wchar>(fwd<decltype(Text)>(Text));
-    const auto caption = cvt<wchar>(fwd<decltype(Caption)>(Caption));
-    return win::MessageBoxW(_hwnd, text.c_str(), caption.c_str(), type);
-  }
-
-  /// displays a message box with an OK button
-  bool ok(stringable auto&& Text) const noexcept {
-    return ok(fwd<decltype(Text)>(Text), L"OK?");
-  }
-
-  /// displays a message box with Yes and No buttons
-  bool yes(stringable auto&& Text, stringable auto&& Caption) const noexcept {
-    constexpr uint4 type = /*MB_ICONQUESTION*/0x20u | /*MB_YESNO*/0x4u;
-    const auto text = cvt<wchar>(fwd<decltype(Text)>(Text));
-    const auto caption = cvt<wchar>(fwd<decltype(Caption)>(Caption));
-    return win::MessageBoxW(_hwnd, text.c_str(), caption.c_str(), type) == /*IDYES*/6;
-  }
-
-  /// displays a message box with Yes and No buttons
-  bool yes(stringable auto&& Text) const noexcept {
-    return yes(fwd<decltype(Text)>(Text), L"Yes?");
-  }
-
-  /// waits and gets window message
-  bool wait_message() noexcept { return win::GetMessageW(&_msg, _hwnd, 0, 0) > 0; }
-
-  /// waits and gets window message in range
-  bool wait_message(uint4 Min, uint4 Max) noexcept { return win::GetMessageW(&_msg, _hwnd, Min, Max) > 0; }
-
-  /// peeks window message
-  bool peek_message(uint4 Remove = 1) noexcept { return win::PeekMessageW(&_msg, _hwnd, 0, 0, Remove); }
-
-  /// peeks window message in range
-  bool peek_message(uint4 Min, uint4 Max, uint4 Remove = 1) noexcept { return win::PeekMessageW(&_msg, _hwnd, Min, Max, Remove); }
-
-  /// sends message
-  void send_message(wmessage Message, uint8 WParam = 0, int8 LParam = 0) noexcept { win::SendMessageW(_hwnd, uint4(Message), WParam, LParam); }
-
-  /// posts message
-  void post_message(wmessage Message, uint8 WParam = 0, int8 LParam = 0) noexcept { win::PostMessageW(_hwnd, uint4(Message), WParam, LParam); }
-
-  /// posts quit message
-  void post_quit_message(uint4 ExitCode = 0) noexcept { win::PostQuitMessage(ExitCode); }
-
-  /// dispatches message
-  void dispatch_message() noexcept { win::DispatchMessageW(&_msg); }
-
-  /// translates message
-  void translate_message() noexcept { win::TranslateMessage(&_msg); }
-};
-
-int8 __stdcall system::wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp) {
-  window* w = reinterpret_cast<window*>(win::GetWindowLongPtrW(hw, /* GWLP_USERDATA */ -21));
-  if (w && w->proc && w->proc(*w, wmessage(msg), wp, lp)) return 0;
-  else return win::DefWindowProcW(hw, msg, wp, lp);
-}
-}
-#pragma endregion // ------------------------------------------------------------------------------------------ [window]
-
-#pragma region [directx] -----------------------------------------------------------------------------------------------
-namespace yw { // clang-format off
-
-#define IID_PPV_ARGS(ppType) __uuidof(**(ppType)), reinterpret_cast<void**>(ppType)
-
-/// deleter for COM objects
-template<typename Com> struct com_deleter {
-  constexpr com_deleter() noexcept = default;
-  template<typename U> constexpr com_deleter(const com_deleter<U>&) noexcept {}
-  constexpr void operator()(Com* p) const noexcept { p ? void(p->Release()) : void(); }
-};
-
-/// COM smart pointer
-template<typename Com> class comptr : public std::unique_ptr<Com, com_deleter<Com>> {
-public:
-  using base = std::unique_ptr<Com, com_deleter<Com>>;
-  using base::base;
-  using base::operator=;
-  using base::operator->;
-  using base::operator bool;
-  constexpr operator Com*() const noexcept { return base::get(); }
-  Com** init(const source& _ = {}) & {
-    if (bool(*this)) throw std::logic_error(std::format("{}: already initialized", _));
-    return reinterpret_cast<Com**>(this);
-  }
-  template<typename OtherCom> HRESULT as(comptr<OtherCom>& other) const noexcept {
-    return base::get()->QueryInterface(IID_PPV_ARGS(other.init()));
-  }
-};
-} // clang-format on
-namespace yw::system { // clang-format off
-
-class com_init {
-  bool _initialized{};
-public:
-  explicit operator bool() const noexcept { return _initialized; }
-  ~com_init() noexcept { _initialized ? win::CoUninitialize() : void(); }
-  com_init(win::COINIT coinit) noexcept {
-    if (auto r = win::CoInitializeEx(0, coinit); !r) _initialized = true;
-  }
-};
-inline const com_init com_initialized{win::COINIT::COINIT_APARTMENTTHREADED};
-
-comptr<win::ID3D11Device>        d3d_device{};
-comptr<win::ID3D11DeviceContext> d3d_context{};
-comptr<win::ID3D11Device5>       d3d_device5{};
-// comptr<win::IDXGIFactory2>       dxgi_factory{};
-// comptr<win::IDXGIDevice2>        dxgi_device{};
-// comptr<win::ID2D1Factory1>       d2d_factory{};
-// comptr<win::ID2D1Device>         d2d_device{};
-// comptr<win::ID2D1DeviceContext>  d2d_context{};
-// comptr<win::IDWriteFactory1>     dwrite_factory{};
-// comptr<win::IWICImagingFactory>  wic_factory{};
-
-inline const bool d3d_initialized = [] {
-  win::D3D_FEATURE_LEVEL fl[] = {
-    win::D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_0,
-    win::D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_1, };
-  auto hr = win::D3D11CreateDevice(
-    nullptr, win::D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr,
-    win::D3D11_CREATE_DEVICE_FLAG::D3D11_CREATE_DEVICE_BGRA_SUPPORT, fl, 2, 7,
-    d3d_device.init(), nullptr, d3d_context.init());
-  if (hr) return log.format(), false;
-  hr = d3d_device->QueryInterface(IID_PPV_ARGS(d3d_device5.init()));
-  if (hr) return println("QueryInterface: {:x}", hr), false;
-  return !hr;
-}();
-} // clang-format on
-#pragma endregion // ----------------------------------------------------------------------------------------- [directx]
+#pragma once /* clang-format off */ /* PYTHON-START
+import os, sys, subprocess
+HERE = os.path.dirname(os.path.abspath(__file__))
+IFC  = fR"{HERE}\ywlib.ifc"
+IXX  = fR"{HERE}\ywlib.ixx"
+OBJ  = fR"{HERE}\ywlib.obj"
+CL   = fR"{HERE}\msvc\bin\cl.exe"
+
+if len(sys.argv) == 1 or "--all" in sys.argv:
+  if os.path.exists(IFC): os.remove(IFC)
+  if os.path.exists(OBJ): os.remove(OBJ)
+  with open(IXX, "w") as f:
+    f.write("export module ywlib;\n#include \"hack/xyz.h\"\n")
+  args = [CL, IXX, "/c", "/D__ywlib_export=export", "/wd5244" ]
+  args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
+  args+= [f"/ifcOutput{IFC}", f"/Fo{OBJ}", fR"/I{HERE}\hack", fR"/I{HERE}\msvc\inc", ]
+  print("compiling ywlib", end="", flush=True)
+  result = subprocess.run(args, capture_output=True, text=True)
+  print(f" -> {result.returncode}")
+  if result.returncode != 0:
+    print(result.stdout)
+    sys.exit(result.returncode)
+  if os.path.exists(IXX): os.remove(IXX)
+  if not "--all" in sys.argv: sys.exit(0)
+
+cpp_file = sys.argv[1]
+if (os.path.splitext(cpp_file)[1] != ".cpp"): print("Usage: python ywlib [<cpp_file> [--run]]")
+exe_file, obj_file = cpp_file.replace(".cpp", ".exe"), cpp_file.replace(".cpp", ".obj")
+args = [CL, cpp_file, f"/Fe{exe_file}", f"/Fo{obj_file}", "/D__ywlib_import", ]
+args+= ["/std:c++latest", "/EHsc", "/nologo", "/MT", "/W4", "/O2", "/Qpar", "/utf-8", ]
+args+= [f"/referenceywlib={IFC}", "/link", OBJ, fR"/LIBPATH:{HERE}\msvc\lib", ]
+print(f"compiling {cpp_file}", end="", flush=True)
+result = subprocess.run(args, capture_output=True, text=True)
+print(f" -> {result.returncode}")
+if os.path.exists(obj_file): os.remove(obj_file)
+if result.returncode != 0:
+  print(result.stdout)
+  sys.exit(result.returncode)
+if "--run" in sys.argv:
+  return_code = subprocess.run([exe_file]).returncode
+  print(f"running {exe_file} -> {return_code}")
+sys.exit(0)
+
+# PYTHON-END */
+#define CPP_START "\
+"""
+#include "hack/ywlib-string.h"
+
+
+
+// #pragma region [string] ------------------------------------------------------------------------------------------------
+// namespace yw {
+
+
+// }
+// #pragma endregion // ------------------------------------------------------------------------------------------ [string]
+
+// #pragma region [none] --------------------------------------------------------------------------------------------------
+// namespace yw {
+
+// /// structure to represent a null value
+// struct none {
+//   constexpr none() noexcept = default;
+//   constexpr none(auto&&...) noexcept {}
+//   constexpr none& operator=(auto&&) noexcept { return *this; }
+//   constexpr operator bool() const noexcept { return false; }
+//   friend constexpr bool operator==(none, none) noexcept { return false; }
+//   friend constexpr auto operator<=>(none, none) noexcept { return unordered; }
+//   friend constexpr none operator+(none) noexcept { return {}; }
+//   friend constexpr none operator-(none) noexcept { return {}; }
+//   friend constexpr none operator+(none, none) noexcept { return {}; }
+//   friend constexpr none operator-(none, none) noexcept { return {}; }
+//   friend constexpr none operator*(none, none) noexcept { return {}; }
+//   friend constexpr none operator/(none, none) noexcept { return {}; }
+//   constexpr none& operator+=(none) noexcept { return *this; }
+//   constexpr none& operator-=(none) noexcept { return *this; }
+//   constexpr none& operator*=(none) noexcept { return *this; }
+//   constexpr none& operator/=(none) noexcept { return *this; }
+
+//   /// converts to string
+//   template<char_type C> constexpr string_view<C> to_string() const {
+//     if constexpr (same_as<C, char>) return "none";
+//     else if constexpr (same_as<C, wchar>) return L"none";
+//     else if constexpr (same_as<C, char8_t>) return u8"none";
+//     else if constexpr (same_as<C, char16_t>) return u"none";
+//     else return U"none";
+//   }
+
+//   /// output stream operator
+//   template<char_type C, typename Tr> friend auto& operator<<(
+//     std::basic_ostream<C, Tr>& os, none) { return os << to_string<C>(); }
+// };
+
+// /// checks if the type is `none`
+// template<typename T> concept is_none = same_as<remove_cv<T>, none>;
+
+// /// converts `none` to string
+// template<char_type C> constexpr auto to_string(
+//   const is_none auto n) noexcept { return n.to_string<C>(); }
+// }
+// namespace std {
+// template<typename T> struct common_type<T, yw::none> : type_identity<yw::none> {};
+// template<typename T> struct common_type<yw::none, T> : type_identity<yw::none> {};
+// template<typename C> struct formatter<yw::none, C> : formatter<basic_string_view<C>, C> {
+//   auto format(const yw::none n, auto& ctx) {
+//     return formatter<basic_string_view<C>, C>::format(n.to_string<C>(), ctx); } };
+// }
+// #pragma endregion // -------------------------------------------------------------------------------------------- [none]
+
+// #pragma region [source] ------------------------------------------------------------------------------------------------
+// namespace yw {
+
+// /// structure to represent the source location
+// struct source {
+//   const str_view file, func;
+//   const uint line, column;
+//   source(const char*) = delete;
+//   constexpr source(const char* File = __builtin_FILE(), const char* Func = __builtin_FUNCTION(),
+//                    uint Line = __builtin_LINE(), uint Column = __builtin_COLUMN()) noexcept
+//     : file(File), func(Func), line(Line), column(Column) {}
+
+//   /// converts to string
+//   template<char_type C> constexpr string<C> to_string() const {
+//     uint n_file = file.size(), n_func = func.size();
+//     C temp[32];
+//     C* p = yw::end(temp);
+//     *--p = C(':'), *--p = C(')');
+//     for (uint i = column; i; i /= 10) *--p = C(i % 10 ^ 0x30);
+//     *--p = C(',');
+//     for (uint i = line; i; i /= 10) *--p = C(i % 10 ^ 0x30);
+//     *--p = C('(');
+//     auto n = static_cast<uint>(32 - (p - temp));
+//     string<C> s(n_file + n_func + n, C{});
+//     std::memcpy(std::memcpy(std::memcpy(s.data(), file.data(), n_file), p, n), func.data(), n_func);
+//     return s;
+//   }
+
+//   /// converts to string
+//   constexpr str to_string() const { return to_string<char>(); }
+
+//   /// output stream operator
+//   template<typename Tr> friend auto& operator<<(std::basic_ostream<char, Tr>& os, source s) {
+//     return os << s.file << '(' << s.line << "," << s.column << "): " << s.func;
+//   }
+// };
+// }
+// namespace std {
+// template<typename C> struct formatter<yw::source, C> : formatter<basic_string<C>, C> {
+//   auto format(const yw::source s, auto& ctx) const {
+//     return formatter<basic_string<C>, C>::format(s.to_string<C>(), ctx); } };
+// }
+// #pragma endregion // ------------------------------------------------------------------------------------------ [source]
+
+// #pragma region [date, clock, time] -------------------------------------------------------------------------------------
+// namespace yw {
+
+// namespace _ {
+// inline auto get_zoned_time() {
+//   namespace ch = std::chrono;
+//   return ch::zoned_time(ch::current_zone(), ch::system_clock::now()); }
+// }
+
+// /// structure to represent a date
+// struct date {
+
+//   /// year of the date
+//   int year{};
+
+//   /// month of the date
+//   int month{};
+
+//   /// day of the date
+//   int day{};
+
+//   /// default constructor; obtains the current date
+//   date() : date(_::get_zoned_time().get_local_time()) {}
+
+//   /// constructor with year, month, and day
+//   date(numeric auto&& Year, numeric auto&& Month, numeric auto&& Day) noexcept
+//     : year(int(Year)), month(int(Month)), day(int(Day)) {}
+
+//   /// constructor from a `std::chrono::time_point`
+//   template<typename Clock, typename Duration>
+//   date(const std::chrono::time_point<Clock, Duration>& tp) {
+//     const auto ymd = std::chrono::year_month_day(std::chrono::floor<std::chrono::days>(tp));
+//     year = int(ymd.year()), month = int(uint4(ymd.month())), day = int(uint4(ymd.day()));
+//   }
+
+//   /// returns the formatted string; `YYYY-MM-DD`
+//   template<char_type C> string<C> to_string() const {
+//     string<C> s(10, {});
+//     if constexpr (sizeof(C) == 4) {
+//       auto t = std::format("{:04d}-{:02d}-{:02d}", year, month, day);
+//       std::ranges::copy(t, s.data());
+//     } else if constexpr (sizeof(C) == 1) std::format_to(s.data(), "{:04d}-{:02d}-{:02d}", year, month, day);
+//     else if constexpr (sizeof(C) == 2) std::format_to(s.data(), L"{:04d}-{:02d}-{:02d}", year, month, day);
+//     return s;
+//   }
+
+//   /// returns the formatted string; `YYYY-MM-DD`
+//   string<char> to_string() const { return to_string<char>(); }
+
+//   /// output stream operator
+//   template<typename C, typename Tr> friend auto& operator<<(
+//     std::basic_ostream<C, Tr>& os, const date& d) { return os << d.to_string<C>(); }
+// };
+
+// /// clock
+// struct clock {
+
+//   /// hour of the clock
+//   int hour{};
+
+//   /// minute of the clock
+//   int minute{};
+
+//   /// second of the clock
+//   int second{};
+
+//   /// default constructor; obtains the current time
+//   clock() : clock(_::get_zoned_time().get_local_time()) {}
+
+//   /// constructor with hour, minute, and second
+//   clock(numeric auto&& Hour, numeric auto&& Minute, numeric auto&& Second) noexcept
+//     : hour(int(Hour)), minute(int(Minute)), second(int(Second)) {}
+
+//   /// constructor from a `std::time_point`
+//   template<typename Clock, typename Duration>
+//   clock(const std::chrono::time_point<Clock, Duration>& tp) {
+//     namespace ch = std::chrono;
+//     const ch::hh_mm_ss hms(ch::floor<ch::seconds>(tp - ch::floor<ch::days>(tp)));
+//     hour = int(hms.hours().count());
+//     minute = int(hms.minutes().count());
+//     second = int(hms.seconds().count());
+//   }
+
+//   /// returns the formatted string; `HH:MM:SS`
+//   template<char_type C> string<C> to_string() const {
+//     string<C> s(8, {});
+//     if constexpr (sizeof(C) == 4) {
+//       auto t = std::format("{:02d}:{:02d}:{:02d}", hour, minute, second);
+//       std::ranges::copy(t, s.data());
+//     } else if constexpr (sizeof(C) == 1) std::format_to(s.data(), "{:02d}:{:02d}:{:02d}", hour, minute, second);
+//     else if constexpr (sizeof(C) == 2) std::format_to(s.data(), L"{:02d}:{:02d}:{:02d}", hour, minute, second);
+//     return s;
+//   }
+
+//   /// returns the formatted string; `HH:MM:SS`
+//   string<char> to_string() const { return to_string<char>(); }
+
+//   /// output stream operator
+//   template<typename C, typename Tr> friend auto& operator<<(
+//     std::basic_ostream<C, Tr>& os, const clock& c) { return os << c.to_string<C>(); }
+// };
+
+// /// date and clock
+// struct time {
+
+//   /// format string for `std::format`; `YYYY-MM-DD HH:MM:SS`
+//   template<char_type C> static constexpr C format[] = {
+//     C('{'), C(':'), C('0'), C('4'), C('d'), C('}'), C('-'),
+//     C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C('-'),
+//     C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(' '),
+//     C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(':'),
+//     C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C(':'),
+//     C('{'), C(':'), C('0'), C('2'), C('d'), C('}'), C('\0')};
+
+//   /// date of the time
+//   yw::date date;
+
+//   /// clock of the time
+//   yw::clock clock;
+
+//   /// default constructor; obtains the current date and time
+//   time() : time(_::get_zoned_time().get_local_time()) {}
+
+//   /// constructor with date and clock
+//   time(const yw::date& Date, const yw::clock& Clock) noexcept : date(Date), clock(Clock) {}
+
+//   /// constructor from a `time_point`
+//   template<typename Clock, typename Duration>
+//   time(const std::chrono::time_point<Clock, Duration>& tp) : date(tp), clock(tp) {}
+
+//   /// conversion operator to `yw::date`
+//   operator yw::date() const { return date; }
+
+//   /// conversion operator to `yw::clock`
+//   operator yw::clock() const { return clock; }
+
+//   /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
+//   template<char_type C> string<C> to_string() const {
+//     const auto& d = date;
+//     const auto& c = clock;
+//     string<C> s(19, {});
+//     if constexpr (sizeof(C) == 4) {
+//       auto t = std::format(format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
+//       std::ranges::copy(t, s.data());
+//     } else if constexpr (sizeof(C) == 1)
+//       std::format_to(s.data(), format<char>, d.year, d.month, d.day, c.hour, c.minute, c.second);
+//     else if constexpr (sizeof(C) == 2)
+//       std::format_to(s.data(), format<wchar>, d.year, d.month, d.day, c.hour, c.minute, c.second);
+//     return s;
+//   }
+
+//   /// returns the formatted string; `YYYY-MM-DD HH:MM:SS`
+//   string<char> to_string() const { return to_string<char>(); }
+
+//   /// output stream operator
+//   template<typename C, typename Tr> friend auto& operator<<(
+//     std::basic_ostream<C, Tr>& os, const time& t) { return os << t.to_string<C>(); }
+// };
+
+// /// current time caster
+// inline constexpr caster now{[] { return time{}; }};
+// }
+// namespace std {
+// template<typename C> struct formatter<yw::date, C> : formatter<basic_string<C>, C> {
+//   auto format(const yw::date& d, auto& ctx) const {
+//     return formatter<basic_string<C>, C>::format(d.to_string<C>(), ctx); } };
+// template<typename C> struct formatter<yw::clock, C> : formatter<basic_string<C>, C> {
+//   auto format(const yw::clock& c, auto& ctx) const {
+//     return formatter<basic_string<C>, C>::format(c.to_string<C>(), ctx); } };
+// template<typename C> struct formatter<yw::time, C> : formatter<basic_string<C>, C> {
+//   auto format(const yw::time& t, auto& ctx) const {
+//     return formatter<basic_string<C>, C>::format(t.to_string<C>(), ctx); } };
+// }
+// #pragma endregion // ------------------------------------------------------------------------------- [date, clock, time]
+
+// #pragma region [file] --------------------------------------------------------------------------------------------------
+// namespace yw::file {
+
+// /// `std::filesystem::path`
+// using path = std::filesystem::path;
+
+// /// confirms whether the path represents any file system entity
+// inline bool exists(const path& Path) noexcept {
+//   std::error_code ec;
+//   auto s = std::filesystem::status(Path, ec);
+//   if (ec) return false;
+//   return std::filesystem::exists(s);
+// }
+
+// /// confirms whether the path represents a regular file
+// inline bool is_file(const path& Path) noexcept {
+//   std::error_code ec;
+//   auto s = std::filesystem::status(Path, ec);
+//   if (ec) return false;
+//   return std::filesystem::is_regular_file(s);
+// }
+
+// /// confirms whether the path represents a directory
+// inline bool is_dir(const path& Path) noexcept {
+//   std::error_code ec;
+//   auto s = std::filesystem::status(Path, ec);
+//   if (ec) return false;
+//   return std::filesystem::is_directory(s);
+// }
+
+// /// confirms whether the path represents an empty file system entity
+// inline bool is_empty(const path& Path) noexcept {
+//   std::error_code ec;
+//   return std::filesystem::is_empty(Path, ec);
+// }
+
+// /// obtains the size of the file; `0` if failed
+// inline uint size(const path& Path) noexcept {
+//   if (uint n; std::filesystem::_File_size(Path, n) == __std_win_error::_Success) return n;
+//   else return 0;
+// }
+
+// /// renames the file system entity
+// inline bool rename(const path& Old, const path& New) noexcept {
+//   std::error_code ec;
+//   std::filesystem::rename(Old, New, ec);
+//   return !ec;
+// }
+
+// /// copies the file system entity
+// inline bool copy(const path& From, const path& To) noexcept {
+//   std::error_code ec;
+//   std::filesystem::copy(From, To, ec);
+//   return !ec;
+// }
+
+// /// removes the file
+// inline bool remove(const path& Path, const bool Recursive = false) noexcept {
+//   std::error_code ec;
+//   if (Recursive) std::filesystem::remove_all(Path, ec);
+//   else std::filesystem::remove(Path, ec);
+//   return !ec;
+// }
+
+// /// creates a directory
+// inline bool create_dir(const path& Path, const bool Recursive = false) noexcept {
+//   std::error_code ec;
+//   if (Recursive) std::filesystem::create_directories(Path, ec);
+//   else std::filesystem::create_directory(Path, ec);
+//   return !ec;
+// }
+
+// /// creates an empty regular file
+// inline bool write(const path& Path) noexcept {
+//   try {
+//     std::ofstream ofs(Path, std::ios::binary);
+//     return ofs.is_open();
+//   } catch (...) { return false; }
+// }
+
+// /// creates a regular file and writes data
+// inline bool write(const path& Path, void* Data, uint Size) noexcept {
+//   try {
+//     std::ofstream ofs(Path, std::ios::binary);
+//     if (!ofs.is_open()) return false;
+//     ofs.write(static_cast<char*>(Data), Size);
+//     return true;
+//   } catch (...) { return false; }
+// }
+
+// /// creates a regular file and writes data
+// inline bool write(const path& Path, std::ranges::contiguous_range auto&& Data) noexcept {
+//   constexpr auto m = sizeof(iter_value<decltype(Data)>);
+//   return file::write(Path, std::ranges::data(Data), m * std::ranges::size(Data));
+// }
+
+// /// reads the file as UTF-8 text
+// inline string<char> read(const path& Path) noexcept {
+//   try {
+//     std::ifstream ifs(Path, std::ios::binary);
+//     if (!ifs.is_open()) return {};
+//     return string<char>(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+//   } catch (...) { return {}; }
+// }
+
+// /// reads the file to the buffer
+// inline bool read(const path& Path, void* Buffer, uint Size) noexcept {
+//   try {
+//     std::ifstream ifs(Path, std::ios::binary);
+//     if (!ifs.is_open()) return false;
+//     ifs.read(static_cast<char*>(Buffer), Size);
+//     return true;
+//   } catch (...) { return false; }
+// }
+
+// /// reads the file to the buffer
+// inline bool read(const path& Path, std::ranges::contiguous_range auto&& Buffer) noexcept
+//   requires convertible_to<decltype(std::ranges::data(Buffer)), void*> {
+//   constexpr auto m = sizeof(iter_value<decltype(Buffer)>);
+//   return file::read(Path, std::ranges::data(Buffer), m * std::ranges::size(Buffer));
+// }
+// }
+// #pragma endregion // -------------------------------------------------------------------------------------------- [file]
+
+// #pragma region [logger] ------------------------------------------------------------------------------------------------
+// namespace yw {
+
+// /// class to log messages and write them to a file when destructed
+// class logger {
+//   string<char> text{};
+// public:
+
+//   /// structure to represent a log level
+//   struct level_t {
+//     std::string_view name;
+//     int value;
+//     friend constexpr bool operator==(const level_t& l, const level_t& r) noexcept { return l.value == r.value; }
+//     friend constexpr std::strong_ordering operator<=>(const level_t& l, const level_t& r) noexcept { return l.value <=> r.value; }
+//   };
+
+//   /// predefined log level; all(0)
+//   static constexpr level_t all{"all", 0};
+
+//   /// predefined log level; debug(10)
+//   static constexpr level_t debug{"debug", 10};
+
+//   /// predefined log level; info(20)
+//   static constexpr level_t info{"info", 20};
+
+//   /// predefined log level; warn(30)
+//   static constexpr level_t warn{"warn", 30};
+
+//   /// predefined log level; error(40)
+//   static constexpr level_t error{"error", 40};
+
+//   /// predefined log level; fatal(50)
+//   static constexpr level_t fatal{"fatal", 50};
+
+//   /// file path to write log messages when destructed
+//   std::filesystem::path path{};
+
+//   /// current log level
+//   level_t level{info};
+
+//   /// flag whether to stream log messages to the console
+//   bool console{true};
+
+//   /// default constructor
+//   logger() noexcept = default;
+
+//   /// constructor with a file path (, log level, and console flag)
+//   logger(const std::filesystem::path& Path, level_t Level = info, bool Console = true) noexcept
+//     : path(Path), level(Level), console(Console) {}
+
+//   /// destructor; writes log messages to the file
+//   ~logger() noexcept {
+//     if (text.empty() || path.empty()) return;
+//     try {
+//       if (!file::exists(path)) throw std::runtime_error("file not found");
+//       else if (!file::write(path, text)) throw std::runtime_error("failed to write file");
+//     } catch (const std::exception& e) { std::cerr << "logger::~logger() failed: " << e.what() << std::endl;
+//     } catch (...) { std::cerr << "logger::~logger() failed" << std::endl; }
+//   }
+
+//   /// appends text to the log; `{time} [{level}] {text}`
+//   void operator()(level_t Level, stringable auto&& Text) noexcept {
+//     if (level < Level) return;
+//     try {
+//       str s;
+//       if constexpr (same_as<iter_value<decltype(Text)>, char>)
+//         s = format("{} [{}] {}\n", now(), Level.name, str_view(Text));
+//       else s = format("{} [{}] {}\n", now(), Level.name, cvt<char>(Text));
+//       if (console) std::cout << s;
+//       text += s;
+//     } catch (const std::exception& e) { std::cerr << "logger::operator() failed: " << e.what() << std::endl;
+//     } catch (...) { std::cerr << "logger::operator() failed" << std::endl; }
+//   }
+
+//   /// appends text to the log; `{time} [{level}] {text}`
+//   void operator()(level_t Level, stringable auto&& Text, const source& _) noexcept {
+//     if (level < Level) return;
+//     try {
+//       str s;
+//       if constexpr (same_as<iter_value<decltype(Text)>, char>)
+//         s = format("{} [{}] {}\n", now(), Level.name, str_view(Text));
+//       else s = format("{} [{}] {}\n", now(), Level.name, cvt<char>(Text));
+//       if (console) std::cout << _ << std::endl << s;
+//       text += s;
+//     } catch (const std::exception& e) { std::cerr << "logger::operator() failed: " << e.what() << std::endl;
+//     } catch (...) { std::cerr << "logger::operator() failed" << std::endl; }
+//   }
+
+// };
+
+// }
+// #pragma endregion // ------------------------------------------------------------------------------------------ [logger]
+
+// #pragma region [wmessage] ----------------------------------------------------------------------------------------------
+// namespace yw {
+
+// /// wimdow message enumerator
+// enum class wmessage : uint4 {
+//   wm_null = 0x0000,
+//   wm_create = 0x0001,
+//   wm_destroy = 0x0002,
+//   wm_move = 0x0003,
+//   wm_size = 0x0005,
+//   wm_activate = 0x0006,
+//   wm_setfocus = 0x0007,
+//   wm_killfocus = 0x0008,
+//   wm_enable = 0x000A,
+//   wm_setredraw = 0x000B,
+//   wm_settext = 0x000C,
+//   wm_gettext = 0x000D,
+//   wm_gettextlength = 0x000E,
+//   wm_paint = 0x000F,
+//   wm_close = 0x0010,
+//   wm_queryendsession = 0x0011,
+//   wm_queryopen = 0x0013,
+//   wm_endsession = 0x0016,
+//   wm_quit = 0x0012,
+//   wm_erasebkgnd = 0x0014,
+//   wm_syscolorchange = 0x0015,
+//   wm_showwindow = 0x0018,
+//   wm_wininichange = 0x001A,
+//   wm_settingchange = wm_wininichange,
+//   wm_devmodechange = 0x001B,
+//   wm_activateapp = 0x001C,
+//   wm_fontchange = 0x001D,
+//   wm_timechange = 0x001E,
+//   wm_cancelmode = 0x001F,
+//   wm_setcursor = 0x0020,
+//   wm_mouseactivate = 0x0021,
+//   wm_childactivate = 0x0022,
+//   wm_queuesync = 0x0023,
+//   wm_getminmaxinfo = 0x0024,
+//   wm_painticon = 0x0026,
+//   wm_iconerasebkgnd = 0x0027,
+//   wm_nextdlgctl = 0x0028,
+//   wm_spoolerstatus = 0x002A,
+//   wm_drawitem = 0x002B,
+//   wm_measureitem = 0x002C,
+//   wm_deleteitem = 0x002D,
+//   wm_vkeytoitem = 0x002E,
+//   wm_chartoitem = 0x002F,
+//   wm_setfont = 0x0030,
+//   wm_getfont = 0x0031,
+//   wm_sethotkey = 0x0032,
+//   wm_gethotkey = 0x0033,
+//   wm_querydragicon = 0x0037,
+//   wm_compareitem = 0x0039,
+//   wm_getobject = 0x003D,
+//   wm_compacting = 0x0041,
+//   wm_commnotify = 0x0044,
+//   wm_windowposchanging = 0x0046,
+//   wm_windowposchanged = 0x0047,
+//   wm_power = 0x0048,
+//   wm_copydata = 0x004A,
+//   wm_canceljournal = 0x004B,
+//   wm_notify = 0x004E,
+//   wm_inputlangchangerequest = 0x0050,
+//   wm_inputlangchange = 0x0051,
+//   wm_tcard = 0x0052,
+//   wm_help = 0x0053,
+//   wm_userchanged = 0x0054,
+//   wm_notifyformat = 0x0055,
+//   wm_contextmenu = 0x007B,
+//   wm_stylechanging = 0x007C,
+//   wm_stylechanged = 0x007D,
+//   wm_displaychange = 0x007E,
+//   wm_geticon = 0x007F,
+//   wm_seticon = 0x0080,
+//   wm_nccreate = 0x0081,
+//   wm_ncdestroy = 0x0082,
+//   wm_nccalcsize = 0x0083,
+//   wm_nchittest = 0x0084,
+//   wm_ncpaint = 0x0085,
+//   wm_ncactivate = 0x0086,
+//   wm_getdlgcode = 0x0087,
+//   wm_syncpaint = 0x0088,
+//   wm_ncmousemove = 0x00A0,
+//   wm_nclbuttondown = 0x00A1,
+//   wm_nclbuttonup = 0x00A2,
+//   wm_nclbuttondblclk = 0x00A3,
+//   wm_ncrbuttondown = 0x00A4,
+//   wm_ncrbuttonup = 0x00A5,
+//   wm_ncrbuttondblclk = 0x00A6,
+//   wm_ncmbuttondown = 0x00A7,
+//   wm_ncmbuttonup = 0x00A8,
+//   wm_ncmbuttondblclk = 0x00A9,
+//   wm_ncxbuttondown = 0x00AB,
+//   wm_ncxbuttonup = 0x00AC,
+//   wm_ncxbuttondblclk = 0x00AD,
+//   wm_input_device_change = 0x00FE,
+//   wm_input = 0x00FF,
+//   wm_keyfirst = 0x0100,
+//   wm_keydown = 0x0100,
+//   wm_keyup = 0x0101,
+//   wm_char = 0x0102,
+//   wm_deadchar = 0x0103,
+//   wm_syskeydown = 0x0104,
+//   wm_syskeyup = 0x0105,
+//   wm_syschar = 0x0106,
+//   wm_sysdeadchar = 0x0107,
+//   wm_unichar = 0x0109,
+//   wm_keylast = 0x0109,
+//   wm_ime_startcomposition = 0x010D,
+//   wm_ime_endcomposition = 0x010E,
+//   wm_ime_composition = 0x010F,
+//   wm_ime_keylast = 0x010F,
+//   wm_initdialog = 0x0110,
+//   wm_command = 0x0111,
+//   wm_syscommand = 0x0112,
+//   wm_timer = 0x0113,
+//   wm_hscroll = 0x0114,
+//   wm_vscroll = 0x0115,
+//   wm_initmenu = 0x0116,
+//   wm_initmenupopup = 0x0117,
+//   wm_gesture = 0x0119,
+//   wm_gesturenotify = 0x011A,
+//   wm_menuselect = 0x011F,
+//   wm_menuchar = 0x0120,
+//   wm_enteridle = 0x0121,
+//   wm_menurbuttonup = 0x0122,
+//   wm_menudrag = 0x0123,
+//   wm_menugetobject = 0x0124,
+//   wm_uninitmenupopup = 0x0125,
+//   wm_menucommand = 0x0126,
+//   wm_changeuistate = 0x0127,
+//   wm_updateuistate = 0x0128,
+//   wm_queryuistate = 0x0129,
+//   wm_ctlcolormsgbox = 0x0132,
+//   wm_ctlcoloredit = 0x0133,
+//   wm_ctlcolorlistbox = 0x0134,
+//   wm_ctlcolorbtn = 0x0135,
+//   wm_ctlcolordlg = 0x0136,
+//   wm_ctlcolorscrollbar = 0x0137,
+//   wm_ctlcolorstatic = 0x0138,
+//   mn_gethmenu = 0x01E1,
+//   wm_mousefirst = 0x0200,
+//   wm_mousemove = 0x0200,
+//   wm_lbuttondown = 0x0201,
+//   wm_lbuttonup = 0x0202,
+//   wm_lbuttondblclk = 0x0203,
+//   wm_rbuttondown = 0x0204,
+//   wm_rbuttonup = 0x0205,
+//   wm_rbuttondblclk = 0x0206,
+//   wm_mbuttondown = 0x0207,
+//   wm_mbuttonup = 0x0208,
+//   wm_mbuttondblclk = 0x0209,
+//   wm_mousewheel = 0x020A,
+//   wm_xbuttondown = 0x020B,
+//   wm_xbuttonup = 0x020C,
+//   wm_xbuttondblclk = 0x020D,
+//   wm_mousehwheel = 0x020E,
+//   wm_mouselast = 0x020E,
+//   wm_parentnotify = 0x0210,
+//   wm_entermenuloop = 0x0211,
+//   wm_exitmenuloop = 0x0212,
+//   wm_nextmenu = 0x0213,
+//   wm_sizing = 0x0214,
+//   wm_capturechanged = 0x0215,
+//   wm_moving = 0x0216,
+//   wm_powerbroadcast = 0x0218,
+//   wm_devicechange = 0x0219,
+//   wm_mdicreate = 0x0220,
+//   wm_mdidestroy = 0x0221,
+//   wm_mdiactivate = 0x0222,
+//   wm_mdirestore = 0x0223,
+//   wm_mdinext = 0x0224,
+//   wm_mdimaximize = 0x0225,
+//   wm_mditile = 0x0226,
+//   wm_mdicascade = 0x0227,
+//   wm_mdiiconarrange = 0x0228,
+//   wm_mdigetactive = 0x0229,
+//   wm_mdisetmenu = 0x0230,
+//   wm_entersizemove = 0x0231,
+//   wm_exitsizemove = 0x0232,
+//   wm_dropfiles = 0x0233,
+//   wm_mdirefreshmenu = 0x0234,
+//   wm_pointerdevicechange = 0x238,
+//   wm_pointerdeviceinrange = 0x239,
+//   wm_pointerdeviceoutofrange = 0x23A,
+//   wm_touch = 0x0240,
+//   wm_ncpointerupdate = 0x0241,
+//   wm_ncpointerdown = 0x0242,
+//   wm_ncpointerup = 0x0243,
+//   wm_pointerupdate = 0x0245,
+//   wm_pointerdown = 0x0246,
+//   wm_pointerup = 0x0247,
+//   wm_pointerenter = 0x0249,
+//   wm_pointerleave = 0x024A,
+//   wm_pointeractivate = 0x024B,
+//   wm_pointercapturechanged = 0x024C,
+//   wm_touchhittesting = 0x024D,
+//   wm_pointerwheel = 0x024E,
+//   wm_pointerhwheel = 0x024F,
+//   dm_pointerhittest = 0x0250,
+//   wm_pointerroutedto = 0x0251,
+//   wm_pointerroutedaway = 0x0252,
+//   wm_pointerroutedreleased = 0x0253,
+//   wm_ime_setcontext = 0x0281,
+//   wm_ime_notify = 0x0282,
+//   wm_ime_control = 0x0283,
+//   wm_ime_compositionfull = 0x0284,
+//   wm_ime_select = 0x0285,
+//   wm_ime_char = 0x0286,
+//   wm_ime_request = 0x0288,
+//   wm_ime_keydown = 0x0290,
+//   wm_ime_keyup = 0x0291,
+//   wm_mousehover = 0x02A1,
+//   wm_mouseleave = 0x02A3,
+//   wm_ncmousehover = 0x02A0,
+//   wm_ncmouseleave = 0x02A2,
+//   wm_wtssession_change = 0x02B1,
+//   wm_tablet_first = 0x02c0,
+//   wm_tablet_last = 0x02df,
+//   wm_dpichanged = 0x02E0,
+//   wm_dpichanged_beforeparent = 0x02E2,
+//   wm_dpichanged_afterparent = 0x02E3,
+//   wm_getdpiscaledsize = 0x02E4,
+//   wm_cut = 0x0300,
+//   wm_copy = 0x0301,
+//   wm_paste = 0x0302,
+//   wm_clear = 0x0303,
+//   wm_undo = 0x0304,
+//   wm_renderformat = 0x0305,
+//   wm_renderallformats = 0x0306,
+//   wm_destroyclipboard = 0x0307,
+//   wm_drawclipboard = 0x0308,
+//   wm_paintclipboard = 0x0309,
+//   wm_vscrollclipboard = 0x030A,
+//   wm_sizeclipboard = 0x030B,
+//   wm_askcbformatname = 0x030C,
+//   wm_changecbchain = 0x030D,
+//   wm_hscrollclipboard = 0x030E,
+//   wm_querynewpalette = 0x030F,
+//   wm_paletteischanging = 0x0310,
+//   wm_palettechanged = 0x0311,
+//   wm_hotkey = 0x0312,
+//   wm_print = 0x0317,
+//   wm_printclient = 0x0318,
+//   wm_appcommand = 0x0319,
+//   wm_themechanged = 0x031A,
+//   wm_clipboardupdate = 0x031D,
+//   wm_dwmcompositionchanged = 0x031E,
+//   wm_dwmncrenderingchanged = 0x031F,
+//   wm_dwmcolorizationcolorchanged = 0x0320,
+//   wm_dwmwindowmaximizedchange = 0x0321,
+//   wm_dwmsendiconicthumbnail = 0x0323,
+//   wm_dwmsendiconiclivepreviewbitmap = 0x0326,
+//   wm_gettitlebarinfoex = 0x033F,
+//   wm_handheldfirst = 0x0358,
+//   wm_handheldlast = 0x035F,
+//   wm_affirst = 0x0360,
+//   wm_aflast = 0x037F,
+//   wm_penwinfirst = 0x0380,
+//   wm_penwinlast = 0x038F,
+//   wm_app = 0x8000,
+//   wm_user = 0x0400,
+// };
+// using enum wmessage;
+// constexpr bool operator==(wmessage a, uint b) noexcept { return uint(a) == b; }
+// constexpr bool operator==(uint a, wmessage b) noexcept { return a == uint(b); }
+// constexpr auto operator<=>(wmessage a, uint b) noexcept { return uint(a) <=> b; }
+// constexpr auto operator<=>(uint a, wmessage b) noexcept { return a <=> uint(b); }
+// }
+// #pragma endregion // ---------------------------------------------------------------------------------------- [wmessage]
+
+// #pragma region [virtual_key] -------------------------------------------------------------------------------------------
+// namespace yw {
+
+// /// virtual key enumerator
+// enum class virtual_key : uint4 {
+//   vk_lbutton = 0x01,
+//   vk_rbutton = 0x02,
+//   vk_cancel = 0x03,
+//   vk_mbutton = 0x04,
+//   vk_xbutton1 = 0x05,
+//   vk_xbutton2 = 0x06,
+//   vk_back = 0x08,
+//   vk_tab = 0x09,
+//   vk_clear = 0x0C,
+//   vk_return = 0x0D,
+//   vk_shift = 0x10,
+//   vk_control = 0x11,
+//   vk_menu = 0x12,
+//   vk_pause = 0x13,
+//   vk_capital = 0x14,
+//   vk_kana = 0x15,
+//   vk_hangul = 0x15,
+//   vk_junja = 0x17,
+//   vk_final = 0x18,
+//   vk_hanja = 0x19,
+//   vk_kanji = 0x19,
+//   vk_escape = 0x1B,
+//   vk_convert = 0x1C,
+//   vk_nonconvert = 0x1D,
+//   vk_accept = 0x1E,
+//   vk_modechange = 0x1F,
+//   vk_space = 0x20,
+//   vk_prior = 0x21,
+//   vk_next = 0x22,
+//   vk_end = 0x23,
+//   vk_home = 0x24,
+//   vk_left = 0x25,
+//   vk_up = 0x26,
+//   vk_right = 0x27,
+//   vk_down = 0x28,
+//   vk_select = 0x29,
+//   vk_print = 0x2A,
+//   vk_execute = 0x2B,
+//   vk_snapshot = 0x2C,
+//   vk_insert = 0x2D,
+//   vk_delete = 0x2E,
+//   vk_help = 0x2F,
+//   vk_0 = 0x30,
+//   vk_1 = 0x31,
+//   vk_2 = 0x32,
+//   vk_3 = 0x33,
+//   vk_4 = 0x34,
+//   vk_5 = 0x35,
+//   vk_6 = 0x36,
+//   vk_7 = 0x37,
+//   vk_8 = 0x38,
+//   vk_9 = 0x39,
+//   vk_a = 0x41,
+//   vk_b = 0x42,
+//   vk_c = 0x43,
+//   vk_d = 0x44,
+//   vk_e = 0x45,
+//   vk_f = 0x46,
+//   vk_g = 0x47,
+//   vk_h = 0x48,
+//   vk_i = 0x49,
+//   vk_j = 0x4A,
+//   vk_k = 0x4B,
+//   vk_l = 0x4C,
+//   vk_m = 0x4D,
+//   vk_n = 0x4E,
+//   vk_o = 0x4F,
+//   vk_p = 0x50,
+//   vk_q = 0x51,
+//   vk_r = 0x52,
+//   vk_s = 0x53,
+//   vk_t = 0x54,
+//   vk_u = 0x55,
+//   vk_v = 0x56,
+//   vk_w = 0x57,
+//   vk_x = 0x58,
+//   vk_y = 0x59,
+//   vk_z = 0x5A,
+//   vk_lwin = 0x5B,
+//   vk_rwin = 0x5C,
+//   vk_apps = 0x5D,
+//   vk_sleep = 0x5F,
+//   vk_numpad0 = 0x60,
+//   vk_numpad1 = 0x61,
+//   vk_numpad2 = 0x62,
+//   vk_numpad3 = 0x63,
+//   vk_numpad4 = 0x64,
+//   vk_numpad5 = 0x65,
+//   vk_numpad6 = 0x66,
+//   vk_numpad7 = 0x67,
+//   vk_numpad8 = 0x68,
+//   vk_numpad9 = 0x69,
+//   vk_multiply = 0x6A,
+//   vk_add = 0x6B,
+//   vk_separator = 0x6C,
+//   vk_subtract = 0x6D,
+//   vk_decimal = 0x6E,
+//   vk_divide = 0x6F,
+//   vk_f1 = 0x70,
+//   vk_f2 = 0x71,
+//   vk_f3 = 0x72,
+//   vk_f4 = 0x73,
+//   vk_f5 = 0x74,
+//   vk_f6 = 0x75,
+//   vk_f7 = 0x76,
+//   vk_f8 = 0x77,
+//   vk_f9 = 0x78,
+//   vk_f10 = 0x79,
+//   vk_f11 = 0x7A,
+//   vk_f12 = 0x7B,
+//   vk_f13 = 0x7C,
+//   vk_f14 = 0x7D,
+//   vk_f15 = 0x7E,
+//   vk_f16 = 0x7F,
+//   vk_f17 = 0x80,
+//   vk_f18 = 0x81,
+//   vk_f19 = 0x82,
+//   vk_f20 = 0x83,
+//   vk_f21 = 0x84,
+//   vk_f22 = 0x85,
+//   vk_f23 = 0x86,
+//   vk_f24 = 0x87,
+//   vk_numlock = 0x90,
+//   vk_scroll = 0x91,
+//   vk_oem_nec_equal = 0x92,
+//   vk_oem_fj_jisho = 0x92,
+//   vk_oem_fj_masshou = 0x93,
+//   vk_oem_fj_touroku = 0x94,
+//   vk_oem_fj_loya = 0x95,
+//   vk_oem_fj_roya = 0x96,
+//   vk_lshift = 0xA0,
+//   vk_rshift = 0xA1,
+//   vk_lcontrol = 0xA2,
+//   vk_rcontrol = 0xA3,
+//   vk_lmenu = 0xA4,
+//   vk_rmenu = 0xA5,
+//   vk_browser_back = 0xA6,
+//   vk_browser_forward = 0xA7,
+//   vk_browser_refresh = 0xA8,
+//   vk_browser_stop = 0xA9,
+//   vk_browser_search = 0xAA,
+//   vk_browser_favorites = 0xAB,
+//   vk_browser_home = 0xAC,
+//   vk_volume_mute = 0xAD,
+//   vk_volume_down = 0xAE,
+//   vk_volume_up = 0xAF,
+//   vk_media_next_track = 0xB0,
+//   vk_media_prev_track = 0xB1,
+//   vk_media_stop = 0xB2,
+//   vk_media_play_pause = 0xB3,
+//   vk_launch_mail = 0xB4,
+//   vk_launch_media_select = 0xB5,
+//   vk_launch_app1 = 0xB6,
+//   vk_launch_app2 = 0xB7,
+//   vk_oem_1 = 0xBA,
+//   vk_oem_plus = 0xBB,
+//   vk_oem_comma = 0xBC,
+//   vk_oem_minus = 0xBD,
+//   vk_oem_period = 0xBE,
+//   vk_oem_2 = 0xBF,
+//   vk_oem_3 = 0xC0,
+//   vk_oem_4 = 0xDB,
+//   vk_oem_5 = 0xDC,
+//   vk_oem_6 = 0xDD,
+//   vk_oem_7 = 0xDE,
+//   vk_oem_8 = 0xDF,
+//   vk_oem_ax = 0xE1,
+//   vk_oem_102 = 0xE2,
+//   vk_icong = 0xE3,
+//   vk_icoff = 0xE4,
+//   vk_attn = 0xF6,
+//   vk_crsel = 0xF7,
+//   vk_exsel = 0xF8,
+//   vk_ereof = 0xF9,
+//   vk_play = 0xFA,
+//   vk_zoom = 0xFB,
+//   vk_noname = 0xFC,
+//   vk_pa1 = 0xFD,
+//   vk_oem_clear = 0xFE,
+// };
+// using enum virtual_key;
+// constexpr bool operator==(virtual_key a, uint b) noexcept { return uint(a) == b; }
+// constexpr bool operator==(uint a, virtual_key b) noexcept { return a == uint(b); }
+// constexpr auto operator<=>(virtual_key a, uint b) noexcept { return uint(a) <=> b; }
+// constexpr auto operator<=>(uint a, virtual_key b) noexcept { return a <=> uint(b); }
+// }
+// #pragma endregion // ------------------------------------------------------------------------------------- [virtual_key]
+
+// #pragma region [wstyle] ------------------------------------------------------------------------------------------------
+// namespace yw { // clang-format off
+
+// /// window style enumerator
+// enum class wstyle : uint {
+//   ws_maximizebox      = 0x00010000,
+//   ws_minimizebox      = 0x00020000,
+//   ws_tabstop          = 0x00010000,
+//   ws_group            = 0x00020000,
+//   ws_thickframe       = 0x00040000,
+//   ws_sizebox          = 0x00040000, // = ws_thickframe
+//   ws_sysmenu          = 0x00080000,
+//   ws_hscroll          = 0x00100000,
+//   ws_vscroll          = 0x00200000,
+//   ws_dlgframe         = 0x00400000,
+//   ws_border           = 0x00800000,
+//   ws_caption          = 0x00c00000, // = ws_border | ws_dlgframe,
+//   ws_maximize         = 0x01000000,
+//   ws_clipchildren     = 0x02000000,
+//   ws_clipsiblings     = 0x04000000,
+//   ws_disabled         = 0x08000000,
+//   ws_visible          = 0x10000000,
+//   ws_minimize         = 0x20000000,
+//   ws_child            = 0x40000000,
+//   ws_popup            = 0x80000000,
+//   ws_overlapped       = 0x00000000,
+//   ws_tiled            = 0x00000000, // = ws_overlapped
+//   ws_iconic           = 0x20000000, // = ws_minimize
+//   ws_childwindow      = 0x40000000, // = ws_child
+//   ws_overlappedwindow = 0x00cf0000,
+//   ws_popupwindow      = 0x80880000, // = ws_popup | ws_border | ws_sysmenu
+//   ws_tiledwindow      = 0x00cf0000, // = ws_overlappedwindow
+
+//   ws_ex_dlgsmodalframe      = 0x00000001ULL << 32,
+//   ws_ex_noparentnotify      = 0x00000004ULL << 32,
+//   ws_ex_topmost             = 0x00000008ULL << 32,
+//   ws_ex_acceptfiles         = 0x00000010ULL << 32,
+//   ws_ex_transparent         = 0x00000020ULL << 32,
+//   ws_ex_mdichild            = 0x00000040ULL << 32,
+//   ws_ex_toolwindow          = 0x00000080ULL << 32,
+//   ws_ex_windowedge          = 0x00000100ULL << 32,
+//   ws_ex_clientedge          = 0x00000200ULL << 32,
+//   ws_ex_contexthelp         = 0x00000400ULL << 32,
+//   ws_ex_right               = 0x00001000ULL << 32,
+//   ws_ex_left                = 0x00000000ULL << 32,
+//   ws_ex_rtlreading          = 0x00002000ULL << 32,
+//   ws_ex_ltrreading          = 0x00000000ULL << 32,
+//   ws_ex_leftscrollbar       = 0x00004000ULL << 32,
+//   ws_ex_rightscrollbar      = 0x00000000ULL << 32,
+//   ws_ex_controlparent       = 0x00010000ULL << 32,
+//   ws_ex_staticedge          = 0x00020000ULL << 32,
+//   ws_ex_appwindow           = 0x00040000ULL << 32,
+//   ws_ex_overlappedwindow    = ws_ex_windowedge | ws_ex_clientedge,
+//   ws_ex_palettewindow       = ws_ex_windowedge | ws_ex_toolwindow | ws_ex_topmost,
+//   ws_ex_layered             = 0x00080000ULL << 32,
+//   ws_ex_noinheritlayout     = 0x00100000ULL << 32,
+//   ws_ex_noredirectionbitmap = 0x00200000ULL << 32,
+//   ws_ex_layoutrtl           = 0x00400000ULL << 32,
+//   ws_ex_composited          = 0x02000000ULL << 32,
+//   ws_ex_noactivate          = 0x08000000ULL << 32,
+
+//   bs_pushbutton      = 0x00000000,
+//   bs_defpushbutton   = 0x00000001,
+//   bs_checkbox        = 0x00000002,
+//   bs_autocheckbox    = 0x00000003,
+//   bs_radiobutton     = 0x00000004,
+//   bs_3state          = 0x00000005,
+//   bs_auto3state      = 0x00000006,
+//   bs_groupbox        = 0x00000007,
+//   bs_userbutton      = 0x00000008,
+//   bs_autoradiobutton = 0x00000009,
+//   bs_pushbox         = 0x0000000A,
+//   bs_ownerdraw       = 0x0000000B,
+//   bs_typemask        = 0x0000000F,
+//   bs_lefttext        = 0x00000020,
+//   bs_text            = 0x00000000,
+//   bs_icon            = 0x00000040,
+//   bs_bitmap          = 0x00000080,
+//   bs_left            = 0x00000100,
+//   bs_right           = 0x00000200,
+//   bs_center          = 0x00000300,
+//   bs_top             = 0x00000400,
+//   bs_bottom          = 0x00000800,
+//   bs_vcenter         = 0x00000C00,
+//   bs_pushlike        = 0x00001000,
+//   bs_multiline       = 0x00002000,
+//   bs_notify          = 0x00004000,
+//   bs_flat            = 0x00008000,
+//   bs_rightbutton     = bs_lefttext,
+
+//   es_left        = 0x0000,
+//   es_center      = 0x0001,
+//   es_right       = 0x0002,
+//   es_multiline   = 0x0004,
+//   es_uppercase   = 0x0008,
+//   es_lowercase   = 0x0010,
+//   es_password    = 0x0020,
+//   es_autovscroll = 0x0040,
+//   es_autohscroll = 0x0080,
+//   es_nohidesel   = 0x0100,
+//   es_oemconvert  = 0x0400,
+//   es_readonly    = 0x0800,
+//   es_wantreturn  = 0x1000,
+//   es_number      = 0x2000,
+
+//   ss_left            = 0x00000000,
+//   ss_center          = 0x00000001,
+//   ss_right           = 0x00000002,
+//   ss_icon            = 0x00000003,
+//   ss_blackrect       = 0x00000004,
+//   ss_grayrect        = 0x00000005,
+//   ss_whiterect       = 0x00000006,
+//   ss_blackframe      = 0x00000007,
+//   ss_grayframe       = 0x00000008,
+//   ss_whiteframe      = 0x00000009,
+//   ss_useritem        = 0x0000000A,
+//   ss_simple          = 0x0000000B,
+//   ss_leftnowrap      = 0x0000000C,
+//   ss_ownerdraw       = 0x0000000D,
+//   ss_bitmap          = 0x0000000E,
+//   ss_enhmetafile     = 0x0000000F,
+//   ss_etchedhorz      = 0x00000010,
+//   ss_etchedvert      = 0x00000011,
+//   ss_etchedframe     = 0x00000012,
+//   ss_typemask        = 0x0000001F,
+//   ss_realsizecontrol = 0x00000040,
+//   ss_noprefix        = 0x00000080,
+//   ss_notify          = 0x00000100,
+//   ss_centerimage     = 0x00000200,
+//   ss_rightjust       = 0x00000400,
+//   ss_realsizeimage   = 0x00000800,
+//   ss_sunken          = 0x00001000,
+//   ss_editcontrol     = 0x00002000,
+//   ss_endellipsis     = 0x00004000,
+//   ss_patellipsis     = 0x00008000,
+//   ss_wordellipsis    = 0x0000C000,
+//   ss_ellipsis        = 0x0000C000,
+
+//   lbs_notify            = 0x0001,
+//   lbs_sort              = 0x0002,
+//   lbs_noredraw          = 0x0004,
+//   lbs_multiplesel       = 0x0008,
+//   lbs_ownerdrawfixed    = 0x0010,
+//   lbs_ownerdrawvariable = 0x0020,
+//   lbs_hasstrings        = 0x0040,
+//   lbs_usetabstops       = 0x0080,
+//   lbs_nointegralheight  = 0x0100,
+//   lbs_multicolumn       = 0x0200,
+//   lbs_wantkeyboardinput = 0x0400,
+//   lbs_extendedsel       = 0x0800,
+//   lbs_disable           = 0x1000,
+//   lbs_nodata            = 0x2000,
+//   lbs_nosel             = 0x4000,
+//   lbs_standard          = (lbs_notify | lbs_sort | ws_vscroll | ws_border),
+
+//   cbs_simple                  = 0x0001,
+//   cbs_dropdown                = 0x0002,
+//   cbs_dropdownlist            = 0x0003,
+//   cbs_ownerdrawfixed          = 0x0010,
+//   cbs_ownerdrawvariable       = 0x0020,
+//   cbs_autohscroll             = 0x0040,
+//   cbs_oemconvert              = 0x0080,
+//   cbs_sort                    = 0x0100,
+//   cbs_hasstrings              = 0x0200,
+//   cbs_nointegralheight        = 0x0400,
+//   cbs_disablenoscroll         = 0x0800,
+//   cbs_uppercase               = 0x2000,
+//   cbs_lowercase               = 0x4000,
+//   sbs_horz                    = 0x0000,
+//   sbs_vert                    = 0x0001,
+//   sbs_topalign                = 0x0002,
+//   sbs_leftalign               = 0x0002,
+//   sbs_bottomalign             = 0x0004,
+//   sbs_rightalign              = 0x0004,
+//   sbs_sizeboxtopleftalign     = 0x0002,
+//   sbs_sizeboxbottomrightalign = 0x0004,
+//   sbs_sizebox                 = 0x0008,
+//   sbs_sizegrip                = 0x0010,
+// };
+// using enum wstyle;
+
+// constexpr wstyle operator~(wstyle a) noexcept { return wstyle(~uint(a)); }
+// constexpr wstyle operator|(wstyle a, wstyle b) noexcept { return wstyle(uint(a) | uint(b)); }
+// constexpr wstyle operator&(wstyle a, wstyle b) noexcept { return wstyle(uint(a) & uint(b)); }
+// constexpr wstyle operator^(wstyle a, wstyle b) noexcept { return wstyle(uint(a) ^ uint(b)); }
+// constexpr wstyle& operator|=(wstyle& a, wstyle b) noexcept { return a = a | b; }
+// constexpr wstyle& operator&=(wstyle& a, wstyle b) noexcept { return a = a & b; }
+// constexpr wstyle& operator^=(wstyle& a, wstyle b) noexcept { return a = a ^ b; }
+// } // clang-format on
+// #pragma endregion // ------------------------------------------------------------------------------------------ [wstyle]
+
+// #pragma region [window] ------------------------------------------------------------------------------------------------
+// namespace yw {
+
+// class window;
+
+// namespace system {
+
+// /// default window procedure
+// int8 __stdcall wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp);
+
+// /// instance handle
+// inline win::HINSTANCE hinstance = win::GetModuleHandleW(nullptr);
+
+// /// argument list
+// inline array<str> args = [](int i) {
+//   auto a = win::CommandLineToArgvW(win::GetCommandLineW(), &i);
+//   array<str> r(i);
+//   for (uint j = 0; j < i; ++j) r[j] = cvt<char>(a[j]);
+//   win::LocalFree(a);
+//   return r;
+// }({});
+
+// /// logger for system messages
+// inline logger log(path(args[0]).replace_extension(".log"));
+
+// /// default window class
+// inline const wchar* const wclass = [] {
+//   win::WNDCLASSEXW wc{sizeof(win::WNDCLASSEXW)};
+//   wc.style = 0x0001 | 0x0002 | 0x0020; // CS_VREDRAW | CS_HREDRAW | CS_OWNDC
+//   wc.lpfnWndProc = wproc;
+//   wc.cbClsExtra = 0;
+//   wc.cbWndExtra = sizeof(void*);
+//   wc.hInstance = hinstance;
+//   wc.hIcon = nullptr;
+//   wc.hCursor = win::LoadCursorW(nullptr, reinterpret_cast<const wchar*>(32512)); // IDC_ARROW
+//   wc.hbrBackground = reinterpret_cast<win::HBRUSH>(5); // COLOR_WINDOW
+//   wc.lpszMenuName = nullptr;
+//   wc.lpszClassName = L"__ywlib";
+//   wc.hIconSm = nullptr;
+//   return reinterpret_cast<const wchar*>(win::RegisterClassExW(&wc));
+// }();
+
+// /// creates a window
+// win::HWND create_window(
+//   const wchar* Class, const wstr& Title, wstyle Style,
+//   numeric auto&& x, numeric auto&& y, numeric auto&& w, numeric auto&& h,
+//   win::HWND Parent, win::HMENU Menu, void* Param, const source& _ = {}) noexcept {
+//   auto hw = win::CreateWindowExW(
+//     int(uint(Style) >> 32), Class, Title.data(), int(uint4(Style)),
+//     int(x), int(y), int(w), int(h), Parent, Menu, hinstance, Param);
+//   if (hw) return hw;
+//   log << format("{} failed to create window", _);
+// }
+
+// }
+
+// /// class to create and manage a window
+// class window {
+// protected:
+//   win::HWND _hwnd{};
+//   win::MSG _msg{};
+//   vector2<int4> _pad{};
+//   window(win::HWND hw) noexcept : _hwnd(hw) {}
+// public:
+
+//   /// user-defined window procedure; returns `true` if the message is processed
+//   bool (*proc)(window&, wmessage, uint8, int8) = nullptr;
+
+//   /// default constructor; uninitialized
+//   window() noexcept = default;
+
+//   /// move constructor
+//   window(window&& w) noexcept : _hwnd(exchange(w._hwnd, nullptr)), _msg(w._msg), _pad(w._pad) {}
+
+//   /// conversion to `bool`; checks if the window is initialized
+//   explicit operator bool() const noexcept { return _hwnd != nullptr; }
+
+//   /// creates a window
+//   window(stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
+//          numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
+//     constexpr int t = 500;
+//     const bool visible = bool(ws_visible & exchange(Style, Style & ~ws_visible));
+//     _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style, 0, 0, t, t, 0, 0, 0, _);
+//     if (!_hwnd) return;
+//     [&](RECT r) { win::GetClientRect(_hwnd, &r), _pad.x = (t - r.right) / 2, _pad.y = t - r.bottom - _pad.x; }({});
+//     win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
+//     win::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width) + _pad.x * 2, int(Height) + _pad.x + _pad.y, 0);
+//     if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
+//   }
+
+//   /// creates a child window
+//   window(const window& Parent, stringable auto&& Title, wstyle Style, numeric auto&& X, numeric auto&& Y,
+//          numeric auto&& Width, numeric auto&& Height, const source& _ = {}) noexcept {
+//     constexpr int t = 500;
+//     const bool visible = bool(ws_visible & exchange(Style, Style & ~ws_visible));
+//     _hwnd = system::create_window(system::wclass, cvt<wchar>(Title), Style | ws_child, X, Y, Width, Height, Parent._hwnd, 0, 0, _);
+//     if (!_hwnd) return;
+//     win::SetWindowLongPtrW(_hwnd, /* GWLP_USERDATA */ -21, reinterpret_cast<int8>(this));
+//     if (visible) win::ShowWindow(_hwnd, /* SW_SHOW */ 5), win::SetFocus(_hwnd);
+//   }
+
+//   /// move assignment
+//   window& operator=(window&& w) noexcept {
+//     if (_hwnd == w._hwnd) return *this;
+//     if (_hwnd) win::DestroyWindow(_hwnd);
+//     _hwnd = exchange(w._hwnd, nullptr);
+//     _msg = w._msg, _pad = w._pad, proc = w.proc;
+//     return *this;
+//   }
+
+//   /// destructor
+//   ~window() noexcept {
+//     if (_hwnd) win::DestroyWindow(exchange(_hwnd, nullptr));
+//   }
+
+//   /// gets window text
+//   str text() const {
+//     const auto len = win::GetWindowTextLengthA(_hwnd);
+//     if (!len) return {};
+//     str s(len, char{});
+//     win::GetWindowTextA(_hwnd, s.data(), len + 1);
+//     return s;
+//   }
+
+//   /// gets window text
+//   template<char_type C> string<C> text() const {
+//     if constexpr (sizeof(C) == 1) {
+//       const auto len = win::GetWindowTextLengthA(_hwnd);
+//       if (!len) return {};
+//       string<C> s(len, C{});
+//       win::GetWindowTextA(_hwnd, reinterpret_cast<char*>(s.data()), len + 1);
+//       return s;
+//     } else if constexpr (sizeof(C) == 2) {
+//       const auto len = ::GetWindowTextLengthW(_hwnd);
+//       if (!len) return {};
+//       string<C> s(len, C{});
+//       ::GetWindowTextW(_hwnd, reinterpret_cast<wchar*>(s.data()), len + 1);
+//       return s;
+//     } else return cvt<char32_t>(text<wchar>());
+//   }
+
+//   /// sets window text
+//   void text(stringable auto&& Text) noexcept {
+//     using C = remove_cvref<iter_value<decltype(Text)>>;
+//     if constexpr (sizeof(C) == 1) {
+//       string<C> temp(string_view<C>(fwd<decltype(Text)>(Text)));
+//       win::SetWindowTextA(_hwnd, reinterpret_cast<const char*>(temp.data()));
+//     } else if constexpr (sizeof(C) == 2) {
+//       string<C> temp(string_view<C>(fwd<decltype(Text)>(Text)));
+//       win::SetWindowTextW(_hwnd, reinterpret_cast<const wchar*>(temp.data()));
+//     } else text(cvt<wchar>(fwd<decltype(Text)>(Text)));
+//   }
+
+//   /// gets window position; `{x = left, y = top, z = right, w = bottom}`
+//   // vector<int> position() const noexcept {
+//   //   return [this](vector<int> v) { return ::GetWindowRect(_hwnd, reinterpret_cast<RECT*>(&v)), mv(v); }({});
+//   // }
+
+//   /// \brief sets window position
+//   // bool position(numeric auto&& X, numeric auto&& Y) noexcept { //
+//   //   return ::SetWindowPos(_hwnd, 0, int(X), int(Y), 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+//   // }
+
+//   /// \brief sets window position and size
+//   // bool position(numeric auto&& X, numeric auto&& Y, numeric auto&& Width, numeric auto&& Height) noexcept { //
+//   //   return ::SetWindowPos(_hwnd, 0, int(X), int(Y), int(Width), int(Height), SWP_NOZORDER);
+//   // }
+
+//   /// \brief gets client area size; `{x = width, y = height}`
+//   // vector2<int> size() const noexcept {
+//   //   return [this](RECT r) { return ::GetClientRect(_hwnd, &r), vector2<int>(r.right, r.bottom); }({});
+//   // }
+
+//   /// displays a message box with an OK button
+//   bool ok(stringable auto&& Text, stringable auto&& Caption) const noexcept {
+//     constexpr uint4 type = /*MB_ICONINFORMATION*/0x40u | /*MB_OK*/0u;
+//     const auto text = cvt<wchar>(fwd<decltype(Text)>(Text));
+//     const auto caption = cvt<wchar>(fwd<decltype(Caption)>(Caption));
+//     return win::MessageBoxW(_hwnd, text.c_str(), caption.c_str(), type);
+//   }
+
+//   /// displays a message box with an OK button
+//   bool ok(stringable auto&& Text) const noexcept {
+//     return ok(fwd<decltype(Text)>(Text), L"OK?");
+//   }
+
+//   /// displays a message box with Yes and No buttons
+//   bool yes(stringable auto&& Text, stringable auto&& Caption) const noexcept {
+//     constexpr uint4 type = /*MB_ICONQUESTION*/0x20u | /*MB_YESNO*/0x4u;
+//     const auto text = cvt<wchar>(fwd<decltype(Text)>(Text));
+//     const auto caption = cvt<wchar>(fwd<decltype(Caption)>(Caption));
+//     return win::MessageBoxW(_hwnd, text.c_str(), caption.c_str(), type) == /*IDYES*/6;
+//   }
+
+//   /// displays a message box with Yes and No buttons
+//   bool yes(stringable auto&& Text) const noexcept {
+//     return yes(fwd<decltype(Text)>(Text), L"Yes?");
+//   }
+
+//   /// waits and gets window message
+//   bool wait_message() noexcept { return win::GetMessageW(&_msg, _hwnd, 0, 0) > 0; }
+
+//   /// waits and gets window message in range
+//   bool wait_message(uint4 Min, uint4 Max) noexcept { return win::GetMessageW(&_msg, _hwnd, Min, Max) > 0; }
+
+//   /// peeks window message
+//   bool peek_message(uint4 Remove = 1) noexcept { return win::PeekMessageW(&_msg, _hwnd, 0, 0, Remove); }
+
+//   /// peeks window message in range
+//   bool peek_message(uint4 Min, uint4 Max, uint4 Remove = 1) noexcept { return win::PeekMessageW(&_msg, _hwnd, Min, Max, Remove); }
+
+//   /// sends message
+//   void send_message(wmessage Message, uint8 WParam = 0, int8 LParam = 0) noexcept { win::SendMessageW(_hwnd, uint4(Message), WParam, LParam); }
+
+//   /// posts message
+//   void post_message(wmessage Message, uint8 WParam = 0, int8 LParam = 0) noexcept { win::PostMessageW(_hwnd, uint4(Message), WParam, LParam); }
+
+//   /// posts quit message
+//   void post_quit_message(uint4 ExitCode = 0) noexcept { win::PostQuitMessage(ExitCode); }
+
+//   /// dispatches message
+//   void dispatch_message() noexcept { win::DispatchMessageW(&_msg); }
+
+//   /// translates message
+//   void translate_message() noexcept { win::TranslateMessage(&_msg); }
+// };
+
+// int8 __stdcall system::wproc(win::HWND hw, uint4 msg, uint8 wp, int8 lp) {
+//   window* w = reinterpret_cast<window*>(win::GetWindowLongPtrW(hw, /* GWLP_USERDATA */ -21));
+//   if (w && w->proc && w->proc(*w, wmessage(msg), wp, lp)) return 0;
+//   else return win::DefWindowProcW(hw, msg, wp, lp);
+// }
+// }
+// #pragma endregion // ------------------------------------------------------------------------------------------ [window]
+
+// #pragma region [directx] -----------------------------------------------------------------------------------------------
+// namespace yw { // clang-format off
+
+// #define IID_PPV_ARGS(ppType) __uuidof(**(ppType)), reinterpret_cast<void**>(ppType)
+
+// /// deleter for COM objects
+// template<typename Com> struct com_deleter {
+//   constexpr com_deleter() noexcept = default;
+//   template<typename U> constexpr com_deleter(const com_deleter<U>&) noexcept {}
+//   constexpr void operator()(Com* p) const noexcept { p ? void(p->Release()) : void(); }
+// };
+
+// /// COM smart pointer
+// template<typename Com> class comptr : public std::unique_ptr<Com, com_deleter<Com>> {
+// public:
+//   using base = std::unique_ptr<Com, com_deleter<Com>>;
+//   using base::base;
+//   using base::operator=;
+//   using base::operator->;
+//   using base::operator bool;
+//   constexpr operator Com*() const noexcept { return base::get(); }
+//   Com** init(const source& _ = {}) & {
+//     if (bool(*this)) throw std::logic_error(std::format("{}: already initialized", _));
+//     return reinterpret_cast<Com**>(this);
+//   }
+//   template<typename OtherCom> HRESULT as(comptr<OtherCom>& other) const noexcept {
+//     return base::get()->QueryInterface(IID_PPV_ARGS(other.init()));
+//   }
+// };
+// } // clang-format on
+// namespace yw::system { // clang-format off
+
+// class com_init {
+//   bool _initialized{};
+// public:
+//   explicit operator bool() const noexcept { return _initialized; }
+//   ~com_init() noexcept { _initialized ? win::CoUninitialize() : void(); }
+//   com_init(win::COINIT coinit) noexcept {
+//     if (auto r = win::CoInitializeEx(0, coinit); !r) _initialized = true;
+//   }
+// };
+// inline const com_init com_initialized{win::COINIT::COINIT_APARTMENTTHREADED};
+
+// comptr<win::ID3D11Device>        d3d_device{};
+// comptr<win::ID3D11DeviceContext> d3d_context{};
+// comptr<win::ID3D11Device5>       d3d_device5{};
+// // comptr<win::IDXGIFactory2>       dxgi_factory{};
+// // comptr<win::IDXGIDevice2>        dxgi_device{};
+// // comptr<win::ID2D1Factory1>       d2d_factory{};
+// // comptr<win::ID2D1Device>         d2d_device{};
+// // comptr<win::ID2D1DeviceContext>  d2d_context{};
+// // comptr<win::IDWriteFactory1>     dwrite_factory{};
+// // comptr<win::IWICImagingFactory>  wic_factory{};
+
+// inline const bool d3d_initialized = [] {
+//   win::D3D_FEATURE_LEVEL fl[] = {
+//     win::D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_0,
+//     win::D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_1, };
+//   auto hr = win::D3D11CreateDevice(
+//     nullptr, win::D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_HARDWARE, nullptr,
+//     win::D3D11_CREATE_DEVICE_FLAG::D3D11_CREATE_DEVICE_BGRA_SUPPORT, fl, 2, 7,
+//     d3d_device.init(), nullptr, d3d_context.init());
+//   if (hr) return log.format(), false;
+//   hr = d3d_device->QueryInterface(IID_PPV_ARGS(d3d_device5.init()));
+//   if (hr) return println("QueryInterface: {:x}", hr), false;
+//   return !hr;
+// }();
+// } // clang-format on
+// #pragma endregion // ----------------------------------------------------------------------------------------- [directx]
+
+#undef CPP_START
+#define CPP_END "\
+"""
+#undef CPP_END

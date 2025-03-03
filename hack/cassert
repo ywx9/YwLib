@@ -1,17 +1,17 @@
 #pragma once // clang-format off
 #include "abc.h"
 
-#define __ywstd_wide_(x) L##x
-#define __ywstd_wide(x) __ywstd_wide_(x)
+#define __ywlib_wide_(x) L##x
+#define __ywlib_wide(x) __ywlib_wide_(x)
 
 #ifndef NDEBUG
-#define assert(e) (void(!(e) && (__ywstd_cfunc _wassert(L#e, __ywstd_wide(__FILE__), __LINE__), 0)))
+#define assert(e) (void(!(e) && (__ywlib_global _wassert(L#e, __ywlib_wide(__FILE__), __LINE__), 0)))
 #else
 #define assert(e) (void(0))
 #endif
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
-
-__ywstd_export void _wassert(const wchar_t*, const wchar_t*, unsigned);
-
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+extern "C" {
+__ywlib_begin;
+__ywlib_export void _wassert(const wchar_t*, const wchar_t*, unsigned);
+__ywlib_end;
+}

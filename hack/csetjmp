@@ -3,7 +3,8 @@
 
 #define setjmp _setjmp
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 typedef struct alignas(16) SETJMP_FLOAT128 {
   unsigned long long Part[2];
@@ -12,14 +13,14 @@ typedef struct alignas(16) SETJMP_FLOAT128 {
 int __cdecl setjmp(jmp_buf);
 [[noreturn]] void __cdecl longjmp(jmp_buf, int) noexcept(false);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
 
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
-
-using __ywstd_cfunc jmp_buf;
-using __ywstd_cfunc longjmp;
-using __ywstd_cfunc setjmp;
+using __ywlib_global jmp_buf;
+using __ywlib_global longjmp;
+using __ywlib_global setjmp;
 
 }
 #endif

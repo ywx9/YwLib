@@ -23,7 +23,7 @@
 #include "hack/cwchar"
 #include "hack/cwctype"
 
-#if not __ywstd_is_imported
+#if not __ywlib_is_imported
 
 #include "msvc/inc/algorithm"
 #include "msvc/inc/any"
@@ -105,8 +105,8 @@
 #include "msvc/inc/version"
 
 #if 0
-#include "hack/_windows.h"
 #include "hack/_directx.h"
+#include "hack/_windows.h"
 #endif
 
 #endif

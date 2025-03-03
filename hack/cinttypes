@@ -200,7 +200,8 @@
 #define SCNxMAX SCNx64
 #define SCNxPTR SCNx64
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 struct imaxdiv_t { intmax_t quot, rem; };
 intmax_t __cdecl imaxabs(intmax_t);
@@ -211,16 +212,16 @@ uintmax_t __cdecl strtoumax(const char*, char**, int);
 intmax_t __cdecl wcstoimax(const wchar_t*, wchar_t**, int);
 uintmax_t __cdecl wcstoumax(const wchar_t*, wchar_t**, int);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
-using __ywstd_cfunc imaxdiv_t;
-using __ywstd_cfunc imaxabs;
-using __ywstd_cfunc imaxdiv;
-using __ywstd_cfunc strtoimax;
-using __ywstd_cfunc strtoumax;
-using __ywstd_cfunc wcstoimax;
-using __ywstd_cfunc wcstoumax;
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
+using __ywlib_global imaxdiv_t;
+using __ywlib_global imaxabs;
+using __ywlib_global imaxdiv;
+using __ywlib_global strtoimax;
+using __ywlib_global strtoumax;
+using __ywlib_global wcstoimax;
+using __ywlib_global wcstoumax;
 }
 #endif

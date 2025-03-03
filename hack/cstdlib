@@ -10,10 +10,11 @@
 
 #define RAND_MAX 0x7FFF
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
-__ywstd_export int __cdecl ___mb_cur_max_func();
-#define MB_CUR_MAX (__ywstd_cfunc __mb_cur_max_func())
+__ywlib_export int __cdecl ___mb_cur_max_func();
+#define MB_CUR_MAX (__ywlib_global __mb_cur_max_func())
 
 struct div_t { int quot, rem; };
 struct ldiv_t { long quot, rem; };
@@ -73,66 +74,66 @@ float __cdecl fabsf(float);
 double __cdecl fabs(double);
 long double __cdecl fabsl(long double);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
 
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
-
-using __ywstd_cfunc div_t;
-using __ywstd_cfunc ldiv_t;
-using __ywstd_cfunc lldiv_t;
-using __ywstd_cfunc atexit_handler;
-using __ywstd_cfunc atexit;
-using __ywstd_cfunc at_quick_exit;
-using __ywstd_cfunc abort;
-using __ywstd_cfunc exit;
-using __ywstd_cfunc _Exit;
-using __ywstd_cfunc quick_exit;
-using __ywstd_cfunc getenv;
-using __ywstd_cfunc system;
-using __ywstd_cfunc free;
-using __ywstd_cfunc malloc;
-using __ywstd_cfunc calloc;
-using __ywstd_cfunc realloc;
-using __ywstd_cfunc compare_pred;
-using __ywstd_cfunc qsort;
-using __ywstd_cfunc bsearch;
-using __ywstd_cfunc mblen;
-using __ywstd_cfunc mbtowc;
-using __ywstd_cfunc wctomb;
-using __ywstd_cfunc mbstowcs;
-using __ywstd_cfunc wcstombs;
-using __ywstd_cfunc atoi;
-using __ywstd_cfunc atol;
-using __ywstd_cfunc atoll;
-using __ywstd_cfunc atof;
-using __ywstd_cfunc strtol;
-using __ywstd_cfunc strtoll;
-using __ywstd_cfunc strtoul;
-using __ywstd_cfunc strtoull;
-using __ywstd_cfunc strtof;
-using __ywstd_cfunc strtod;
-using __ywstd_cfunc strtold;
-using __ywstd_cfunc rand;
-using __ywstd_cfunc srand;
+using __ywlib_global div_t;
+using __ywlib_global ldiv_t;
+using __ywlib_global lldiv_t;
+using __ywlib_global atexit_handler;
+using __ywlib_global atexit;
+using __ywlib_global at_quick_exit;
+using __ywlib_global abort;
+using __ywlib_global exit;
+using __ywlib_global _Exit;
+using __ywlib_global quick_exit;
+using __ywlib_global getenv;
+using __ywlib_global system;
+using __ywlib_global free;
+using __ywlib_global malloc;
+using __ywlib_global calloc;
+using __ywlib_global realloc;
+using __ywlib_global compare_pred;
+using __ywlib_global qsort;
+using __ywlib_global bsearch;
+using __ywlib_global mblen;
+using __ywlib_global mbtowc;
+using __ywlib_global wctomb;
+using __ywlib_global mbstowcs;
+using __ywlib_global wcstombs;
+using __ywlib_global atoi;
+using __ywlib_global atol;
+using __ywlib_global atoll;
+using __ywlib_global atof;
+using __ywlib_global strtol;
+using __ywlib_global strtoll;
+using __ywlib_global strtoul;
+using __ywlib_global strtoull;
+using __ywlib_global strtof;
+using __ywlib_global strtod;
+using __ywlib_global strtold;
+using __ywlib_global rand;
+using __ywlib_global srand;
 
 constexpr int abs(int x) noexcept {
-  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc abs(x);
+  if (!__builtin_is_constant_evaluated()) return __ywlib_global abs(x);
   else return x < 0 ? -x : x;
 }
 constexpr long abs(long x) noexcept {
-  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc labs(x);
+  if (!__builtin_is_constant_evaluated()) return __ywlib_global labs(x);
   else return x < 0 ? -x : x;
 }
 constexpr long long abs(long long x) noexcept {
-  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc llabs(x);
+  if (!__builtin_is_constant_evaluated()) return __ywlib_global llabs(x);
   else return x < 0 ? -x : x;
 }
 template<yw::float_type T> constexpr T abs(const T x) noexcept {
   if (!yw::is_cev) {
-    if constexpr (yw::same_as<T, float>) return __ywstd_cfunc fabsf(x);
-    else if constexpr (yw::same_as<T, double>) return __ywstd_cfunc fabs(x);
-    else return __ywstd_cfunc fabsl(x);
+    if constexpr (yw::same_as<T, float>) return __ywlib_global fabsf(x);
+    else if constexpr (yw::same_as<T, double>) return __ywlib_global fabs(x);
+    else return __ywlib_global fabsl(x);
   } else return x < 0 ? -x : x;
 }
 
@@ -140,15 +141,15 @@ constexpr long labs(long x) noexcept { return abs(x); }
 constexpr long long llabs(long long x) noexcept { return abs(x); }
 
 constexpr div_t div(int num, int den) noexcept {
-  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc div(num, den);
+  if (!__builtin_is_constant_evaluated()) return __ywlib_global div(num, den);
   else return {num / den, num % den};
 }
 constexpr ldiv_t div(long num, long den) noexcept {
-  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc ldiv(num, den);
+  if (!__builtin_is_constant_evaluated()) return __ywlib_global ldiv(num, den);
   else return {num / den, num % den};
 }
 constexpr lldiv_t div(long long num, long long den) noexcept {
-  if (!__builtin_is_constant_evaluated()) return __ywstd_cfunc lldiv(num, den);
+  if (!__builtin_is_constant_evaluated()) return __ywlib_global lldiv(num, den);
   else return {num / den, num % den};
 }
 constexpr ldiv_t ldiv(long num, long den) noexcept { return div(num, den); }

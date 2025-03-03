@@ -1,7 +1,7 @@
 #pragma once // clang-format off
 #include "abc.h"
 
-#define FLT_ROUNDS (__ywstd_cfunc __fpe_flt_rounds())
+#define FLT_ROUNDS (__ywlib_global __fpe_flt_rounds())
 
 #define FLT_RADIX 2
 
@@ -61,6 +61,8 @@
 #define DBL_TRUE_MIN 4.9406564584124654e-324
 #define LDBL_TRUE_MIN 4.9406564584124654e-324L
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
-__ywstd_export int __cdecl __fpe_flt_rounds();
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+extern "C" {
+__ywlib_begin;
+__ywlib_export int __cdecl __fpe_flt_rounds();
+__ywlib_end;
+}

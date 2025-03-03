@@ -7,7 +7,8 @@ struct __type_info_node;
 extern __type_info_node __type_info_root_node;
 }
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 struct __std_type_info_data {
   const char* _UndecoratedName;
@@ -23,23 +24,23 @@ int __cdecl __std_type_info_compare(const __std_type_info_data*, const __std_typ
 size_t __cdecl __std_type_info_hash(const __std_type_info_data*);
 const char* __cdecl __std_type_info_name(__std_type_info_data*, __type_info_node*);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
+__ywlib_end;
+}
 extern "C++" {
 
 class type_info {
-mutable __ywstd_cfunc __std_type_info_data _Data;
+mutable __ywlib_global __std_type_info_data _Data;
 public:
   virtual ~type_info() noexcept;
   type_info(const type_info&) = delete;
   type_info& operator=(const type_info&) = delete;
-  size_t hash_code() const noexcept { return __ywstd_cfunc __std_type_info_hash(&_Data); }
+  size_t hash_code() const noexcept { return __ywlib_global __std_type_info_hash(&_Data); }
   constexpr bool operator==(const type_info& ti) const noexcept {
     if (__builtin_is_constant_evaluated()) { return &_Data == &ti._Data; }
-    return __ywstd_cfunc __std_type_info_compare(&_Data, &ti._Data) == 0;
+    return __ywlib_global __std_type_info_compare(&_Data, &ti._Data) == 0;
   }
-  bool before(const type_info& ti) const noexcept { return __ywstd_cfunc __std_type_info_compare(&_Data, &ti._Data) < 0; }
-  const char* name() const noexcept { return __ywstd_cfunc __std_type_info_name(&_Data, &__type_info_root_node); }
+  bool before(const type_info& ti) const noexcept { return __ywlib_global __std_type_info_compare(&_Data, &ti._Data) < 0; }
+  const char* name() const noexcept { return __ywlib_global __std_type_info_name(&_Data, &__type_info_root_node); }
   const char* raw_name() const noexcept { return _Data._DecoratedName; }
 };
 }

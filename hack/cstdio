@@ -15,13 +15,14 @@
 #define FOPEN_MAX 20
 #define TMP_MAX 2147483647
 
-#define __ywstd_cstdio_va(x, call) \
+#define __ywlib_cstdio_va(x, call) \
   va_list args; __crt_va_start(args, x); \
   const int result = call;               \
   __crt_va_end(args);                    \
   return result
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 using fpos_t = long long;
 
@@ -71,11 +72,11 @@ inline int __cdecl vfscanf(FILE* const stream, const char* fmt, va_list args) {
 inline int __cdecl vscanf(const char* fmt, va_list args) { return vfscanf(stdin, fmt, args); }
 
 inline int __cdecl fscanf(FILE* const stream, const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vfscanf(stream, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vfscanf(stream, fmt, args)));
 }
 
 inline int __cdecl scanf(const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vfscanf(stdin, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vfscanf(stdin, fmt, args)));
 }
 
 #pragma endregion
@@ -90,7 +91,7 @@ inline int __cdecl vsscanf(const char* buffer, const char* fmt, va_list args) {
 }
 
 inline int __cdecl sscanf(const char* buffer, const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vsscanf(buffer, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vsscanf(buffer, fmt, args)));
 }
 
 #pragma endregion
@@ -108,11 +109,11 @@ inline int __cdecl vprintf(const char* fmt, va_list args) {
 }
 
 inline int __cdecl fprintf(FILE* const stream, const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vfprintf(stream, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vfprintf(stream, fmt, args)));
 }
 
 inline int __cdecl printf(const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vfprintf(stdout, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vfprintf(stdout, fmt, args)));
 }
 
 #pragma endregion
@@ -134,77 +135,77 @@ inline int __cdecl vsprintf(char* buffer, const char* fmt, va_list args) {
 }
 
 inline int __cdecl snprintf(char* buffer, size_t count, const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vsnprintf(buffer, count, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vsnprintf(buffer, count, fmt, args)));
 }
 
 inline int __cdecl sprintf(char* buffer, const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vsprintf(buffer, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vsprintf(buffer, fmt, args)));
 }
 
 #pragma endregion
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+__ywlib_end;
+}
+__ywlib_export namespace std {
+using __ywlib_global clearerr;
+using __ywlib_global fclose;
+using __ywlib_global feof;
+using __ywlib_global ferror;
+using __ywlib_global fflush;
+using __ywlib_global fgetc;
+using __ywlib_global fgetpos;
+using __ywlib_global fgets;
+using __ywlib_global fopen;
+using __ywlib_global fputc;
+using __ywlib_global fputs;
+using __ywlib_global fread;
+using __ywlib_global freopen;
+using __ywlib_global fsetpos;
+using __ywlib_global fseek;
+using __ywlib_global ftell;
+using __ywlib_global fwrite;
+using __ywlib_global getc;
+using __ywlib_global getchar;
+using __ywlib_global perror;
+using __ywlib_global putc;
+using __ywlib_global putchar;
+using __ywlib_global puts;
+using __ywlib_global remove;
+using __ywlib_global rename;
+using __ywlib_global rewind;
+using __ywlib_global setbuf;
+using __ywlib_global setvbuf;
+using __ywlib_global tmpfile;
+using __ywlib_global tmpnam;
+using __ywlib_global ungetc;
 
-__ywstd_export namespace std {
-using __ywstd_cfunc clearerr;
-using __ywstd_cfunc fclose;
-using __ywstd_cfunc feof;
-using __ywstd_cfunc ferror;
-using __ywstd_cfunc fflush;
-using __ywstd_cfunc fgetc;
-using __ywstd_cfunc fgetpos;
-using __ywstd_cfunc fgets;
-using __ywstd_cfunc fopen;
-using __ywstd_cfunc fputc;
-using __ywstd_cfunc fputs;
-using __ywstd_cfunc fread;
-using __ywstd_cfunc freopen;
-using __ywstd_cfunc fsetpos;
-using __ywstd_cfunc fseek;
-using __ywstd_cfunc ftell;
-using __ywstd_cfunc fwrite;
-using __ywstd_cfunc getc;
-using __ywstd_cfunc getchar;
-using __ywstd_cfunc perror;
-using __ywstd_cfunc putc;
-using __ywstd_cfunc putchar;
-using __ywstd_cfunc puts;
-using __ywstd_cfunc remove;
-using __ywstd_cfunc rename;
-using __ywstd_cfunc rewind;
-using __ywstd_cfunc setbuf;
-using __ywstd_cfunc setvbuf;
-using __ywstd_cfunc tmpfile;
-using __ywstd_cfunc tmpnam;
-using __ywstd_cfunc ungetc;
+using __ywlib_global vfscanf;
+using __ywlib_global vscanf;
+using __ywlib_global fscanf;
+using __ywlib_global scanf;
 
-using __ywstd_cfunc vfscanf;
-using __ywstd_cfunc vscanf;
-using __ywstd_cfunc fscanf;
-using __ywstd_cfunc scanf;
+using __ywlib_global vsscanf;
+using __ywlib_global sscanf;
 
-using __ywstd_cfunc vsscanf;
-using __ywstd_cfunc sscanf;
+using __ywlib_global vfprintf;
+using __ywlib_global vprintf;
+using __ywlib_global fprintf;
+using __ywlib_global printf;
 
-using __ywstd_cfunc vfprintf;
-using __ywstd_cfunc vprintf;
-using __ywstd_cfunc fprintf;
-using __ywstd_cfunc printf;
-
-using __ywstd_cfunc vsnprintf;
-using __ywstd_cfunc vsprintf;
-using __ywstd_cfunc snprintf;
-using __ywstd_cfunc sprintf;
+using __ywlib_global vsnprintf;
+using __ywlib_global vsprintf;
+using __ywlib_global snprintf;
+using __ywlib_global sprintf;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // for <string>
 extern "C" {
 inline int __cdecl _scprintf(const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (__ywstd_cfunc vsnprintf(nullptr, 0, fmt, args)));
+  __ywlib_cstdio_va(fmt, (__ywlib_global vsnprintf(nullptr, 0, fmt, args)));
 }
 
-int __cdecl __stdio_common_vsprintf_s(unsigned __int64, char*, size_t, const char*, __ywstd_cfunc _locale_t, va_list);
+int __cdecl __stdio_common_vsprintf_s(unsigned __int64, char*, size_t, const char*, __ywlib_global _locale_t, va_list);
 
 inline int __cdecl vsprintf_s(char* buffer, size_t count, const char* fmt, va_list args) {
   const auto options = _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS;
@@ -213,7 +214,7 @@ inline int __cdecl vsprintf_s(char* buffer, size_t count, const char* fmt, va_li
 }
 
 inline int __cdecl sprintf_s(char* buffer, size_t count, const char* fmt, ...) {
-  __ywstd_cstdio_va(fmt, (vsprintf_s(buffer, count, fmt, args)));
+  __ywlib_cstdio_va(fmt, (vsprintf_s(buffer, count, fmt, args)));
 }
 }
 

@@ -8,7 +8,8 @@
 #define CLOCKS_PER_SEC ((std::clock_t)1000)
 #define TIME_UTC 1
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 using clock_t = long;
 using time_t = long long;
@@ -29,31 +30,31 @@ tm* __cdecl _localtime64(const long long*);
 long long __cdecl _mktime64(tm*);
 long long __cdecl _time64(long long*);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
 
 using clock_t = long;
 using time_t = long long;
 using __time64_t = long long;
 
-using __ywstd_cfunc tm;
-using __ywstd_cfunc timespec;
+using __ywlib_global tm;
+using __ywlib_global timespec;
 
-using __ywstd_cfunc clock;
-using __ywstd_cfunc asctime;
-using __ywstd_cfunc strftime;
+using __ywlib_global clock;
+using __ywlib_global asctime;
+using __ywlib_global strftime;
 
-inline char* ctime(const time_t* t) noexcept { return __ywstd_cfunc _ctime64(t); }
-inline double difftime(time_t t1, time_t t2) noexcept { return __ywstd_cfunc _difftime64(t1, t2); }
-inline tm* gmtime(const time_t* t) noexcept { return __ywstd_cfunc _gmtime64(t); }
-inline tm* localtime(const time_t* t) noexcept { return __ywstd_cfunc _localtime64(t); }
-inline time_t mktime(tm* t) noexcept { return __ywstd_cfunc _mktime64(t); }
-inline time_t time(time_t* t) noexcept { return __ywstd_cfunc _time64(t); }
+inline char* ctime(const time_t* t) noexcept { return __ywlib_global _ctime64(t); }
+inline double difftime(time_t t1, time_t t2) noexcept { return __ywlib_global _difftime64(t1, t2); }
+inline tm* gmtime(const time_t* t) noexcept { return __ywlib_global _gmtime64(t); }
+inline tm* localtime(const time_t* t) noexcept { return __ywlib_global _localtime64(t); }
+inline time_t mktime(tm* t) noexcept { return __ywlib_global _mktime64(t); }
+inline time_t time(time_t* t) noexcept { return __ywlib_global _time64(t); }
 
 inline int timespec_get(timespec* ts, int base) noexcept {
-  return __ywstd_cfunc _timespec64_get(reinterpret_cast<__ywstd_cfunc _timespec64*>(ts), base);
+  return __ywlib_global _timespec64_get(reinterpret_cast<__ywlib_global _timespec64*>(ts), base);
 }
 }
 #endif

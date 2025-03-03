@@ -83,15 +83,7 @@
 #define INTMAX_C(x) INT64_C(x)
 #define UINTMAX_C(x) UINT64_C(x)
 
-__ywstd_export extern "C" {
-using int8_t = signed char;
-using int16_t = short;
-using int32_t = int;
-using int64_t = long long;
-using uint8_t = unsigned char;
-using uint16_t = unsigned short;
-using uint32_t = unsigned int;
-using uint64_t = unsigned long long;
+__ywlib_export extern "C" {
 using int_least8_t = signed char;
 using int_least16_t = short;
 using int_least32_t = int;
@@ -114,7 +106,7 @@ using intptr_t = long long;
 using uintptr_t = unsigned long long;
 }
 
-__ywstd_export namespace std {
+__ywlib_export namespace std {
 using ::int8_t;
 using ::int16_t;
 using ::int32_t;

@@ -1,29 +1,31 @@
 #pragma once // clang-format off
 #include "abc.h"
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 int __cdecl isalnum(int); int __cdecl isalpha(int); int __cdecl islower(int);
 int __cdecl isupper(int); int __cdecl isdigit(int); int __cdecl isxdigit(int);
 int __cdecl iscntrl(int); int __cdecl isgraph(int); int __cdecl isspace(int);
 int __cdecl isblank(int); int __cdecl isprint(int); int __cdecl ispunct(int);
 int __cdecl tolower(int); int __cdecl toupper(int);
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+__ywlib_end;
+}
 
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
-using __ywstd_cfunc isalnum;
-using __ywstd_cfunc isalpha;
-using __ywstd_cfunc islower;
-using __ywstd_cfunc isupper;
-using __ywstd_cfunc isdigit;
-using __ywstd_cfunc isxdigit;
-using __ywstd_cfunc iscntrl;
-using __ywstd_cfunc isgraph;
-using __ywstd_cfunc isspace;
-using __ywstd_cfunc isblank;
-using __ywstd_cfunc isprint;
-using __ywstd_cfunc ispunct;
-using __ywstd_cfunc tolower;
-using __ywstd_cfunc toupper;
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
+using __ywlib_global isalnum;
+using __ywlib_global isalpha;
+using __ywlib_global islower;
+using __ywlib_global isupper;
+using __ywlib_global isdigit;
+using __ywlib_global isxdigit;
+using __ywlib_global iscntrl;
+using __ywlib_global isgraph;
+using __ywlib_global isspace;
+using __ywlib_global isblank;
+using __ywlib_global isprint;
+using __ywlib_global ispunct;
+using __ywlib_global tolower;
+using __ywlib_global toupper;
 }
 #endif

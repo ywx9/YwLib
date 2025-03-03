@@ -1,7 +1,7 @@
 DisableFormat: false
 
 BasedOnStyle: LLVM
-ColumnLimit: 120
+ColumnLimit: 160
 IndentWidth: 2
 MaxEmptyLinesToKeep: 2
 FixNamespaceComments: false
@@ -28,7 +28,7 @@ RequiresClausePosition: SingleLine
 SpaceAfterTemplateKeyword: false
 
 ConstructorInitializerIndentWidth: 2
-ContinuationIndentWidth: 0
+ContinuationIndentWidth: 2
 IndentExternBlock: NoIndent
 
 SpaceBeforeParens: Custom

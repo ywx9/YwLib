@@ -14,14 +14,15 @@
 #define FE_INVALID 0x10
 #define FE_ALL_EXCEPT 0x1f
 
-#define FE_DFL_ENV (&__ywstd_cfunc _Fenv1)
+#define FE_DFL_ENV (&__ywlib_global _Fenv1)
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 using fexcept_t = unsigned long;
 
 struct fenv_t { unsigned long _Fe_ctl, _Fe_stat; };
-__ywstd_export __declspec(selectany) inline const fenv_t _Fenv1 = {0x3f00003f, 0};
+__ywlib_export __declspec(selectany) inline const fenv_t _Fenv1 = {0x3f00003f, 0};
 
 int __cdecl fegetround();
 int __cdecl fesetround(int);
@@ -53,25 +54,25 @@ inline int __cdecl feupdateenv(const fenv_t* env) {
   else return 0;
 }
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+__ywlib_end;
+}
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
 
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
+using __ywlib_global fenv_t;
+using __ywlib_global fexcept_t;
 
-using __ywstd_cfunc fenv_t;
-using __ywstd_cfunc fexcept_t;
-
-using __ywstd_cfunc fegetround;
-using __ywstd_cfunc fesetround;
-using __ywstd_cfunc fegetenv;
-using __ywstd_cfunc fesetenv;
-using __ywstd_cfunc feclearexcept;
-using __ywstd_cfunc feholdexcept;
-using __ywstd_cfunc fetestexcept;
-using __ywstd_cfunc fegetexceptflag;
-using __ywstd_cfunc fesetexceptflag;
-using __ywstd_cfunc feraiseexcept;
-using __ywstd_cfunc feupdateenv;
+using __ywlib_global fegetround;
+using __ywlib_global fesetround;
+using __ywlib_global fegetenv;
+using __ywlib_global fesetenv;
+using __ywlib_global feclearexcept;
+using __ywlib_global feholdexcept;
+using __ywlib_global fetestexcept;
+using __ywlib_global fegetexceptflag;
+using __ywlib_global fesetexceptflag;
+using __ywlib_global feraiseexcept;
+using __ywlib_global feupdateenv;
 
 }
 #endif

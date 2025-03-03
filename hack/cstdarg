@@ -4,22 +4,23 @@
 using va_list = char*;
 
 #define __crt_va_end(ap) (void(ap = nullptr))
-#define __crt_va_start(ap, x) ((void)(::ywstd::cstdarg::va_check<decltype(x)>(), __ywstd_cfunc __va_start(&ap, x)))
+#define __crt_va_start(ap, x) ((void)(::ywlib::cstdarg::va_check<decltype(x)>(), __ywlib_global __va_start(&ap, x)))
 #define __crt_va_arg(ap, t) ((sizeof(t) > 8 || (sizeof(t) & (sizeof(t) - 1)) != 0) ? **(t**)((ap += 8) - 8) : *(t*)((ap += 8) - 8))
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
-__ywstd_export void __cdecl __va_start(char**, ...);
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-namespace ywstd::cstdarg {
+extern "C" {
+__ywlib_begin;
+__ywlib_export void __cdecl __va_start(char**, ...);
+__ywlib_end;
+}
+namespace ywlib::cstdarg {
 template<typename T> constexpr bool is_reference = false;
 template<typename T> constexpr bool is_reference<T&> = true;
 template<typename T> constexpr bool is_reference<T&&> = true;
-__ywstd_export template<typename T> struct va_check { static_assert(!is_reference<T>); };
+__ywlib_export template<typename T> struct va_check { static_assert(!is_reference<T>); };
 }
 
-#if not __ywstd_is_imported
-__ywstd_export namespace std {
+#if not __ywlib_is_imported
+__ywlib_export namespace std {
 using ::va_list;
 }
 #endif

@@ -2,7 +2,7 @@
 #include "abc.h"
 
 #ifndef errno
-#define errno (*__ywstd_cfunc _errno())
+#define errno (*__ywlib_global _errno())
 #endif
 
 #define EPERM 1
@@ -93,6 +93,8 @@
 #define EWOULDBLOCK 140
 #endif
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
-__ywstd_export int* __cdecl _errno();
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+extern "C" {
+__ywlib_begin;
+__ywlib_export int* __cdecl _errno();
+__ywlib_end;
+}

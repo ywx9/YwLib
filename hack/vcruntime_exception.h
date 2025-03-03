@@ -8,31 +8,32 @@ terminate_handler __cdecl set_terminate(terminate_handler) throw();
 terminate_handler __cdecl _get_terminate();
 }
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 struct __std_exception_data { const char* _What; bool _DoFree; };
 void __cdecl __std_exception_copy(const __std_exception_data*, __std_exception_data*);
 void __cdecl __std_exception_destroy(__std_exception_data*);
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
-
-__ywstd_export namespace std {
+__ywlib_end;
+}
+__ywlib_export namespace std {
 
 ///
 class exception {
-  __ywstd_cfunc __std_exception_data _data;
+  __ywlib_global __std_exception_data _data;
 public:
-  virtual ~exception() noexcept { __ywstd_cfunc __std_exception_destroy(&_data); }
+  virtual ~exception() noexcept { __ywlib_global __std_exception_destroy(&_data); }
   exception() noexcept : _data() {}
   exception(const char* const s, int) noexcept : _data() { _data._What = s; }
-  exception(exception const& e) noexcept : _data() { __ywstd_cfunc __std_exception_copy(&e._data, &_data); }
+  exception(exception const& e) noexcept : _data() { __ywlib_global __std_exception_copy(&e._data, &_data); }
   explicit exception(const char* const s) noexcept : _data() {
-    __ywstd_cfunc __std_exception_data i{s, true};
-    __ywstd_cfunc __std_exception_copy(&i, &_data);
+    __ywlib_global __std_exception_data i{s, true};
+    __ywlib_global __std_exception_copy(&i, &_data);
   }
 
   exception& operator=(exception const& e) noexcept {
     if (this == &e) return *this;
-    __ywstd_cfunc __std_exception_destroy(&_data);
-    __ywstd_cfunc __std_exception_copy(&e._data, &_data);
+    __ywlib_global __std_exception_destroy(&_data);
+    __ywlib_global __std_exception_copy(&e._data, &_data);
     return *this;
   }
   [[nodiscard]] virtual const char* what() const { return _data._What ? _data._What : "Unknown exception"; }

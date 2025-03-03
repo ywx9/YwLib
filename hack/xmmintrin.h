@@ -1,7 +1,7 @@
 #pragma once // clang-format off
 #include "abc.h"
 
-__ywstd_export extern "C" {
+__ywlib_export extern "C" {
 
 union __declspec(intrin_type) alignas(8) __m64 {
   unsigned __int64 m64_u64;

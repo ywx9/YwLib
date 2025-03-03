@@ -1,7 +1,8 @@
 #pragma once // clang-format off
 #include "abc.h"
 
-__ywstd_cfunc_begin_poqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoqpoq
+extern "C" {
+__ywlib_begin;
 
 __int8           __iso_volatile_load8(const volatile __int8*);
 __int32          __iso_volatile_load32(const volatile __int32*);
@@ -42,4 +43,5 @@ unsigned __int64 __cdecl   _udiv128(unsigned __int64, unsigned __int64, unsigned
 unsigned __int64           _umul128(unsigned __int64, unsigned __int64, unsigned __int64*);
 void __cdecl               _unlock_file(FILE*);
 
-__ywstd_cfunc_end___bodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbodbod
+__ywlib_end;
+}

@@ -2,7 +2,7 @@
 #include "abc.h"
 #include "xmmintrin.h"
 
-__ywstd_export extern "C" {
+__ywlib_export extern "C" {
 
 union __declspec(intrin_type) alignas(16) __m128i {
   __int8           m128i_i8[16];
